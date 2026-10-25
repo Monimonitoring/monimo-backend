@@ -175,13 +175,13 @@ class GroupingTest(
         at(211)
         worker.pollOnce()
 
-        Then("서비스마다 따로 — Slack 2건, 각각 묶음 표시 없는 한 건짜리 문구") {
+        Then("서비스마다 따로 — Slack 2건, 각각 그룹 표시 없는 한 건짜리 문구") {
             fake.received.size shouldBe 2
             fake.received.forEach { it shouldNotContain "건\\n" }
         }
     }
 
-    Given("E9 모사: 그룹을 잡은 알림 서비스가 보내기 전에 멈춘다 (claim 만 하고 finish 안 함 — 프로세스 종료 아님)") {
+    Given("E9 모사: 그룹을 잡은 Notifier 가 보내기 전에 멈춘다 (claim 만 하고 finish 안 함 — 프로세스 종료 아님)") {
         isolate()
         at(300)
         val ch = channel("ok")
@@ -260,7 +260,7 @@ class GroupingTest(
         }
     }
 
-    Given("묶음이 503 으로 실패한다") {
+    Given("그룹이 503 으로 실패한다") {
         isolate()
         fake.switchStatus = 503
         at(700)

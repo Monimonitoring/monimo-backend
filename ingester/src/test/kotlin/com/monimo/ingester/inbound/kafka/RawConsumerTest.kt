@@ -84,7 +84,7 @@ class RawConsumerTest(
         return rows()
     }
 
-    Given("raw 토픽을 구독하는 적재 처리기") {
+    Given("raw 토픽을 구독하는 Ingester") {
         When("스팬 2개가 든 트레이스 바이트를 키 traces 로 넣으면") {
             val request = ExportTraceServiceRequest.newBuilder()
                 .addResourceSpans(

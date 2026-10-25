@@ -31,7 +31,7 @@ class PeerServiceResolverTest : BehaviorSpec({
         }
 
         When("IP 주소 10.0.0.5:8080") {
-            Then("첫 라벨 '10' 은 목록에 없어 그대로 빈 글자 — 서버맵이 EXTERNAL 로 둔다") {
+            Then("첫 라벨 '10' 은 목록에 없어 그대로 빈 글자 — Service map 이 EXTERNAL 로 둔다") {
                 PeerServiceResolver.fill(listOf(client("10.0.0.5:8080")), known).single().peerService shouldBe ""
             }
         }

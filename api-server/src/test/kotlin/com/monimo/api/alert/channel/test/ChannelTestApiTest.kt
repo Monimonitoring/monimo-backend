@@ -108,7 +108,7 @@ class ChannelTestApiTest(
         fake.body = body
     }
 
-    Given("알림 서비스가 보내 보고 SUCCESS 를 준다") {
+    Given("Notifier 가 보내 보고 SUCCESS 를 준다") {
         respond(200, """{"data":{"result":"SUCCESS","response":"ok"}}""")
         fake.received.clear()
         val ch = channel("성공")
@@ -125,7 +125,7 @@ class ChannelTestApiTest(
             response.body!! shouldNotContain "SECRETSECRET"
         }
 
-        Then("알림 서비스에는 내부 토큰과 저장된 실제 config(가리지 않은 값)가 간다") {
+        Then("Notifier 에는 내부 토큰과 저장된 실제 config(가리지 않은 값)가 간다") {
             val sent = fake.received.single()
             sent.token shouldBe "test-internal-token"
             sent.body shouldContain secretUrl
@@ -133,7 +133,7 @@ class ChannelTestApiTest(
         }
     }
 
-    Given("공급자가 거절했거나(FAILED) 채널 서버에 닿지 않았다(알림 서비스 503)") {
+    Given("공급자가 거절했거나(FAILED) 채널 서버에 닿지 않았다(Notifier 503)") {
         respond(200, """{"data":{"result":"FAILED","response":"404 channel_not_found"}}""")
         val rejected = test(channel("거절").alertChannelUuid)
         respond(503, """{"error":{"code":"UPSTREAM_UNAVAILABLE","message":"연결 실패"}}""")
@@ -148,7 +148,7 @@ class ChannelTestApiTest(
         }
     }
 
-    Given("알림 서비스 자체가 이상하다") {
+    Given("Notifier 자체가 이상하다") {
         respond(401, """{"error":{"code":"UNAUTHENTICATED","message":"x"}}""")
         val unauthorized = test(channel("토큰 불일치").alertChannelUuid)
         respond(200, "not json")
@@ -161,7 +161,7 @@ class ChannelTestApiTest(
             }
         }
 
-        When("알림 서비스가 살아난 뒤 같은 채널을 바로 다시 누르면") {
+        When("Notifier 가 살아난 뒤 같은 채널을 바로 다시 누르면") {
             val ch = channel("살아남")
             respond(500, """{}""")
             val down = test(ch.alertChannelUuid)
@@ -191,7 +191,7 @@ class ChannelTestApiTest(
         fake.received.clear()
         val second = test(ch.alertChannelUuid)
 
-        Then("두 번째는 429 이고 알림 서비스를 부르지 않는다") {
+        Then("두 번째는 429 이고 Notifier 를 부르지 않는다") {
             first.statusCode.value() shouldBe 200
             second.statusCode.value() shouldBe 429
             fake.received.size shouldBe 0

@@ -147,7 +147,7 @@ openssl verify -CAfile "$OUT/ca.crt" "$OUT/server.crt" "$OUT"/clients/*.crt > /d
   || openssl verify -no_check_time -CAfile "$OUT/ca.crt" "$OUT/server.crt" "$OUT"/clients/*.crt > /dev/null
 
 if [ "$made" -eq 0 ]; then
-  echo "인증서 이미 있음: $OUT (기관 · 수집기 · 손님 $(ls "$OUT/clients"/*.crt | wc -l | tr -d ' ')벌). 아무것도 안 했다"
+  echo "인증서 이미 있음: $OUT (기관 · Collector · 손님 $(ls "$OUT/clients"/*.crt | wc -l | tr -d ' ')벌). 아무것도 안 했다"
 else
   echo "인증서 ${made}벌 만듦: $OUT (기관 ${CA_DAYS}일 · 신분증 ${LEAF_DAYS}일 · 손님: $CLIENTS · expired)"
 fi

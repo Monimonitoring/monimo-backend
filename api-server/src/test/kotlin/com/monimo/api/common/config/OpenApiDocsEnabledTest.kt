@@ -16,7 +16,7 @@ import org.springframework.http.HttpStatus
 @Import(TestInfraConfig::class)
 class OpenApiDocsEnabledTest(rest: TestRestTemplate) : BehaviorSpec({
 
-    Given("springdoc 을 켠 API 서버 (local 프로필과 같은 설정)") {
+    Given("springdoc 을 켠 API server (local 프로필과 같은 설정)") {
         When("REST 명세 주소를 부르면") {
             val response = rest.getForEntity("/v3/api-docs", String::class.java)
 
@@ -25,8 +25,8 @@ class OpenApiDocsEnabledTest(rest: TestRestTemplate) : BehaviorSpec({
                 response.body!! shouldContain "\"openapi\""
             }
 
-            Then("제목이 모니모니터링 API 서버다") {
-                response.body!! shouldContain "모니모니터링 API 서버"
+            Then("제목이 모니모니터링 API server 다") {
+                response.body!! shouldContain "모니모니터링 API server"
             }
         }
 

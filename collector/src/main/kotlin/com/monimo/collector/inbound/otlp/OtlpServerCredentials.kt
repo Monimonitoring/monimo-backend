@@ -18,8 +18,8 @@ internal fun serverCredentialsOf(tls: OtlpGrpcProperties.Tls): ServerCredentials
     if (tls.clientAuth == OtlpGrpcProperties.ClientAuth.NONE) return InsecureServerCredentials.create()
 
     val files = mapOf(
-        "수집기 신분증(server-certificate)" to tls.serverCertificate,
-        "수집기 열쇠(server-key)" to tls.serverKey,
+        "Collector 신분증(server-certificate)" to tls.serverCertificate,
+        "Collector 열쇠(server-key)" to tls.serverKey,
         "기관 인증서(ca-certificate)" to tls.caCertificate,
     )
     val missing = files.filter { (_, path) -> path.isNullOrBlank() || !File(path).canRead() }

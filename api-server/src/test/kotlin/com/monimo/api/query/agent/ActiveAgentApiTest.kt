@@ -73,7 +73,7 @@ class ActiveAgentApiTest(
 
     val range = "from=$t0&to=${t0.plusSeconds(60)}"
 
-    Given("탐지가 agents/active 를 부를 때") {
+    Given("Detector 가 agents/active 를 부를 때") {
         When("service_name 없이 구간만 주면") {
             val response = get(range)
             val rows = json(response)["data"]

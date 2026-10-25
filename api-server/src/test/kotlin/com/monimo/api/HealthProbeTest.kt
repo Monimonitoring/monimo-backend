@@ -33,7 +33,7 @@ class HealthProbeTest(
     val rest = TestRestTemplate()
     fun get(url: String) = rest.getForEntity(url, String::class.java)
 
-    Given("API 서버가 떠 있고 PostgreSQL 에 붙어 있다") {
+    Given("API server 가 떠 있고 PostgreSQL 에 붙어 있다") {
         When("업무 포트의 /livez · /readyz 를 토큰 없이 부르면") {
             val livez = get("$business/livez")
             val readyz = get("$business/readyz")

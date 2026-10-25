@@ -71,7 +71,7 @@ class LogSeverityTest : BehaviorSpec({
             )
         }
 
-        Then("규약 안의 숫자 24개가 내는 이름은 모두 이 표에 있다 (하한 비교가 그 번호를 쓴다)") {
+        Then("규약 안의 숫자 24개가 내는 이름은 모두 이 표에 있다 (Minimum log level 비교가 그 번호를 쓴다)") {
             (1..24).map { LogSeverity.nameOf(it, "") }.toSet() shouldBe LogSeverity.FIRST_NUMBER.keys
         }
     }

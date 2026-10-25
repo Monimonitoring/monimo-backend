@@ -21,7 +21,7 @@ class CollectorApplicationTest(
     kafkaAdmin: KafkaAdmin,
 ) : BehaviorSpec({
 
-    Given("수집기 애플리케이션") {
+    Given("Collector 애플리케이션") {
         When("스프링 컨텍스트를 띄우면") {
             val name = environment.getProperty("spring.application.name")
 

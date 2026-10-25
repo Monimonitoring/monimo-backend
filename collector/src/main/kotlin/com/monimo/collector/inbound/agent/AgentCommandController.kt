@@ -74,7 +74,7 @@ class AgentCommandController(
         private val UNAUTHORIZED: ResponseEntity<Any> =
             ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("code" to "UNAUTHORIZED", "message" to "토큰이 없거나 틀렸습니다."))
         private val NOT_REACHABLE: ResponseEntity<Any> =
-            ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(mapOf("code" to "AGENT_NOT_REACHABLE", "message" to "이 수집기에 연결된 에이전트가 아닙니다."))
+            ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(mapOf("code" to "AGENT_NOT_REACHABLE", "message" to "이 Collector 에 연결된 에이전트가 아닙니다."))
 
         // 설정이 비어 있으면 어떤 값도 통과시키지 않는다 (문이 닫힌다). 길이가 달라도 시간이 같도록 상수 시간 비교 (API server InternalTokenFilter 와 같은 규칙)
         internal fun matches(expected: String, presented: String?): Boolean =

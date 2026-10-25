@@ -54,7 +54,7 @@ object LogSeverity {
         in 13..16 -> WARN
         in 17..20 -> ERROR
         in 21..24 -> FATAL
-        else -> null // 0 = 등급 없음. 규약 밖의 값(음수 · 25 이상)도 여기로 온다
+        else -> null // 0 = severity 없음. 규약 밖의 값(음수 · 25 이상)도 여기로 온다
     }
 
     // 숫자가 없을 때만 쓴다. 우리가 붙이는 OTel Java 에이전트는 늘 숫자를 채우므로, 이 길은 직접 OTLP 를 만들어

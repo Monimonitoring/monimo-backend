@@ -308,3 +308,37 @@ Slack 경보       → 팀 Slack 채널 (사람)
 - 화면 메뉴를 영어로 바꾼 뒤 팀원 · 멘토가 한국어 메뉴가 낫다고 하면 메뉴만 되돌린다 (문서 이름은 그대로)
 - Slack 경보를 키워드로 거르는 설정이 나오면 그 키워드를 새 이름으로 바꾼다
 ```
+
+---
+
+## 9. 구현과 확인 (2026-10-26)
+
+### 한 것
+
+| 무엇 | 어떻게 |
+|---|---|
+| 일괄 치환 | 뜻이 하나인 조어 + 「알림 서비스」 + 시드 이름 다섯 + 「자기 감시(B평면)」. **코드 줄의 주석 앞부분만** 바꿨다 (`#240` 과 반대). backend 132 · shop 8 · deploy 4 · web 39 · watchdog 18 곳 |
+| 문맥 수정 | 하한 → Minimum log level · 묶음 → System (알림 그룹핑은 「그룹」) · 로그 등급 → severity · 모듈을 가리키는 탐지 → Detector · 관통 → E2E. backend 65 · deploy 2 · web 5 · watchdog 3 줄 |
+| watchdog 테스트 | 124 · 125 줄은 새 글자, 108 줄(없어야 하는 글자)은 `"Detector"` · `"Collector"` 로 : 그대로 두면 아무것도 검사하지 않는다 |
+| 문서 | glossary 두 줄(코드 안 문자열 · 응답 메시지 · 로그도 바꿨다) · README 시드 한 줄(`DO NOTHING` 이라 볼륨을 비워야 새 이름) · AGENTS §5 · §6 |
+
+### 그대로 둔 것
+
+- 보통 뜻의 「알림」 : 「머지 알림 보내기」(네 레포 `slack-notify.yml`) · 발화 알림 문구 · 「알림 채널」 · 「알림 발송 이력」
+- 사람 파트 이름 · 지표 이름 · 에러 `code` · URL · 환경변수 · `V*.sql`
+- (덧) `#240` 이 빠뜨린 줄 끝 주석 네 곳(「등급」 셋 · 「다른 탐지 인스턴스」)은 이번에 같이 고쳤다 : `LogRow.kt` · `OtlpExportServices.kt` · `LogSeverity.kt` · `AlertStateMachine.kt`
+
+### 확인
+
+| 확인 | 값 |
+|---|---|
+| 바뀐 줄이 주석 밖인가 (일괄 · 문맥 둘 다, 기계 검사) | 다섯 레포 모두 주석 줄 0 (줄 끝 주석 네 곳은 위 「덧」 으로 일부러) |
+| 옛 용어(수집기 · 적재 처리기 · 파수꾼 · 서버맵 · 인스펙터 · 꼬리표 · 평면 · 하한 · 관통 · 명부)가 코드 안 문자열에 | 0 |
+| backend `./gradlew build` | 통과, 테스트 **870 건 실패 0** |
+| shop `./gradlew test` · web `build` + `test` (51 건) · watchdog `pytest` (9 건) · deploy `bash -n` + `kustomize` | 전부 통과 |
+
+### 머지 뒤 남은 것
+
+- 노션 「API 명세」 의 응답 메시지 문구를 코드와 같게
+- backend · web 의 `.github/setup-labels.sh` 를 한 번 돌려 GitHub 라벨 설명 반영
+- web 메뉴가 바뀐다는 한 줄을 슬랙에

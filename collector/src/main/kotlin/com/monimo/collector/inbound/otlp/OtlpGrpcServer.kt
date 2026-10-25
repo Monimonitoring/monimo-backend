@@ -50,7 +50,7 @@ class OtlpGrpcServer(
             log.info("OTLP gRPC 수신 시작: 포트 {} · TLS 꺼짐(평문) · 손님 신분증 요구 none", started.port)
         } else {
             log.info(
-                "OTLP gRPC 수신 시작: 포트 {} · TLS 켜짐 · 손님 신분증 요구 {} · 수집기 신분증 {} · 수집기 열쇠 {} · 기관 인증서 {}" +
+                "OTLP gRPC 수신 시작: 포트 {} · TLS 켜짐 · 손님 신분증 요구 {} · Collector 신분증 {} · Collector 열쇠 {} · 기관 인증서 {}" +
                     " (파일은 기동 때 한 번 읽었다. 바꾸면 재시작)",
                 started.port, tls.clientAuth, tls.serverCertificate, tls.serverKey, tls.caCertificate,
             )

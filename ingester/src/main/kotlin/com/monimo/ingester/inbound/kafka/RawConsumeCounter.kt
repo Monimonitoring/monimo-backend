@@ -15,7 +15,7 @@ class RawConsumeCounter(registry: MeterRegistry) {
     // associateWith = 목록의 각 항목을 키로, 중괄호가 만든 값을 값으로 하는 map 을 만든다 (TRACES -> 계량기, ...)
     private val counters: Map<RawSignal, Counter> = RawSignal.entries.associateWith { signal ->
         Counter.builder(METRIC) // 이름은 셋 다 같고
-            .description("적재 처리기가 raw 토픽에서 꺼내 푼 건수 (스팬 · 메트릭 · 로그 레코드)")
+            .description("Ingester 가 raw 토픽에서 꺼내 푼 건수 (스팬 · 메트릭 · 로그 레코드)")
             .baseUnit("items")
             .tag("signal", signal.key) // 태그(signal=traces ...)로 구분한다
             .register(registry) // 등록해야 /actuator/metrics 에 보인다

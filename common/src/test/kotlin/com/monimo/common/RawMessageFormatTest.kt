@@ -34,11 +34,11 @@ class RawMessageFormatTest : BehaviorSpec({
                 RawSignal.entries.map { it.key } shouldBe listOf("traces", "metrics", "logs")
             }
 
-            Then("키 글자로 신호를 되찾을 수 있다 : 적재 처리기가 어느 protobuf 로 풀지 정하는 방법") {
+            Then("키 글자로 신호를 되찾을 수 있다 : Ingester 가 어느 protobuf 로 풀지 정하는 방법") {
                 RawSignal.entries.forEach { RawSignal.fromKey(it.key) shouldBe it }
             }
 
-            Then("모르는 키는 전용 예외다 : 적재 처리기가 독성으로 분류해 재시도하지 않는다 (ADR `#51`)") {
+            Then("모르는 키는 전용 예외다 : Ingester 가 독성으로 분류해 재시도하지 않는다 (ADR `#51`)") {
                 shouldThrow<UnknownRawKeyException> { RawSignal.fromKey("spans") }
             }
         }

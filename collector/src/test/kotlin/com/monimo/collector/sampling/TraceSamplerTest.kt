@@ -189,7 +189,7 @@ class TraceSamplerTest : BehaviorSpec({
         When("목록에 없는 이름으로 2개를 보내면") {
             val result = sampler.sample(requestFrom("stranger-app", span(), span()))
 
-            Then("기본 선으로 걸린다 : 묶음을 모르니 남의 묶음 값을 빌리지 않는다 (ADR #72)") {
+            Then("기본 선으로 걸린다 : System 을 모르니 남의 System 값을 빌리지 않는다 (ADR #72)") {
                 result.spanCount() shouldBe 0
             }
 
@@ -206,7 +206,7 @@ class TraceSamplerTest : BehaviorSpec({
                 registry.get("${TraceSampler.METRIC}.unknown_service").counter().count() shouldBe before
             }
 
-            Then("그 묶음의 선으로 걸린다") {
+            Then("그 System 의 선으로 걸린다") {
                 result.spanCount() shouldBe 1
             }
         }
@@ -242,14 +242,14 @@ class TraceSamplerTest : BehaviorSpec({
                 result.spanCount() shouldBe 2
             }
 
-            Then("남은 묶음의 서비스 이름이 모니모다 : resource 속성은 그대로 따라간다") {
+            Then("남은 System 의 서비스 이름이 모니모다 : resource 속성은 그대로 따라간다") {
                 result.resourceSpansCount shouldBe 1
                 serviceNameIn(result.getResourceSpans(0)) shouldBe "monimo-api-server"
             }
         }
     }
 
-    Given("같은 묶음의 서로 다른 서비스가 같은 trace_id 로 오면") {
+    Given("같은 System 의 서로 다른 서비스가 같은 trace_id 로 오면") {
         // 둘 다 shop System 이라 선은 0.5 하나다. 트레이스가 쪼개지지 않는 것이 ADR #53 의 약속
         val sampler = TraceSampler(
             SamplingProperties(),

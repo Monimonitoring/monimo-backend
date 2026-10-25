@@ -11,7 +11,7 @@ class AgentRegisterCounter(registry: MeterRegistry) {
 
     private val counters: Map<Outcome, Counter> = Outcome.entries.associateWith { outcome ->
         Counter.builder(METRIC)
-            .description("적재 처리기가 파드를 agents 표에 등록 · 갱신한 결과")
+            .description("Ingester 가 파드를 agents 표에 등록 · 갱신한 결과")
             .baseUnit("agents")
             .tag("outcome", outcome.tag)
             .register(registry)

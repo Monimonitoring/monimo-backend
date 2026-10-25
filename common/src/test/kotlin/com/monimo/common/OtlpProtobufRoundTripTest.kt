@@ -73,7 +73,7 @@ class OtlpProtobufRoundTripTest : BehaviorSpec({
                 }
             }
 
-            When("${signal.key} 의 resource 꼬리표를 보면") {
+            When("${signal.key} 의 resource Attribute 를 보면") {
                 Then("쇼핑몰 서비스 이름이 들어 있다 : 가짜 발신기 데이터가 아니라는 증거") {
                     attribute(signal, "service.name") shouldStartWith "shop-"
                 }
@@ -115,7 +115,7 @@ class OtlpProtobufRoundTripTest : BehaviorSpec({
             val records = ExportLogsServiceRequest.parseFrom(fixture(RawSignal.LOGS))
                 .resourceLogsList.flatMap { it.scopeLogsList }.flatMap { it.logRecordsList }
 
-            Then("등급 숫자(`severity_number`)가 들어 있다 : `#144` 가 정본으로 쓰는 칸") {
+            Then("severity 숫자(`severity_number`)가 들어 있다 : `#144` 가 정본으로 쓰는 칸") {
                 records.size shouldBeGreaterThan 0
                 records.all { it.severityNumber != SeverityNumber.SEVERITY_NUMBER_UNSPECIFIED } shouldBe true
             }

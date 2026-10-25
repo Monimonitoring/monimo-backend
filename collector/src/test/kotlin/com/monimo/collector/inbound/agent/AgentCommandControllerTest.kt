@@ -30,7 +30,7 @@ class AgentCommandControllerTest : BehaviorSpec({
                 mvc().finish(get("/agent/commands").param("service", "shop-order").param("instance", "i-1").header("X-Monimo-Agent-Token", "nope")) shouldBe 401
             }
         }
-        When("수집기에 토큰이 설정돼 있지 않으면 (문이 닫힘)") {
+        When("Collector 에 토큰이 설정돼 있지 않으면 (문이 닫힘)") {
             Then("맞는 척하는 빈 값도 401") {
                 mvc(AgentCommandProperties()).finish(get("/agent/commands").param("service", "s").param("instance", "i").header("X-Monimo-Agent-Token", "")) shouldBe 401
             }
@@ -55,7 +55,7 @@ class AgentCommandControllerTest : BehaviorSpec({
                 mvc().finish(post("/internal/thread-dump").contentType(MediaType.APPLICATION_JSON).content(body).header("X-Internal-Token", "agent")) shouldBe 401
             }
         }
-        When("이 수집기가 그 에이전트를 쥐고 있지 않으면") {
+        When("이 Collector 가 그 에이전트를 쥐고 있지 않으면") {
             Then("503 AGENT_NOT_REACHABLE") {
                 mvc().finish(post("/internal/thread-dump").contentType(MediaType.APPLICATION_JSON).content(body).header("X-Internal-Token", "internal")) shouldBe 503
             }

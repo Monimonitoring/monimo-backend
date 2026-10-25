@@ -38,7 +38,7 @@ class LogLevelFilter(
     // 버린 수를 등급 이름별로 센다. Minimum log level 미만 등급만 미리 등록하므로 가짓수가 등급 수로 묶인다
     private val droppedByLevel: Map<String, Counter> = LogSeverity.FIRST_NUMBER.filterValues { it < (threshold ?: 0) }.keys.associateWith { level ->
         Counter.builder(HealthCheckFilter.METRIC)
-            .description("로그 하한 미만이라 버린 로그 레코드 수")
+            .description("Minimum log level 미만이라 버린 로그 레코드 수")
             .baseUnit("records")
             .tag("reason", REASON_LOG_LEVEL)
             .tag("level", level)
@@ -47,10 +47,10 @@ class LogLevelFilter(
 
     init {
         if (threshold == null) {
-            log.info("로그 하한: 꺼짐 (min-level 이 비어 있어 로그를 버리지 않는다)")
+            log.info("Minimum log level: 꺼짐 (min-level 이 비어 있어 로그를 버리지 않는다)")
         } else {
             log.info(
-                "로그 하한: 등급이 {}({}) 미만인 로그 레코드를 버린다 (등급은 severity_number, 없거나 규약 밖이면 severity_text)",
+                "Minimum log level: severity 가 {}({}) 미만인 로그 레코드를 버린다 (severity 는 severity_number, 없거나 규약 밖이면 severity_text)",
                 properties.minLevel.uppercase(),
                 threshold,
             )

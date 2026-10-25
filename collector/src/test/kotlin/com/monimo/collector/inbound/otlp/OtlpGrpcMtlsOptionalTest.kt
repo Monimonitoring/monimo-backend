@@ -35,7 +35,7 @@ class OtlpGrpcMtlsOptionalTest(
 
     val ours = TestCerts.ours
 
-    Given("손님 신분증을 요청하되 없어도 받는 수집기 (optional)") {
+    Given("손님 신분증을 요청하되 없어도 받는 Collector (optional)") {
 
         When("신분증 없이 TLS 로만 붙는 손님이 보내면") {
             val before = counter.count(OtlpReceiveCounter.Signal.TRACES)

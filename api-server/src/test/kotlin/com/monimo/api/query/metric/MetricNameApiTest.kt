@@ -75,7 +75,7 @@ class MetricNameApiTest(
 
     fun names(response: ResponseEntity<String>) = json(response)["data"].map { it["metric_name"].asText() }
 
-    Given("인스펙터가 지표 추가 드롭다운을 열 때") {
+    Given("Inspector 가 지표 추가 드롭다운을 열 때") {
         When("서비스만 주면") {
             val response = get("service_name=mn-order")
             val data = json(response)["data"]

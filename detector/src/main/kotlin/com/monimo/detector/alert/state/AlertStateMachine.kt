@@ -30,7 +30,7 @@ sealed interface Transition {
 }
 
 enum class IgnoreReason {
-    DUPLICATE_BUCKET,     // 이미 반영한 버킷 (재시도 · 다른 탐지 인스턴스가 먼저 처리)
+    DUPLICATE_BUCKET,     // 이미 반영한 버킷 (재시도 · 다른 Detector 인스턴스가 먼저 처리)
     OUT_OF_ORDER_BUCKET,  // 이미 반영한 버킷보다 과거 (늦게 도착한 평가)
     STALE_RULE_VERSION,   // 지금보다 낮은 규칙 판으로 계산한 평가
 }
