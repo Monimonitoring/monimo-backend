@@ -1,9 +1,40 @@
 # monimo-backend
 
-수집기 · 적재 처리기 · API 서버 · 탐지 · 알림 5개 서비스와 공통 모듈을 담은 Kotlin Gradle 멀티모듈 레포
+**Pinpoint 처럼 Java 앱에 에이전트만 붙이면 트레이스 · 지표 · 로그를 모아 서비스 지도 · 경보까지 보여 주는 APM** 의 서버 쪽이다. OpenTelemetry Java Agent 를 그대로 받고, 수집 · 저장 · 조회 · 경보를 Kotlin 서비스 다섯으로 직접 만들었다.
+
+```
+Monitored app (쇼핑몰 4개 + OTel Java Agent)
+   │ OTLP gRPC 4317 · mTLS
+   ▼
+Collector ── 헬스체크 거르기 · System 별 샘플링 · Minimum log level ──▶ Kafka raw ──실패──▶ raw.dlq (30일)
+                                                                        │
+                                                                    Ingester ──▶ ClickHouse (spans · metrics · logs → 1분 · 1시간 롤업)
+                                                                                     │
+                                                       Web ◀── API server ◀──────────┘
+                                                   Detector (규칙 평가) ──▶ Notifier (Slack · 이메일 · 웹훅 · PagerDuty)
+Watchdog (스택 바깥 Lambda) : 카나리가 끝까지 도착하는지 본다 · Self-monitoring : 같은 에이전트를 우리 모듈 다섯에도 붙인다
+```
+
+| 숫자 | 값 | 근거 |
+|---|---|---|
+| 에이전트를 붙인 앱의 부담 | CPU 1코어 대비 **+1.4 ~ +2.1%p** · 메모리 **+80 ~ +141MB** (초당 주문 20건) | [shop 오버헤드 측정](https://github.com/Monimonitoring/monimo-shop/tree/develop/docs/seungjo/36-agent-overhead) · ADR `#56` |
+| 수집 지연 (요청 → ClickHouse 에 보이기까지) | 중앙 **2.65초** · p95 **5.1초** | `AGENTS.md` §6 (2026-10-06 로컬 29회) |
+| 남긴 설계 결정 | **73개** (채택 · 기각 · 사유 · 되돌리는 조건) | [`docs/design/01-decisions.md`](docs/design/01-decisions.md) |
+
+핵심 결정 다섯 (전체는 [설계 문서](docs/design/00-index.md), 용어는 [glossary](docs/design/glossary.md))
+
+- 에이전트는 직접 만들지 않고 **OTel Java Agent 기성품**을 쓴다 : ADR `#33`
+- Kafka `raw` 에는 **OTLP protobuf 바이트를 그대로** 싣고 메타는 헤더에 둔다 : ADR `#65`
+- 헬스체크 스팬은 **Collector 에서 버린다** : ADR `#50`
+- 샘플링 비율은 PG 에 두고 **System 안의 최댓값 하나**를 쓴다 : 요청 하나가 쪼개지지 않게 : ADR `#53` · `#72`
+- 에이전트 인증은 **mTLS 로 Collector 포트에서 직접** : ADR `#64`
+
+바로 켜 보기 : 아래 「로컬 실행 › 전체를 한 번에 켜기」 · 쿠버네티스 · ArgoCD 는 [monimo-deploy](https://github.com/Monimonitoring/monimo-deploy) · AI 와 일한 방식은 [`docs/seungjo/`](docs/seungjo/README.md)
+
+---
 
 - 기술: Kotlin · Java 17 · Spring Boot 3.x · Gradle
-- 상태: 파이프라인 앞 구간(수집기 → Kafka → 적재 처리기)과 인증 · 서비스 등록 · 조회 일부 · 경보 상태머신 · 발송 워커가 들어와 있다. ClickHouse 적재는 아직
+- 상태: 수집(Collector → Kafka → Ingester → ClickHouse) · 인증 · 서비스 등록 · 조회 · 경보 상태머신 · 발송 워커 · Self-monitoring 이 들어와 있다. 배포는 로컬 쿠버네티스 · ArgoCD 까지(monimo-deploy)
 - **작업을 시작하기 전에 [`AGENTS.md`](AGENTS.md) 를 먼저 읽는다.** 규칙 · 파트별 담당 · 지금까지 한 일 · 막혀 있는 것이 거기에 있다
 
 ## 폴더 구성
@@ -227,8 +258,8 @@ notifier 용 (bootRun 환경변수):
 | `monimo-backend/compose.yaml` | Kafka(토픽 2개) · ClickHouse(마이그레이션) · PostgreSQL(마이그레이션) | `monimo-dev` |
 | `monimo-backend/compose.yaml --profile collector` | 위 + 수집기 컨테이너 (`collector:4317` · `:8081` · 관리 `:18081`) | `monimo-dev` |
 | `monimo-backend/compose.yaml --profile ingester` | 위 + 적재 처리기 컨테이너 (`:8082` · 관리 `:18082`) | `monimo-dev` |
-| `monimo-shop/docker-compose.dev.yml` (예정) | 쇼핑몰 4개 + MySQL. OTel 에이전트는 `collector:4317` 로 보낸다 | `monimo-dev` (external) |
-| (없음) | api-server · detector · notifier 는 `bootRun` 또는 IDE 로 실행. 컨테이너 프로필은 구현 때 추가 | |
+| `monimo-shop/docker-compose.dev.yml` | 쇼핑몰 4개 + MySQL. OTel 에이전트는 `collector:4317` 로 보낸다 | `monimo-dev` (external) |
+| `monimo-backend/compose.yaml --profile api-server --profile detector --profile notifier` | 위 + API server · Detector · Notifier 컨테이너 (`bootRun` · IDE 로도 켤 수 있다, 호스트 포트가 겹치니 둘 중 하나) | `monimo-dev` |
 
 프로필은 겹쳐 쓸 수 있다: `--profile collector --profile ingester`. 같은 서비스를 IDE 로도 띄우면 호스트 포트가 겹치므로 둘 중 하나만 켠다.
 
