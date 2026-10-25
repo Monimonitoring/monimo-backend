@@ -113,8 +113,28 @@ Slack 경보       → 팀 Slack 채널 (사람)
 
 ## 3. 1차 질문 (사람 차례)
 
-- **Q.**
-  - A.
+- 승조가 2 를 읽고 정한 것 (2026-10-26, 원문은 `prompts.md`)
+  - ④ 화면 메뉴 : 「화면 메뉴는 영어로 수정하자」
+  - ③ API 응답 메시지 : 「API 응답 메시지도 연결된 collecter 이런식으로 바꾸면 될 거 같다」 (→ `Collector`)
+
+- **Q. 로그 문구는 예시가 뭐지?**
+  - A. Collector 가 띄울 때 · 동작 중에 찍는 줄이다. 옛 용어가 든 것은 **Collector 코드 안 일곱 줄**이 전부다
+
+| 어디 | 지금 찍히는 줄 | 언제 |
+|---|---|---|
+| `LogLevelFilter.kt:50` | `로그 하한: 꺼짐 (min-level 이 비어 있어 로그를 버리지 않는다)` | 기동 때 한 번 (INFO) |
+| `LogLevelFilter.kt:53` | `로그 하한: 등급이 INFO(9) 미만인 로그 레코드를 버린다 (…)` | 기동 때 한 번 (INFO) |
+| `OtlpGrpcServer.kt:53` | `OTLP gRPC 수신 시작: 포트 4317 · TLS 켜짐 · … · 수집기 신분증 … · 수집기 열쇠 …` | 기동 때 한 번 (INFO) |
+| `PostgresSamplingRateSource.kt:75` | `샘플링 비율 갱신 실패 : 묶음별 {monimo=0.5, shop=0.01} 유지 (…)` | PG 를 못 읽을 때 (WARN) |
+| `PostgresSamplingRateSource.kt:89` | `샘플링 비율 갱신 : 묶음별 {…} · 미등록 1.0 (서비스별 …)` | 비율이 바뀔 때 (INFO) |
+| `OtlpExportServices.kt:116` | `로그 하한에서 레코드 3건 전부 제외` | 요청마다 (DEBUG, 평소엔 안 찍힘) |
+| `OtlpExportServices.kt:120` | `로그 하한: 레코드 5건 중 2건만 남김` | 요청마다 (DEBUG, 평소엔 안 찍힘) |
+
+  - A. 바꾸면 이렇게 된다 : `Minimum log level: 꺼짐 …` · `… Collector 신분증 … · Collector 열쇠 …` · `샘플링 비율 갱신 : System 별 {…}`
+  - A. 이 줄을 글자로 찾는 곳
+    - 경보 규칙 · 대시보드 : 없다 (로그 경보 `#230` 은 아직 안 만들었다)
+    - 스크립트 : `check-pipeline.sh` · `check-wiring.sh` 가 실패할 때 「Collector 로그의 `OTLP gRPC 수신 시작` 줄을 보라」 고 **사람에게** 안내한다. 머리말 `OTLP gRPC 수신 시작` 은 옛 용어가 아니라 그대로 남는다
+    - 문서 : `docs/seungjo/206-sampling-per-system/research.md:238` · `236-log-floor-text-severity/research.md` 가 이 줄을 **인용**했다. 로그를 바꾸면 인용은 그때의 기록으로 둔다
 
 ---
 
