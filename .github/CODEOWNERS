@@ -7,7 +7,7 @@
 # 파트 경계를 넘는 변경은 PR 본문과 AGENTS.md §5 · §6 로 공유하고, 봐야 할 사람은 직접 리뷰어로 추가한다.
 * @SeungJo-02
 
-# 수집 파트 (수집기 · 적재 처리기) + 배포 (CI · compose · 이미지)
+# 수집 파트 (Collector · Ingester) + 배포 (CI · compose · 이미지)
 /collector/ @SeungJo-02
 /ingester/ @SeungJo-02
 /db/postgres/ingest/ @SeungJo-02
@@ -19,13 +19,13 @@
 /.dockerignore @SeungJo-02
 /.env.example @SeungJo-02
 
-# 알림 파트 (탐지 · 알림 · 경보 규칙 / 채널 / 이벤트 API)
+# 알림 파트 (Detector · Notifier · 경보 규칙 / 채널 / 이벤트 API)
 /detector/ @ukongee
 /notifier/ @ukongee
 /api-server/src/main/kotlin/com/monimo/api/alert/ @ukongee
 /db/postgres/alert/ @ukongee
 
-# 조회 파트 (서버맵 · 스캐터 · 콜트리 · 인스펙터 조회 API)
+# 조회 파트 (Service map · 스캐터 · 콜트리 · Inspector 조회 API)
 /api-server/src/main/kotlin/com/monimo/api/query/ @hyl1115
 
 # 인증 설정 파트 (로그인 · JWT · 역할 · 서비스 등록 · 샘플링 설정 · 스레드 덤프 팬아웃)

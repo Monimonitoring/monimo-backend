@@ -32,7 +32,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 
-// 가짜 알림 서비스. 받은 요청(토큰 · 본문)을 남기고, status · body 로 정한 대로 답한다. down 이면 문을 닫는다
+// 가짜 Notifier. 받은 요청(토큰 · 본문)을 남기고, status · body 로 정한 대로 답한다. down 이면 문을 닫는다
 class FakeNotifier : AutoCloseable {
     data class Received(val token: String?, val body: String)
 
@@ -59,13 +59,13 @@ class FakeNotifier : AutoCloseable {
 class ChannelTestTestConfig {
     @Bean(destroyMethod = "close") fun fakeNotifier() = FakeNotifier()
 
-    // 실제 HTTP 클라이언트를 쓰되 주소만 가짜 알림 서비스로 돌린다
+    // 실제 HTTP 클라이언트를 쓰되 주소만 가짜 Notifier로 돌린다
     @Bean @Primary
     fun testChannelTestClient(fake: FakeNotifier, props: NotifierClientProperties, objectMapper: ObjectMapper): ChannelTestClient =
         HttpChannelTestClient(props.copy(baseUrl = fake.baseUrl), "test-internal-token", objectMapper)
 }
 
-// 채널 시험 발송(#13)을 실제 HTTP 로 돈다. 알림 서비스는 가짜, PG 는 Testcontainers
+// 채널 시험 발송(#13)을 실제 HTTP 로 돈다. Notifier는 가짜, PG 는 Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestInfraConfig::class, ChannelTestTestConfig::class)
 @TestPropertySource(properties = ["monimo.notifier.test-cooldown=1h"])

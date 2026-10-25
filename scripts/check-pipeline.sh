@@ -190,7 +190,7 @@ dup=$(ch_query "SELECT count() - uniqExact(trace_id, span_id) FROM monimo.spans 
 [ "$dup" = "0" ] || fail "spans 에 중복 ${dup}줄 (같은 trace_id·span_id 가 두 번 들어왔다). ClickHouse 중복 제거 기억이 못 걸렀다는 뜻이다 : db/clickhouse 의 non_replicated_deduplication_window 설정과 적재 처리기 재시작 이력을 보라"
 ok "spans 중복 0줄"
 
-# ② spans(SERVER) ↔ service_health_1m : 탐지가 읽는 집계다. MV 조건(span_kind = 'SERVER')을 그대로 맞춘다
+# ② spans(SERVER) ↔ service_health_1m : Detector 가 읽는 집계다. MV 조건(span_kind = 'SERVER')을 그대로 맞춘다
 src=$(ch_query "SELECT count() FROM monimo.spans WHERE span_kind = 'SERVER' AND $RECENT") || fail "spans SERVER 조회 실패"
 agg=$(ch_query "SELECT countMerge(cnt) FROM monimo.service_health_1m WHERE ts_min >= $FROM_TS") || fail "service_health_1m 조회 실패"
 [ "$src" = "$agg" ] || fail "집계가 원본과 다르다: spans(SERVER) ${src}줄인데 service_health_1m 은 ${agg}건으로 센다. 집계만 중복되면 에러율 · P95 가 틀어진다 (탐지가 이 표를 읽는다)"

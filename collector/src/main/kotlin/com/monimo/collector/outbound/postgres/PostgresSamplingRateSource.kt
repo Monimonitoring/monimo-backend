@@ -42,7 +42,7 @@ class PostgresSamplingRateSource(
     private val snapshot = AtomicReference(SamplingRates.unread(properties.ratio))
 
     // 이 설계의 약속이 "PG 가 죽어도 수집은 돌고 비율만 낡는다" 인데, 낡았다는 사실을 로그 한 줄로만
-    // 알 수 있으면 아무도 모른다. 탐지 · 알림이 걸 수 있게 센다 (헬스체크 필터 · 미등록 카운터와 같은 기준)
+    // 알 수 있으면 아무도 모른다. Detector · Notifier 가 걸 수 있게 센다 (헬스체크 필터 · 미등록 카운터와 같은 기준)
     private val refreshed = counter(registry, "success", "샘플링 비율 갱신에 성공한 횟수")
     private val failed = counter(registry, "failure", "샘플링 비율 갱신에 실패한 횟수")
 

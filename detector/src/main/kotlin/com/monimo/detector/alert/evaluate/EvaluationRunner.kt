@@ -80,7 +80,7 @@ class EvaluationRunner(
     }
 
     // 켜진 규칙 중 서비스 단위(5XX · 4XX · P95)만. 제외된 서비스는 빠진다.
-    // alert_rules 는 API server 표(ADR #39: 탐지는 읽기만), applications 는 서비스 이름 · UUID 를 얻으려고 읽는다
+    // alert_rules 는 API server 표(ADR #39: Detector 는 읽기만), applications 는 서비스 이름 · UUID 를 얻으려고 읽는다
     private fun loadTargets(): List<EvaluationTarget> = jdbc.query(
         """
         SELECT r.id, r.alert_rule_uuid, r.version, r.name, a.name AS service_name, a.application_uuid,

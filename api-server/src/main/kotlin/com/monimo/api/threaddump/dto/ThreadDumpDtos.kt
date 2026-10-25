@@ -29,7 +29,7 @@ data class ThreadDumpSummary(
     val threadCount: Int,
 )
 
-// 탐지가 경보 때 부르는 자동 덤프 요청 (#164). requestedBy 는 없으면 "detector"
+// Detector 가 경보 때 부르는 자동 덤프 요청 (#164). requestedBy 는 없으면 "detector"
 data class AutoThreadDumpRequest(
     val agentUuid: UUID,
     val requestedBy: String? = null,

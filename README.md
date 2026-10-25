@@ -187,7 +187,7 @@ API 명세 §0-2 의 권한 4종을 `common/security/SecurityConfig` 가 경로�
 @SpringBootTest
 @Import(TestInfraConfig::class)
 class CollectorApplicationTest(environment: Environment) : BehaviorSpec({
-    Given("Collector 애플리케이션") {
+    Given("수집기 애플리케이션") {
         When("스프링 컨텍스트를 띄우면") {
             val name = environment.getProperty("spring.application.name")
             Then("애플리케이션 이름이 collector 로 잡힌다") {

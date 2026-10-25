@@ -53,6 +53,6 @@ class HttpServiceHealthClient(
 
     private companion object {
         const val PATH = "/api/v1/internal/service-health"
-        const val STEP_SEC = 60  // 1분 버킷. 창(window_sec) 합산은 탐지가 직접 한다
+        const val STEP_SEC = 60  // 1분 버킷. 창(window_sec) 합산은 Detector 가 직접 한다
     }
 }

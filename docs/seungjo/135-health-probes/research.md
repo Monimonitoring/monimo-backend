@@ -49,7 +49,7 @@
 |---|---|
 | **건드리는 것** | `collector` · `ingester` 의 `application.yml`, 두 모듈 테스트, `compose.yaml`(관리 포트 공개 · 헬스체크 주소), `check-pipeline.sh` · `check-wiring.sh`, `api-spec.md`, `AGENTS.md` §5 · §6, `01-decisions.md` |
 | **건드리지 않는 것** | **`api-server`**(팀 규약이 재범 몫으로 정했다) · `detector` · `notifier`(이미 켰다) · 업무 포트 번호 · 쇼핑몰 · Watchdog 레포 |
-| **이 이슈 범위 밖 (후속)** | 쿠버네티스 매니페스트에 probe 를 적는 일(배포 레포가 빈 폴더다) · `startupProbe` 와 `preStop` 값 결정(실제 기동 시간을 재야 한다) · API server(재범) · Detector · Notifier에 추가 주소 열기(유경) · Watchdog(규약이 제외했다) · Collector 가 거르는 헬스체크 목록에 probe 주소 더하기(지금은 불필요) |
+| **이 이슈 범위 밖 (후속)** | 쿠버네티스 매니페스트에 probe 를 적는 일(배포 레포가 빈 폴더다) · `startupProbe` 와 `preStop` 값 결정(실제 기동 시간을 재야 한다) · API server(재범) · Detector · Notifier 에 추가 주소 열기(유경) · Watchdog(규약이 제외했다) · Collector 가 거르는 헬스체크 목록에 probe 주소 더하기(지금은 불필요) |
 
 **조사 들어가기 전에 내가 알던 것 (세 줄)**
 

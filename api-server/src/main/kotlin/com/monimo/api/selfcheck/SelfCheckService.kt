@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import javax.sql.DataSource
 
-// PG 두드림 + 탐지 · Collector 낡음 게이지. Watchdog 이 밖에서 "PG 가 죽었다 · 탐지가 멈췄다" 를 볼 유일한 문 (#226, #208 ⑥)
+// PG 두드림 + Detector · Collector 낡음 게이지. Watchdog 이 밖에서 "PG 가 죽었다 · Detector 가 멈췄다" 를 볼 유일한 문 (#226, #208 ⑥)
 @Service
 class SelfCheckService(
     dataSource: DataSource,
@@ -54,7 +54,7 @@ class SelfCheckService(
     }
 
     private companion object {
-        // 탐지 · Collector 가 ADR #54 로 내놓는 "마지막 성공 뒤 흐른 초"
+        // Detector · Collector 가 ADR #54 로 내놓는 "마지막 성공 뒤 흐른 초"
         const val DETECTOR_GAUGE = "monimo.detector.evaluation.age"
         const val COLLECTOR_GAUGE = "monimo.collector.sampling.refresh.age"
     }

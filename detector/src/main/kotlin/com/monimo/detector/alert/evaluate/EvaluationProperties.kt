@@ -25,7 +25,7 @@ data class EvaluationProperties(
         val lookback: Duration = Duration.ofMinutes(3),
         // DOWN 이 된 지 이만큼 지난 키는 감시 대상에서 뺀다. 재시작마다 키가 새로 생겨 옛 키가 쌓이지 않게 (표에서 지우지는 않는다)
         val forgetAfter: Duration = Duration.ofHours(24),
-        // agents.status 를 UP/DOWN 으로 맞출지 (ADR #39: 탐지가 생존 상태 갱신)
+        // agents.status 를 UP/DOWN 으로 맞출지 (ADR #39: Detector 가 생존 상태 갱신)
         val updateStatus: Boolean = true,
     )
 

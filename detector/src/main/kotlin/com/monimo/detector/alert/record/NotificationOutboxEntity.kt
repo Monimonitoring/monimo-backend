@@ -14,7 +14,7 @@ import java.time.Instant
 
 enum class OutboxTransition { FIRING, RESOLVED }
 
-// notification_outbox (제안 A안). 탐지는 PENDING 으로 넣기만 한다. 이후 상태 컬럼은 알림이 바꾼다
+// notification_outbox (제안 A안). Detector 는 PENDING 으로 넣기만 한다. 이후 상태 컬럼은 Notifier 가 바꾼다
 @Entity
 @Table(name = "notification_outbox")
 class NotificationOutboxEntity(

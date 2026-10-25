@@ -10,7 +10,7 @@ data class SelfCheckProperties(
     val collectorManagementUrl: String = "http://localhost:18081",
     // PG 두드림이 이보다 오래 걸리면 실패로 친다. Watchdog 의 호출 기한(10초) 안에 답이 가야 해서 그 절반
     val postgresTimeout: Duration = Duration.ofSeconds(5),
-    // 낡음 게이지가 이보다 크면 멈춘 것으로 친다. 탐지는 1분 주기 3번, Collector 는 30초 주기 6번
+    // 낡음 게이지가 이보다 크면 멈춘 것으로 친다. Detector 는 1분 주기 3번, Collector 는 30초 주기 6번
     val detectorMaxAge: Duration = Duration.ofSeconds(180),
     val collectorMaxAge: Duration = Duration.ofSeconds(180),
     val gaugeTimeout: Duration = Duration.ofSeconds(2),

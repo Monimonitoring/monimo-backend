@@ -39,11 +39,13 @@
 | 옛 이름 | 새 이름 | 뜻 | 코드 위치 |
 |---|---|---|---|
 | 꼬리표 | **Attribute** | 스팬 · 지표 · 로그에 붙는 key-value | `attributes` 컬럼 · [OTel Glossary](https://opentelemetry.io/docs/concepts/glossary/) |
-| 등급 (로그) | **Severity** · log level | 로그 심각도. 번호(`severity_number`)가 정본 | `common/log/LogSeverity.kt` · ADR `#59` |
+| 등급 (로그) | **severity** · log level (문장 안에서는 소문자) | 로그 심각도. 번호(`severity_number`)가 정본 | `common/log/LogSeverity.kt` · ADR `#59` |
 | 로그 하한 · 하한 | **Minimum log level** | 이 레벨 미만 로그는 Collector 가 Kafka 전에 버린다 | `MONIMO_COLLECTOR_LOG_MIN_LEVEL` · `collector/filter/LogLevelFilter.kt` |
 | 묶음 | **System** | 샘플링 비율을 같이 쓰는 서비스 무리 (`shop` · `monimo`) | `applications.system` · ADR `#72` · [Backstage System](https://backstage.io/docs/features/software-catalog/system-model/) |
 | 고아 스팬 | **orphan span** | 부모 스팬이 저장되지 않은 스팬. 현업에 정해진 이름은 없다 | |
 | 관통 · 관통 확인 | **E2E 확인** (end-to-end) | 한쪽 끝에서 보낸 신호가 저장소까지 도착하는지 본다 | `scripts/check-pipeline.sh` |
+| 묶음 (System 이 아닌 뜻) | 뜻마다 다른 말 | 인증서 → 「두 벌」 · Kafka · ClickHouse 로 한 번에 보내는 단위 → `batch` · DB 연결 → 「연결 풀」 · 경보 그룹핑 → 「그룹」 · 결정 번호 → 「항목 N」 · deploy 적용 순서 → 「단계」 | |
+| 컬렉터 | **Collector** | 소리대로 적은 옛 표기 | |
 
 ## 일부러 안 바꾼 것
 
@@ -51,5 +53,6 @@
 |---|---|
 | 스팬 · 트레이스 · 샘플링 | OpenTelemetry 표준 용어 |
 | 롤업 · 카나리 · 스레드 덤프 | 현업 용어(rollup · canary · thread dump)를 소리대로 적은 것. 카나리는 [AWS CloudWatch Synthetics](https://docs.amazonaws.cn/en_us/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Canaries.html) 와 같은 뜻(합성 요청)이다 |
+| 알림 파트 · 탐지 파트 (사람 파트 이름) | 모듈이 아니라 팀 안의 담당 이름이다 (`AGENTS.md` §4) |
 | 알림 · 탐지 · 등급 (보통 말) | 「알림 60초」 · 「이상 탐지」 처럼 모듈이 아닌 뜻으로 쓰일 때는 그대로 둔다 |
 | `db/*/V*.sql` 안의 우리 말 | Flyway 가 이미 적용한 파일이라 한 글자라도 바꾸면 checksum 이 어긋나 기동이 멈춘다 |

@@ -92,7 +92,7 @@ class PostgresAgentRegistry(
     // 아는 파드의 주소를 고친다. 주소를 모르는 목격은 애초에 여기까지 오지 않는다(needsWrite).
     //
     // 서비스가 제외됐는지(deleted_at)는 보지 않는다 : 줄이 이미 있는 것을 고치는 일이고,
-    // 이 표의 다른 갱신자(탐지의 status 변경)도 그 조건을 보지 않는다. 새 줄을 만드는 쪽만 그 조건을 본다
+    // 이 표의 다른 갱신자(Detector 의 status 변경)도 그 조건을 보지 않는다. 새 줄을 만드는 쪽만 그 조건을 본다
     private fun refreshIp(sighting: AgentSighting) {
         val ip = sighting.ip ?: return
         val updated = repository.updateIp(agentKey = sighting.agentKey, ip = ip, now = sighting.seenAt)

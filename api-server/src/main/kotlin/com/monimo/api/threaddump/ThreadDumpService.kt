@@ -40,7 +40,7 @@ class ThreadDumpService(
         return response(row, agent.agentUuid)
     }
 
-    // 탐지가 경보 때 부르는 자동 덤프 (#164). 파드당 쿨다운 안에 한 번만 — 메모리 집합이 같은 인스턴스의 동시 호출을,
+    // Detector 가 경보 때 부르는 자동 덤프 (#164). 파드당 쿨다운 안에 한 번만 — 메모리 집합이 같은 인스턴스의 동시 호출을,
     // CH 의 최근 덤프가 인스턴스가 여럿이거나 재시작된 뒤를 막는다. 사람이 방금 뜬 덤프도 센다 (덤프가 쌓이는 것을 막는 게 목적)
     fun autoRequest(agentUuid: UUID, requestedBy: String?): AutoThreadDumpResponse {
         val agent = findAgent(agentUuid)

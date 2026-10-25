@@ -353,7 +353,7 @@ services:
       # 스레드 덤프 팬아웃이 부르는 Collector, 채널 시험이 부르는 알림. compose 서비스 이름으로
       MONIMO_COLLECTOR_URLS: http://collector:8081
       MONIMO_NOTIFIER_URL: http://notifier:8084
-      # 자기 점검 문(#226)이 읽는 탐지 · Collector 관리 포트 (낡음 게이지, ADR #54)
+      # 자기 점검 문(#226)이 읽는 Detector · Collector 관리 포트 (낡음 게이지, ADR #54)
       MONIMO_DETECTOR_MANAGEMENT_URL: http://detector:18083
       MONIMO_COLLECTOR_MANAGEMENT_URL: http://collector:18081
       MONIMO_INTERNAL_TOKEN: ${MONIMO_INTERNAL_TOKEN:-local-internal-token}

@@ -108,7 +108,7 @@ class AgentDownRunner(
         Timestamp.from(now.minus(props.agentDown.forgetAfter)),
     )
 
-    // 살아 있는 키는 UP, 나머지는 DOWN. 바뀐 줄만 쓴다 (agents 는 Ingester 가 등록하고 탐지가 생존 상태를 갱신 — ADR #39)
+    // 살아 있는 키는 UP, 나머지는 DOWN. 바뀐 줄만 쓴다 (agents 는 Ingester 가 등록하고 Detector 가 생존 상태를 갱신 — ADR #39)
     private fun syncStatus(agents: List<Agent>, alive: List<AgentSignal>, now: Instant): Int {
         val aliveKeys = alive.mapTo(HashSet()) { it.agentKey }
         val changes = agents.mapNotNull { a ->

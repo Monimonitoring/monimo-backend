@@ -3,7 +3,7 @@ package com.monimo.detector.alert.state
 import java.time.Instant
 import java.util.UUID
 
-// 평가 상태 (탐지 내부 전용). 공개 API 의 경보 state 는 FIRING / RESOLVED 두 개뿐이고, 이 값은 밖으로 내보내지 않는다
+// 평가 상태 (Detector 내부 전용). 공개 API 의 경보 state 는 FIRING / RESOLVED 두 개뿐이고, 이 값은 밖으로 내보내지 않는다
 enum class EvaluationPhase {
     NORMAL,   // 위반 없음
     PENDING,  // 위반 중이지만 아직 N회에 못 미침 → 사건 없음

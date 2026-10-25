@@ -25,7 +25,7 @@ interface AgentRepository : JpaRepository<AgentEntity, Long> {
     //   주소 글자에서 `::ffff:` 군더더기를 떼는 일은 Collector 가 한다 (ADR `#63`)
     //
     // 돌려주는 값은 넣은 줄 수다. 0 이면 "이미 있음" 또는 "모르는 서비스" 두 경우다.
-    // ADR #42 가드레일 ①: 선점 · 충돌 처리는 JPA 에 맡기지 않고 SQL 을 그대로 드러낸다 (탐지의 insertIfAbsent 와 같은 방식)
+    // ADR #42 가드레일 ①: 선점 · 충돌 처리는 JPA 에 맡기지 않고 SQL 을 그대로 드러낸다 (Detector 의 insertIfAbsent 와 같은 방식)
     // 쓰는 쿼리는 트랜잭션 안에서 돌아야 한다. 여기에 붙이면 스프링 데이터가 호출마다 열어 준다.
     // 부르는 쪽(PostgresAgentRegistry)에 붙이면 같은 클래스 안 호출이라 프록시를 안 거쳐 트랜잭션이 안 열린다
     @Transactional
@@ -58,7 +58,7 @@ interface AgentRepository : JpaRepository<AgentEntity, Long> {
     // 부르는 쪽 캐시가 이미 걸러 주지만 캐시를 비운 직후(상한 초과)에는 모든 파드가 한 번씩 미스라 그때 쓰기가 몰린다.
     // `=` 가 아니라 IS DISTINCT FROM 인 이유는 NULL 비교다 : 옛 줄은 ip 가 NULL 이고 `NULL <> '1.2.3.4'` 는 참이 아니라 NULL 이다.
     //
-    // updated_at 을 같이 고치는 이유 : 이 표의 다른 갱신자(탐지의 status 변경)가 이미 그렇게 한다. 모양을 하나로 맞췄다.
+    // updated_at 을 같이 고치는 이유 : 이 표의 다른 갱신자(Detector 의 status 변경)가 이미 그렇게 한다. 모양을 하나로 맞췄다.
     // 돌려주는 값은 고친 줄 수다. 0 이면 "주소가 그대로" 또는 "그 파드가 없음" 이다
     @Transactional
     @Modifying

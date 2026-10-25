@@ -16,7 +16,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
-// alert_rules 표. 주인: API server. 탐지는 읽기만 한다
+// alert_rules 표. 주인: API server. Detector 는 읽기만 한다
 @Entity
 @Table(name = "alert_rules")
 class AlertRule(
@@ -52,7 +52,7 @@ class AlertRule(
     @Column(nullable = false)
     var enabled: Boolean,
 
-    // 조건(metric_kind · operator · threshold · window_sec)을 고칠 때마다 +1. 탐지가 수정 전 조건으로 낸 평가를 버리는 기준
+    // 조건(metric_kind · operator · threshold · window_sec)을 고칠 때마다 +1. Detector 가 수정 전 조건으로 낸 평가를 버리는 기준
     @Column(nullable = false)
     var version: Int,
 

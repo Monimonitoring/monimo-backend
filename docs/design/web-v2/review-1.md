@@ -73,7 +73,7 @@ API 50행 중 미매핑(없음)은 0건이고 14건이 부분 충족이다. 화�
 
 **용어·배지** — 대체로 잘 통일됐다. FIRING/RESOLVED, UP/DOWN/UNKNOWN, SUCCESS/FAIL, SLACK/EMAIL/WEBHOOK/PAGERDUTY, CRITICAL/WARNING/INFO가 색·모양까지 일치한다. 예외 둘:
 
-1. Watchdog의 서비스 상태 배지만 `READY`(영문 enum)와 `재시도 중`(한국어 서술)을 섞어 쓴다. 다른 화면이 전부 영문 enum이므로 `READY` / `NOT_READY`로 맞추고, "알림 실패 2건" 칩이 사유를 설명하게 하면 된다. (M)
+1. Watchdog 의 서비스 상태 배지만 `READY`(영문 enum)와 `재시도 중`(한국어 서술)을 섞어 쓴다. 다른 화면이 전부 영문 enum이므로 `READY` / `NOT_READY`로 맞추고, "알림 실패 2건" 칩이 사유를 설명하게 하면 된다. (M)
 2. AlertChannels의 테스트 결과는 `SUCCESS/FAILED`, Alerts의 발송 이력은 `SUCCESS/FAIL`이다. 이건 api-spec #19와 #24가 실제로 다른 enum이라 **디자인이 맞다**. 다만 사용자에게는 오타로 보이므로 채널 카드 캡션에 "채널 테스트 결과" / 드로어에 "발송 이력 결과"라고 문맥을 붙여두면 오해가 없다. (L)
 
 **현재 시각** — 화면마다 다르다. (M)
@@ -129,12 +129,12 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 
 ## E. UX 논리
 
-**왕복 링크** — Service map→트랜잭션→트레이스→Inspector 축은 잘 이어진다. TraceDetail이 "이 파드 Inspector 보기"와 "트랜잭션 목록" 버튼을 양쪽에 달았고, Errors·Logs 표의 trace_id 8~10개가 모두 TraceDetail로 간다. Inspector는 "덤프 이력"으로 ThreadDump에 닿는다. 끊긴 곳은 넷이다.
+**왕복 링크** — Service map→트랜잭션→트레이스→Inspector 축은 잘 이어진다. TraceDetail이 "이 파드 Inspector 보기"와 "트랜잭션 목록" 버튼을 양쪽에 달았고, Errors·Logs 표의 trace_id 8~10개가 모두 TraceDetail로 간다. Inspector 는 "덤프 이력"으로 ThreadDump에 닿는다. 끊긴 곳은 넷이다.
 
 1. **Login의 "로그인" 버튼에 링크가 없다.** Login에서 나가는 유일한 링크가 "관리자에게 문의" → Settings.dc.html인데, 이건 의미도 어긋난다(비밀번호를 잊은 VIEWER가 관리자용 설정 화면에 떨어진다). 클릭 데모의 출발점이 막혀 있으므로 로그인 버튼을 ServerMap.dc.html로 잇고, 문의 링크는 `mailto:` 또는 비링크 텍스트로 바꿀 것. (H)
 2. **ThreadDump의 "다시 요청" 버튼이 Inspector.dc.html로 간다.** 주 버튼 자리에 있는 재요청 동작이 상위 화면 이동으로 연결돼 있다. 재요청은 InspectorDumpModal.dc.html로 보내고, 대신 상단에 "← Inspector" 되돌아가기 링크를 따로 두는 게 맞다. (H)
 3. **Alerts의 이벤트 표 8행이 모두 AlertRules.dc.html로 간다.** api-map #45는 행 클릭 시 이벤트 상세 드로어를 열라고 한다. 드로어는 같은 아트보드에 이미 열려 있으므로 행 링크는 Alerts.dc.html(자기 자신)로 두고, 규칙으로 가는 건 드로어 안의 "규칙 보기" 하나면 충분하다. (M)
-4. **Watchdog 배지가 어디서도 플랫폼 상태로 이어지지 않는다.** 사이드바 하단 카나리 미니 카드가 `<a>`가 아니어서, 15개 파일 전부 Watchdog로 가는 링크가 사이드바 메뉴 하나뿐이다. ia.md는 "배지 클릭 → 플랫폼 상태"를 명시한다. 미니 카드를 Watchdog.dc.html 링크로 감쌀 것. 덧붙여 Watchdog의 마지막 카나리 `trace_id 8f2c…41ab`도 TraceDetail로, STALE 이벤트도 Alerts로 이어야 Watchdog 이 고립되지 않는다. (M)
+4. **Watchdog 배지가 어디서도 플랫폼 상태로 이어지지 않는다.** 사이드바 하단 카나리 미니 카드가 `<a>`가 아니어서, 15개 파일 전부 Watchdog 로 가는 링크가 사이드바 메뉴 하나뿐이다. ia.md는 "배지 클릭 → 플랫폼 상태"를 명시한다. 미니 카드를 Watchdog.dc.html 링크로 감쌀 것. 덧붙여 Watchdog 의 마지막 카나리 `trace_id 8f2c…41ab`도 TraceDetail로, STALE 이벤트도 Alerts로 이어야 Watchdog 이 고립되지 않는다. (M)
 
 **권한 노출** — `VIEWER`라는 단어가 Login 한 곳에만 나온다. ADMIN 전용 문이 14개인데, 화면에서 권한을 암시하는 건 InspectorDumpModal의 "권한 ADMIN" 캡션과 Settings 두 곳뿐이다. VIEWER로 로그인했을 때 "스레드 덤프 요청", "규칙 만들기", "채널 등록", "적용", "감시 대상에서 제외", enabled 스위치가 어떻게 보이는지 정보가 하나도 없다. 한 화면(AlertRules 권장)에 ADMIN 버튼을 비활성 + "ADMIN만 바꿀 수 있다" 툴팁으로 그린 VIEWER 상태 변형을 하나 추가하면 14개 문의 처리 방식이 한 번에 정해진다. (H)
 
@@ -162,7 +162,7 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 
 2. **우리 서비스 6개의 readyz 상태를 읽을 문이 없다.** Watchdog "우리 서비스 6개" 카드는 서비스명·READY 여부·의존 저장소 목록·파드 수·확인 시각 5개 값을 쓰는데, 지금 명세에는 각 서비스가 `/readyz`를 연다는 기술만 있고 **화면이 6개를 한 번에 조회할 문이 없다**. 화면이 6개 서비스에 직접 붙는 건 "화면은 API server 하나만 호출한다"는 핵심 규칙 위반이다. `GET /api/v1/platform/services`(VIEWER+, 응답 `service_name, ready, deps[], pod_count, checked_at`)를 52번으로 추가하고, API server 가 6개 readyz를 대신 훑도록 할 것.
 
-3. **Dead Man's Switch 상태를 읽을 문이 없다.** Watchdog가 "마지막 핑 38초 전"과 카나리 이벤트의 `DMS_MISSED` 종류를 표시하는데, 이건 Healthchecks.io 쪽 상태다. 51번 응답에 `dms_last_ping_at`을 얹든지, 카나리 이벤트 이력 자체를 문으로 여는(`GET /api/v1/platform/canary/events`) 결정이 필요하다. 지금 화면의 "최근 카나리 이벤트" 표 6행은 근거 API가 없는 상태다.
+3. **Dead Man's Switch 상태를 읽을 문이 없다.** Watchdog 가 "마지막 핑 38초 전"과 카나리 이벤트의 `DMS_MISSED` 종류를 표시하는데, 이건 Healthchecks.io 쪽 상태다. 51번 응답에 `dms_last_ping_at`을 얹든지, 카나리 이벤트 이력 자체를 문으로 여는(`GET /api/v1/platform/canary/events`) 결정이 필요하다. 지금 화면의 "최근 카나리 이벤트" 표 6행은 근거 API가 없는 상태다.
 
 4. **카나리 이벤트의 `종류` enum이 ERD에 없다.** 화면은 `FRESH`·`STALE`·`DMS_MISSED` 3값을 쓴다. Watchdog 이 이 이력을 어디에 적는지(PostgreSQL 새 테이블인지, 적지 않고 매번 계산하는지)가 정해져 있지 않다. 적는다면 `canary_events(ts, kind, age_sec, threshold_sec, action)` 테이블이 ERD에 들어가야 한다.
 
@@ -170,7 +170,7 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 
 6. **에이전트 설치 명령의 endpoint 포트가 스펙과 어긋난다.** Settings의 설치 명령은 `-Dotel.exporter.otlp.endpoint=https://collector.monimo.dev:4317`인데, api-spec의 gRPC 절은 포트 4317에 **mTLS 클라이언트 인증서**를 요구한다. `https://`만으로는 클라이언트 인증서 지정이 빠져 있다. 화면 문구에 `-Dotel.exporter.otlp.client.key`·`client.certificate` 두 줄을 더하거나, 명세에 "에이전트 배포 시 필요한 JVM 옵션 전체"를 FN-12 아래에 한 번 적어둘 것.
 
-7. **`GET /metrics/series`의 source_table 선택 규칙을 화면이 어기고 있다.** Inspector의 "스레드 수" 차트는 `metrics_raw` 배지를 달았는데, 시간 범위가 1시간(step 60)이므로 §0 규칙상 `metrics_1m`이 나와야 한다. 같은 화면의 "현재 스레드 142"도 api-spec #21이 `metrics_1m` 기반이라고 적는다. 화면 배지를 `metrics_1m`으로 고치는 게 맞지만, 이 혼동이 생긴 이유는 **step→source_table 대응표가 명세에 글로만 있고 표가 없기 때문**이다. api-spec §0 시간 범위 절에 3행짜리 대응표를 넣을 것.
+7. **`GET /metrics/series`의 source_table 선택 규칙을 화면이 어기고 있다.** Inspector 의 "스레드 수" 차트는 `metrics_raw` 배지를 달았는데, 시간 범위가 1시간(step 60)이므로 §0 규칙상 `metrics_1m`이 나와야 한다. 같은 화면의 "현재 스레드 142"도 api-spec #21이 `metrics_1m` 기반이라고 적는다. 화면 배지를 `metrics_1m`으로 고치는 게 맞지만, 이 혼동이 생긴 이유는 **step→source_table 대응표가 명세에 글로만 있고 표가 없기 때문**이다. api-spec §0 시간 범위 절에 3행짜리 대응표를 넣을 것.
 
 8. **화면 목록에 아트보드 2개가 빠져 있다.** ia.md는 13화면인데 실제 작성물은 15개다. `UrlStats.dc.html`(S02b, URL 통계 탭 활성)과 `InspectorDumpModal.dc.html`(S04b, 덤프 요청 모달)이 표에 없다. ia.md 표에 두 행을 추가할 것.
 

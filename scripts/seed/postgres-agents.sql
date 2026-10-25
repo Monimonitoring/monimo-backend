@@ -4,7 +4,7 @@
 -- 넣는 법: ./scripts/seed-clickhouse.sh (CH 와 함께 들어간다)
 --
 -- 다시 돌리면 지우지 않고 status 만 UP 으로 되돌린다: alert_events · alert_evaluation_states 가 agents 를 FK 로 가리킨다.
--- UP 으로 넣는 이유: 화면의 「스레드 덤프 요청」 버튼이 UP 일 때만 켜진다. 신호가 끊기면 탐지가 90초 뒤 DOWN 으로 바꾼다 (ADR #39)
+-- UP 으로 넣는 이유: 화면의 「스레드 덤프 요청」 버튼이 UP 일 때만 켜진다. 신호가 끊기면 Detector 가 90초 뒤 DOWN 으로 바꾼다 (ADR #39)
 INSERT INTO agents (application_id, agent_key, hostname, ip, jvm_version, agent_version, status, first_seen_at)
 SELECT a.id, p.agent_key, p.agent_key, p.ip::inet, '17.0.12', '2.31.1', 'UP', now() - interval '1 hour'
 FROM (VALUES

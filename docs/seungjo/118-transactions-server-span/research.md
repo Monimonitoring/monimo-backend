@@ -477,7 +477,7 @@ SERVER  gateway   POST /api/orders     parent 없음  ← 루트이면서 SERVER
 | **Jaeger SPM** | **`span.kind = server` 단독** | 공식 문서. **다만 "unspecified 나 client kind 스팬은 안 보인다" 고 바로 경고한다** |
 
 - **Pinpoint 는 이미 우리가 가려는 기준이다**
-  - 컬렉터의 `HbaseTraceService.insertSpan` 이 들어온 모든 Span 에 대해 스캐터 인덱스를 조건 없이 넣는다
+  - Collector 의 `HbaseTraceService.insertSpan` 이 들어온 모든 Span 에 대해 스캐터 인덱스를 조건 없이 넣는다
   - 행키에 `applicationName` 이 들어간다
   - 그래서 서비스를 골라 보는 것이 자연스럽고 중간 서비스에도 점이 찍힌다
   - 우리가 참고하는 제품이 그렇게 하고 있었다

@@ -44,7 +44,7 @@ class AgentEntity(
     @Column(name = "first_seen_at")
     val firstSeenAt: Instant?,
 
-    // 탐지가 CH 부재 규칙으로 UP · DOWN 을 쓴다(ADR #39). 우리는 기본값 UNKNOWN 으로 두고 건드리지 않는다
+    // Detector 가 CH 부재 규칙으로 UP · DOWN 을 쓴다(ADR #39). 우리는 기본값 UNKNOWN 으로 두고 건드리지 않는다
     @Column(nullable = false, length = 20)
     var status: String = "UNKNOWN",
 

@@ -9,7 +9,7 @@ import java.util.UUID
 
 interface AlertEvaluationStateRepository : JpaRepository<AlertEvaluationStateEntity, Long> {
 
-    // 처음 보는 fingerprint 면 NORMAL 줄을 만든다. 두 탐지가 동시에 만들려 해도 UNIQUE 충돌 대신 한쪽은 아무 일도 안 한다
+    // 처음 보는 fingerprint 면 NORMAL 줄을 만든다. 두 Detector 가 동시에 만들려 해도 UNIQUE 충돌 대신 한쪽은 아무 일도 안 한다
     @Modifying
     @Query(
         nativeQuery = true,

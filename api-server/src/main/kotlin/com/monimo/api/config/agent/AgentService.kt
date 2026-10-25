@@ -50,7 +50,7 @@ class AgentService(
     }
 
     private companion object {
-        // agents 표의 CHECK 제약과 같은 값 (ADR #39 — 탐지가 90초 무신호면 DOWN 으로 바꾼다)
+        // agents 표의 CHECK 제약과 같은 값 (ADR #39 — Detector 가 90초 무신호면 DOWN 으로 바꾼다)
         val STATUSES = setOf("UP", "DOWN", "UNKNOWN")
     }
 }

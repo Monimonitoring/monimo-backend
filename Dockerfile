@@ -1,4 +1,4 @@
-# 우리 모듈 다섯(Collector · Ingester · API server · 탐지 · 알림)의 이미지를 이 파일 하나로 만든다 (#170, monimo-shop #42 와 같은 방식).
+# 우리 모듈 다섯(Collector · Ingester · API server · Detector · Notifier)의 이미지를 이 파일 하나로 만든다 (#170, monimo-shop #42 와 같은 방식).
 # 레포 루트에서 하나만 빌드할 때 :  docker build --target collector -t monimo/collector .
 # --target 을 빼면 맨 마지막 단계(notifier)가 만들어진다. 늘 --target 을 준다
 # compose · CI 는 서비스마다 target 만 골라 쓴다
