@@ -191,6 +191,8 @@ CI 는 `build`(테스트 포함) · 이미지 빌드 2개 · `dev-infra`(compose
 
 - **`#240`** 멘토 피드백(2026-10)으로 **문서 · 주석의 우리말 조어를 현업 영어 이름으로** 바꿨다 : Collector · Ingester · API server · Detector · Notifier · Watchdog · Attribute · Minimum log level · System · Service map · Inspector. 정본은 [`docs/design/glossary.md`](docs/design/glossary.md). 「A · B · C평면」 은 ADR `#73`(2026-10-26 확정, 슬랙 공지)으로 Monitored app · APM · Watchdog · Self-monitoring 이 됐다. README 위에 입구(한 줄 소개 · 구조 그림 · 숫자 셋 · 핵심 결정 다섯)를 얹고 틀린 줄 셋을 고쳤다. 바꾸는 법 : 뜻이 하나인 조어는 스크립트로 일괄 치환(코드는 주석 부분만), 평면 · 하한 · 묶음 · 관통 · 명부 · 모듈을 가리키는 탐지 · 알림 은 문맥을 보고 손으로. **Flyway 가 적용한 `db/*/V*.sql` 은 checksum 때문에 안 건드렸다.** 원문 인용 파일은 머리에 「용어만 바꿈」 한 줄을 달았다. 코드 안 문자열(테스트 이름 · 화면 · 경보 · 스크립트 단계 제목)은 `#241` 로 넘겼다. 정리는 `docs/seungjo/240-terms-readme/research.md`
 
+- **`#241`** `#240` 의 후속으로 **코드 안 문자열**의 옛 용어를 glossary 이름으로 바꿨다 : 테스트 이름 · 화면 메뉴와 제목(영어, 안내 문장은 한국어) · Slack 경보(`Watchdog —`) · 스크립트 출력 · API 응답 메시지(「파드에 연결된 Collector 가 없습니다.」) · 로그 문구(`Minimum log level: …`) · 지표 설명 · 시드 표시 이름(`Monimo Collector` 등). 지표 이름 · 에러 `code` · URL 은 그대로라 화면 분기 · 대시보드 · 경보가 안 깨진다. 글자를 비교하던 watchdog 테스트 세 줄은 같이 고쳤다(없어야 하는 글자를 검사하던 줄은 새 이름으로). **시드는 `ON CONFLICT DO NOTHING` 이라 이미 넣은 로컬은 `docker compose down -v` 뒤 다시 넣어야 새 이름이 보인다.** 정리는 `docs/seungjo/241-code-string-terms/research.md`
+
 - **Kafka 재처리 기준선 (2026-10-11, 알림 · 1단계)**: Ingester 가 CH 저장 뒤 · 오프셋 커밋 전에 죽으면 같은 레코드를 다시 넣는다. 격리 Kafka · CH 에서 정상 90 커밋 → 오류 10 저장 후 커밋 전 `kill -9`(`jdb` 로 `commitSync` 중단점) → 같은 그룹 재시작을 3회 해 모두 **`spans` 110줄 / 고유 100, `service_health_1m` 에러율 10% → 18.18%**. 오류 로그 없이 조용히 틀린다. 원인: 커밋은 기본 BATCH(poll 처리 뒤), `spans` 는 `MergeTree` 에 `non_replicated_deduplication_window=0` · 중복 제거 토큰 없음. 해결책은 2단계에서 비교 (`docs/kafka-reprocess/10-baseline.md`)
 
 ## 6. 지금 막혀 있는 것
@@ -199,7 +201,7 @@ CI 는 `build`(테스트 포함) · 이미지 빌드 2개 · `dev-infra`(compose
 
 | 무엇 | 누가 풀어야 하나 | 안 풀면 |
 |---|---|---|
-| **코드 안 문자열에 옛 용어가 남아 있다** (`#240` 은 문서 · 주석만) | 수집 (`#241`, web · watchdog 은 담당 리뷰) | 테스트 이름 · 화면 문구 · Slack 경보 · 스크립트 출력이 문서와 다른 이름을 쓴다. 목록은 `#241` 본문. API 응답 메시지 · 로그 문구는 명세 · 검색과 묶여 있어 거기서 따로 정한다 |
+| **~~코드 안 문자열에 옛 용어가 남아 있다~~** (`#241` 로 해소 : 테스트 이름 · 화면 · 경보 · 스크립트 · 응답 메시지 · 로그 · 시드까지 glossary 이름) | 수집 (끝) | 노션 API 명세 문구와 GitHub 라벨 설명은 머지 뒤 맞춘다 |
 | **~~`agents.ip` 가 비어 있다~~ (`#149` 로 해소 : Collector 가 gRPC 연결에서 읽어 Kafka 헤더로 넘기고 Ingester 가 적는다, ADR `#63`)** | 수집 (끝) | 등록은 시작됐지만(`#66`) `ip` 는 못 채운다. ERD 는 Collector 가 gRPC 연결 통로에서 알아내 메시지에 붙이고 Ingester 가 적는 것으로 정했는데, Collector 쪽 코드가 없다. 파드 이름이 비슷할 때 구분하는 단서라 화면에만 영향 |
 | **GC_TIME 평가가 아직 조회의 GC 시간을 안 읽는다** (`#196` 이 조회 쪽 빼기를 끝냈다) | 알림 (Detector GC_TIME 평가) | 조회는 `GET /api/v1/internal/metrics/gc-time` 으로 파드별 1분 GC 시간(`gc_time_ms`, 이미 뺀 값) · 횟수(`gc_count`)를 준다. Detector 가 GC_TIME 평가를 만들 때 이 문을 `X-Internal-Token` 으로 불러 `gc_time_ms` 를 임계값과 그대로 비교하면 된다(총합을 직접 읽으면 서버가 오래 켜질수록 언젠가 무조건 울린다). 임계값 단위는 ms 로 맞춘다. 응답 모양이 판정에 안 맞으면 조회에 말하면 고친다 |
 | 조회가 롤업의 Attribute 를 아직 안 읽는다 (`#193` 이 칸만 채웠다) | 조회 (급하지 않음) | `metrics_1m` · `metrics_1h` 에 `attributes` 가 생겼지만 `MetricRepository` 는 여전히 원본 `metrics_raw` 에서 해시로 찾는다. 2027-01-05(원본 첫 줄 + 105일)까지는 둘이 같은 답을 내서 안 보인다. 그 전에 "롤업의 `attributes` 가 빈 Map 일 때만 원본을 찾는다" 로 바꿔야 하고, 105일 뒤엔 원본 조인을 없앨 수 있다(ADR `#70` 되돌림 ②) |

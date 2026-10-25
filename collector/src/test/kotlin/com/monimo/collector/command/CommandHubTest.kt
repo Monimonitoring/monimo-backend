@@ -34,7 +34,7 @@ class CommandHubTest : BehaviorSpec({
             val polling = hub.poll(order)
             val result = hub.dispatch(order, Duration.ofSeconds(10))
 
-            Then("붙잡은 폴링이 200 + THREAD_DUMP 명령으로 끝나고, reply_to 는 이 수집기 주소다") {
+            Then("붙잡은 폴링이 200 + THREAD_DUMP 명령으로 끝나고, reply_to 는 이 Collector 주소다") {
                 result.shouldNotBeNull()
                 val command = (polling.result as ResponseEntity<*>).body as AgentCommand
                 command.type shouldBe "THREAD_DUMP"
@@ -60,7 +60,7 @@ class CommandHubTest : BehaviorSpec({
         }
     }
 
-    Given("이 수집기가 그 에이전트를 쥐고 있지 않을 때") {
+    Given("이 Collector 가 그 에이전트를 쥐고 있지 않을 때") {
         When("한 번도 폴링이 없었으면") {
             val (hub, _) = hub()
             Then("null 이라 팬아웃 받은 쪽이 503 을 낸다") {
@@ -107,7 +107,7 @@ class CommandHubTest : BehaviorSpec({
             hub.ended(order, polling)
             val first = hub.dispatch(order, Duration.ofSeconds(10))
             val second = hub.dispatch(order, Duration.ofSeconds(10))
-            Then("앞 명령을 덮어쓰지 않는다 (뒤 명령은 503 으로 API 서버가 다시 시도)") {
+            Then("앞 명령을 덮어쓰지 않는다 (뒤 명령은 503 으로 API server 가 다시 시도)") {
                 first.shouldNotBeNull()
                 second.shouldBeNull()
             }
@@ -122,7 +122,7 @@ class CommandHubTest : BehaviorSpec({
     }
 
     Given("결과 받기") {
-        When("모르는 command_id 면 (시간 초과로 이미 끝났거나 다른 수집기 명령)") {
+        When("모르는 command_id 면 (시간 초과로 이미 끝났거나 다른 Collector 명령)") {
             val (hub, _) = hub()
             Then("false 라 Extension 이 404 를 받는다") {
                 hub.complete("unknown", "{}") shouldBe false

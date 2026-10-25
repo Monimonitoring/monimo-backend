@@ -166,7 +166,7 @@ class HealthCheckFilterTest : BehaviorSpec({
                 ),
             )
 
-            Then("부모만 버려지고 자식은 남는다 (고아 스팬이 된다)") {
+            Then("부모만 버려지고 자식은 남는다 (orphan span 이 된다)") {
                 result.spanNames() shouldContainExactly listOf("SELECT shop.orders")
             }
         }

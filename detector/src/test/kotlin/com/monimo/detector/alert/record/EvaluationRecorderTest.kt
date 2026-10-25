@@ -172,7 +172,7 @@ class EvaluationRecorderTest(
         }
     }
 
-    Given("E2: 탐지 2개가 같은 fingerprint 의 같은 버킷을 동시에 평가하면 (20회 반복)") {
+    Given("E2: Detector 2개가 같은 fingerprint 의 같은 버킷을 동시에 평가하면 (20회 반복)") {
         val a = channel("e2-a", true)
         val pool = Executors.newFixedThreadPool(2)
 
@@ -198,7 +198,7 @@ class EvaluationRecorderTest(
         }
     }
 
-    Given("처음 보는 fingerprint 를 두 탐지가 동시에 평가하면 (평가 상태 줄 생성 경쟁, 20회 반복)") {
+    Given("처음 보는 fingerprint 를 두 Detector 가 동시에 평가하면 (평가 상태 줄 생성 경쟁, 20회 반복)") {
         val pool = Executors.newFixedThreadPool(2)
         val fps = (1..20).map {
             val target = newTarget()

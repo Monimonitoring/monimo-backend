@@ -22,7 +22,7 @@ class HealthProbeTest(
     val business = "http://localhost:${environment.getProperty("local.server.port")}"
     val rest = TestRestTemplate()
 
-    Given("알림 이 떠 있고 PostgreSQL 에 붙어 있다") {
+    Given("Notifier 가 떠 있고 PostgreSQL 에 붙어 있다") {
         When("업무 포트의 /livez · /readyz 를 부르면") {
             val livez = rest.getForEntity("$business/livez", String::class.java)
             val readyz = rest.getForEntity("$business/readyz", String::class.java)

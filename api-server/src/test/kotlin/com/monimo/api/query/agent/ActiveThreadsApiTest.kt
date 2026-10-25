@@ -89,7 +89,7 @@ class ActiveThreadsApiTest(
         return rest.exchange("/api/v1/agents/$agentUuid/active-threads", HttpMethod.GET, HttpEntity<Void>(headers), String::class.java)
     }
 
-    Given("인스펙터가 파드의 현재 스레드 수를 물을 때") {
+    Given("Inspector 가 파드의 현재 스레드 수를 물을 때") {
         When("최근에 값이 들어온 파드면") {
             val response = get(live)
             val data = json(response)["data"]

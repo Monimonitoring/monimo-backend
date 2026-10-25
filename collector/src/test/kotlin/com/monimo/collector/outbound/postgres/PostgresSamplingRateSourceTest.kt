@@ -85,7 +85,7 @@ class PostgresSamplingRateSourceTest : BehaviorSpec({
         val source = sourceOf(jdbc)
         source.refresh()
 
-        Then("같은 묶음이면 그 안의 최댓값이 적용된다") {
+        Then("같은 System 이면 그 안의 최댓값이 적용된다") {
             source.rates().appliedFor("shop-gateway") shouldBe 0.1
             source.rates().appliedFor("shop-order") shouldBe 0.1
         }
@@ -151,7 +151,7 @@ class PostgresSamplingRateSourceTest : BehaviorSpec({
     }
 
     // System 이 둘일 때가 이 이슈(#206 · ADR #72)의 본 목적이다. System 끼리 선이 독립이어야 한다
-    Given("묶음이 둘이면") {
+    Given("System 이 둘이면") {
         val jdbc = FakeJdbc(
             mapOf("shop-gateway" to 0.02, "shop-order" to 0.01, "monimo-api-server" to 0.5),
             systems = mapOf("monimo-api-server" to "monimo"),
@@ -159,20 +159,20 @@ class PostgresSamplingRateSourceTest : BehaviorSpec({
         val source = sourceOf(jdbc)
         source.refresh()
 
-        Then("쇼핑몰 스팬은 쇼핑몰 묶음의 최댓값으로 걸린다 : 모니모 0.5 가 새어 들어오지 않는다") {
+        Then("쇼핑몰 스팬은 쇼핑몰 System 의 최댓값으로 걸린다 : 모니모 0.5 가 새어 들어오지 않는다") {
             source.rates().appliedFor("shop-gateway") shouldBe 0.02
             source.rates().appliedFor("shop-order") shouldBe 0.02
         }
 
-        Then("모니모 스팬은 모니모 묶음의 최댓값으로 걸린다") {
+        Then("모니모 스팬은 모니모 System 의 최댓값으로 걸린다") {
             source.rates().appliedFor("monimo-api-server") shouldBe 0.5
         }
 
-        Then("미등록 서비스는 yml 기본값이다 (묶음을 모르니 남의 묶음 값을 빌리지 않는다)") {
+        Then("미등록 서비스는 yml 기본값이다 (System 을 모르니 남의 System 값을 빌리지 않는다)") {
             source.rates().appliedFor("stranger-app") shouldBe 0.01
         }
 
-        Then("묶음별 선을 둘 들고 있다 : 로그와 판정이 같은 값을 본다") {
+        Then("System 별 선을 둘 들고 있다 : 로그와 판정이 같은 값을 본다") {
             source.rates().bySystem shouldBe mapOf("shop" to 0.02, "monimo" to 0.5)
         }
     }

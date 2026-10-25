@@ -63,7 +63,7 @@ class PostgresAgentRegistryTest(
                 rows(key) shouldBe 1
             }
 
-            Then("서비스 번호 · 환경 정보 · 처음 본 시각이 들어가고 상태는 UNKNOWN 이다 (탐지가 바꾼다)") {
+            Then("서비스 번호 · 환경 정보 · 처음 본 시각이 들어가고 상태는 UNKNOWN 이다 (Detector 가 바꾼다)") {
                 val row = jdbc.queryForMap(
                     """
                     SELECT a.hostname, a.jvm_version, a.agent_version, a.status, a.first_seen_at, app.name AS service
@@ -169,7 +169,7 @@ class PostgresAgentRegistryTest(
                 ipOf(key) shouldBe "172.19.0.99"
             }
 
-            Then("고친 시각도 같이 움직인다 : 상태를 고치는 쪽(탐지)과 모양을 맞췄다") {
+            Then("고친 시각도 같이 움직인다 : 상태를 고치는 쪽(Detector)과 모양을 맞췄다") {
                 updatedAtOf(key) shouldBe laterAt
             }
 

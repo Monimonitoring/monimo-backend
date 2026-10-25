@@ -15,11 +15,11 @@ ON CONFLICT (name) DO NOTHING;
 -- 우리 모듈 다섯 (Self-monitoring #216). 이름은 루트 Dockerfile 의 OTEL_SERVICE_NAME 과 같은 글자, system 은 monimo (#205 : 쇼핑몰과 샘플링 비율을 따로 묶는 축).
 -- 운영은 설정 화면 「서비스 등록」으로 넣는다. 여기 줄은 로컬 · CI 용
 INSERT INTO applications (name, display_name, description, system)
-VALUES ('monimo-collector',  '모니모 수집기',      '에이전트 신호를 받아 Kafka 로. 자기 감시(B평면)', 'monimo'),
-       ('monimo-ingester',   '모니모 적재 처리기', 'Kafka 에서 꺼내 ClickHouse 로. 자기 감시(B평면)', 'monimo'),
-       ('monimo-api-server', '모니모 API 서버',    '화면이 부르는 조회 · 설정 문. 자기 감시(B평면)', 'monimo'),
-       ('monimo-detector',   '모니모 탐지',        '1분마다 규칙을 평가. 자기 감시(B평면)', 'monimo'),
-       ('monimo-notifier',   '모니모 알림',        '경보를 채널로 발송. 자기 감시(B평면)', 'monimo')
+VALUES ('monimo-collector',   'Monimo Collector',   '에이전트 신호를 받아 Kafka 로. Self-monitoring', 'monimo'),
+       ('monimo-ingester',    'Monimo Ingester',    'Kafka 에서 꺼내 ClickHouse 로. Self-monitoring', 'monimo'),
+       ('monimo-api-server',  'Monimo API server',  '화면이 부르는 조회 · 설정 문. Self-monitoring', 'monimo'),
+       ('monimo-detector',    'Monimo Detector',    '1분마다 규칙을 평가. Self-monitoring', 'monimo'),
+       ('monimo-notifier',    'Monimo Notifier',    '경보를 채널로 발송. Self-monitoring', 'monimo')
 ON CONFLICT (name) DO NOTHING;
 
 -- 설정 줄도 같이 만든다. 평소에는 API server 가 서비스 등록 때 만들지만, 가짜 데이터는 그 문을 거치지 않는다.

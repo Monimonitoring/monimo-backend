@@ -129,6 +129,7 @@ docker compose --profile collector --profile ingester up -d --wait --build
 docker compose --profile collector --profile ingester down
 ```
 
+- 시드의 서비스 표시 이름(`Monimo Collector` 등, `scripts/seed/postgres-applications.sql`)은 `ON CONFLICT (name) DO NOTHING` 이라 **다시 돌려도 이미 있는 줄은 안 바뀐다.** 예전 이름(「모니모 수집기」)이 보이면 `docker compose down -v` 뒤 다시 켜고 시드를 넣는다 (`#241`)
 - Kafka 토픽 `raw`(7일 보관, 파티션 3) · `raw.dlq`(30일 보관)는 켤 때 자동으로 만든다. 그 외 토픽은 자동으로 생기지 않는다.
 - Kafka 메시지는 컨테이너 안에만 있어서 `down` 하면 지워진다.
 - **PostgreSQL 표는 `db/postgres/` 한 곳**에 파트별 폴더(`config/` · `alert/` · `ingest/`)로 추가하고, 켤 때 Flyway가 자동 적용한다. 서비스는 마이그레이션을 돌리지 않는다. 규칙은 [`db/postgres/README.md`](db/postgres/README.md) (ADR #49)

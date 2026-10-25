@@ -72,7 +72,7 @@ class PostgresSamplingRateSource(
         val current = snapshot.get()
         val fresh = runCatching { load() }.getOrElse { error ->
             failed.increment()
-            log.warn("샘플링 비율 갱신 실패 : 묶음별 {} 유지 ({})", current.bySystem, error.message)
+            log.warn("샘플링 비율 갱신 실패 : System 별 {} 유지 ({})", current.bySystem, error.message)
             return
         }
         snapshot.set(fresh)
@@ -86,7 +86,7 @@ class PostgresSamplingRateSource(
         } else if (fresh.byService != current.byService) {
             // System 별 선을 먼저 찍는다 : 판정에 실제로 쓰이는 값이고 줄 수가 적다 (ADR #72)
             log.info(
-                "샘플링 비율 갱신 : 묶음별 {} · 미등록 {} (서비스별 {})",
+                "샘플링 비율 갱신 : System 별 {} · 미등록 {} (서비스별 {})",
                 fresh.bySystem.toSortedMap(),
                 fresh.fallback,
                 fresh.byService.toSortedMap(),

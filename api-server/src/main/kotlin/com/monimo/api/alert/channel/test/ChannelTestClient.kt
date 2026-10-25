@@ -57,17 +57,17 @@ class HttpChannelTestClient(
         val response = try {
             client.send(request, HttpResponse.BodyHandlers.ofString())
         } catch (e: IOException) {
-            return ChannelTestOutcome.NotifierUnavailable("알림 서비스 호출 실패: ${e.javaClass.simpleName}")
+            return ChannelTestOutcome.NotifierUnavailable("Notifier 호출 실패: ${e.javaClass.simpleName}")
         }
         val json = runCatching { objectMapper.readTree(response.body()) }.getOrNull()
         val errorMessage = json?.get("error")?.get("message")?.asText().orEmpty()
         return when (response.statusCode()) {
             200 -> json?.get("data")?.let { ChannelTestOutcome.Tested(it["result"].asText(), it["response"].asText()) }
-                ?: ChannelTestOutcome.NotifierUnavailable("알림 서비스 응답을 읽을 수 없습니다.")
+                ?: ChannelTestOutcome.NotifierUnavailable("Notifier 응답을 읽을 수 없습니다.")
             503 -> ChannelTestOutcome.ChannelUnreachable(errorMessage)
             // 저장할 때 검사를 통과한 config 를 Notifier가 거절했다. 사용자에게는 "보내 봤더니 안 됐다"로 보여 준다
             400 -> ChannelTestOutcome.Tested(FAILED, errorMessage)
-            else -> ChannelTestOutcome.NotifierUnavailable("알림 서비스 응답 ${response.statusCode()}")
+            else -> ChannelTestOutcome.NotifierUnavailable("Notifier 응답 ${response.statusCode()}")
         }
     }
 

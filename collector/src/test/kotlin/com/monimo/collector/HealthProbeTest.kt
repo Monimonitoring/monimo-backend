@@ -35,7 +35,7 @@ class HealthProbeTest(
     val rest = TestRestTemplate()
     fun get(url: String) = rest.getForEntity(url, String::class.java)
 
-    Given("수집기가 떠 있고 PostgreSQL 에 붙어 있다") {
+    Given("Collector 가 떠 있고 PostgreSQL 에 붙어 있다") {
         When("업무 포트의 /livez · /readyz 를 부르면") {
             val livez = get("$business/livez")
             val readyz = get("$business/readyz")
@@ -82,7 +82,7 @@ class HealthProbeTest(
                 liveness.isMember("db") shouldBe false
             }
 
-            Then("readiness 그룹에도 db 가 없다 (규약과 다른 선택이라 고정한다. 탐지 · 알림은 넣었다)") {
+            Then("readiness 그룹에도 db 가 없다 (규약과 다른 선택이라 고정한다. Detector · Notifier 는 넣었다)") {
                 readiness.isMember("db") shouldBe false
             }
         }
@@ -98,7 +98,7 @@ class HealthProbeTest(
             val livez = get("$business/livez")
             val readyz = get("$business/readyz")
 
-            Then("전체는 503 (db DOWN) 인데 probe 둘은 200 그대로다 : 저장소가 죽어도 수집기는 빠지지도 재시작되지도 않는다") {
+            Then("전체는 503 (db DOWN) 인데 probe 둘은 200 그대로다 : 저장소가 죽어도 Collector 는 빠지지도 재시작되지도 않는다") {
                 whole.statusCode.value() shouldBe 503
                 livez.statusCode.value() shouldBe 200
                 readyz.statusCode.value() shouldBe 200

@@ -43,9 +43,9 @@ received() {
 for signal in traces metrics logs; do
   before=$(received "$signal") || fail "collector 카운터($signal) 조회 실패: http://$HTTP/actuator/metrics"
   send "$signal" > /dev/null 2>&1 \
-    || fail "telemetrygen $signal 전송 실패 (collector:4317, TLS=$TLS). 수집기 로그의 'OTLP gRPC 수신 시작' 줄과 .env 의 COLLECTOR_TLS_CLIENT_AUTH 가 맞는지 보라"
+    || fail "telemetrygen $signal 전송 실패 (collector:4317, TLS=$TLS). Collector 로그의 'OTLP gRPC 수신 시작' 줄과 .env 의 COLLECTOR_TLS_CLIENT_AUTH 가 맞는지 보라"
   after=$(received "$signal")
-  [ "$after" -gt "$before" ] && ok "collector:4317 로 보낸 $signal 을 수집기가 받음 ($before → $after)" || fail "$signal 을 보냈지만 수집기 카운터가 안 늘었음 ($before → $after)"
+  [ "$after" -gt "$before" ] && ok "collector:4317 로 보낸 $signal 을 Collector 가 받음 ($before → $after)" || fail "$signal 을 보냈지만 Collector 카운터가 안 늘었음 ($before → $after)"
 done
 
 echo "연결 약속 정상: 쇼핑몰 에이전트는 collector:4317 (컨테이너끼리) · localhost:${COLLECTOR_OTLP_PORT:-4317} (내 컴퓨터) 로 보내면 된다"

@@ -24,6 +24,6 @@ enum class ErrorCode(
     RULE_CHANNEL_DUPLICATE(HttpStatus.CONFLICT, "이미 연결된 채널입니다."),
     SIGNAL_EXPIRED(HttpStatus.NOT_FOUND, "보관 기간이 지나 삭제된 데이터입니다."),
     TIME_RANGE_TOO_WIDE(HttpStatus.UNPROCESSABLE_ENTITY, "시간 범위가 상한을 넘었습니다."),
-    AGENT_NOT_REACHABLE(HttpStatus.SERVICE_UNAVAILABLE, "파드에 연결된 수집기가 없습니다."),
+    AGENT_NOT_REACHABLE(HttpStatus.SERVICE_UNAVAILABLE, "파드에 연결된 Collector 가 없습니다."),
     THREAD_DUMP_TIMEOUT(HttpStatus.SERVICE_UNAVAILABLE, "스레드 덤프 응답 시간이 초과됐습니다."),
 }

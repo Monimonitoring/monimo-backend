@@ -78,7 +78,7 @@ class RawErrorHandlerTest(
     fun header(record: ConsumerRecord<*, *>, key: String): String? = record.headers().lastHeader(key)?.value()?.let { String(it) }
     var awaitDlqSeen: ConsumerRecord<String, ByteArray>? = null // 첫 When 이 받은 DLQ 레코드. 둘째 When 이 되돌려 넣는다
 
-    Given("에러 핸들러가 붙은 적재 처리기") {
+    Given("에러 핸들러가 붙은 Ingester") {
 
         When("키는 traces 인데 값이 protobuf 가 아닌 바이트를 raw 의 파티션 1 에 넣으면") {
             // 0x0A = 1번 필드 · 길이 있는 타입, 0x7F = 길이 127 이라고 선언. 그런데 뒤에 바이트가 없다 → 잘린 메시지 → 파싱 실패.

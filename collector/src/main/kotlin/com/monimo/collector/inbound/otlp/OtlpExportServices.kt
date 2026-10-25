@@ -102,7 +102,7 @@ class OtlpMetricsService(
 class OtlpLogsService(
     private val counter: OtlpReceiveCounter,
     private val producer: RawProducer,
-    private val logLevelFilter: LogLevelFilter, // Minimum log level 미만 등급 빼내기 (#215)
+    private val logLevelFilter: LogLevelFilter, // Minimum log level 미만 severity 빼내기 (#215)
 ) : LogsServiceGrpc.LogsServiceImplBase() {
 
     override fun export(request: ExportLogsServiceRequest, responseObserver: StreamObserver<ExportLogsServiceResponse>) {
@@ -113,11 +113,11 @@ class OtlpLogsService(
         val filtered = logLevelFilter.drop(request)
         val kept = filtered.resourceLogsList.sumOf { rl -> rl.scopeLogsList.sumOf { it.logRecordsCount } }
         if (kept == 0) { // 전부 Minimum log level 미만. Kafka 에 빈 메시지를 넣을 이유가 없다
-            log.debug("로그 하한에서 레코드 {}건 전부 제외", records)
+            log.debug("Minimum log level 에서 레코드 {}건 전부 제외", records)
             responseObserver.respondNow(ExportLogsServiceResponse.getDefaultInstance())
             return
         }
-        if (kept < records) log.debug("로그 하한: 레코드 {}건 중 {}건만 남김", records, kept)
+        if (kept < records) log.debug("Minimum log level: 레코드 {}건 중 {}건만 남김", records, kept)
 
         responseObserver.respondAfter(
             sent = producer.send(RawSignal.LOGS, filtered.toByteArray(), currentPeerAddress()),

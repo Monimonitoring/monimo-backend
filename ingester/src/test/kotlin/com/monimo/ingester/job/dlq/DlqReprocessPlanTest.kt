@@ -25,7 +25,7 @@ class DlqReprocessPlanTest : BehaviorSpec({
         }
 
         When("분류가 없는 레코드면") {
-            Then("되넣는다 : 머리말이 없는 것은 손으로 넣은 것이거나 옛 수집기 것이다") {
+            Then("되넣는다 : 머리말이 없는 것은 손으로 넣은 것이거나 옛 Collector 것이다") {
                 DlqReprocessPlan.decide(null, attempt = 0, maxAttempt = 3) shouldBe DlqReprocessPlan.Decision.REPLAY
             }
         }

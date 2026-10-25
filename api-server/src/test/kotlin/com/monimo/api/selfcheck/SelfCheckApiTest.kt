@@ -80,7 +80,7 @@ class SelfCheckApiTest(
     }
     fun data(response: ResponseEntity<String>): JsonNode = objectMapper.readTree(response.body)["data"]
 
-    Given("PG 가 붙어 있고 탐지 · 수집기 게이지가 작다") {
+    Given("PG 가 붙어 있고 Detector · Collector 게이지가 작다") {
         fakes.detector.value = 12.3
         fakes.collector.value = 8.0
 
@@ -107,7 +107,7 @@ class SelfCheckApiTest(
         }
     }
 
-    Given("탐지 게이지가 180초를 넘고 수집기 게이지는 못 읽는다") {
+    Given("Detector 게이지가 180초를 넘고 Collector 게이지는 못 읽는다") {
         fakes.detector.value = 251.0
         fakes.collector.value = null
 
@@ -115,7 +115,7 @@ class SelfCheckApiTest(
             val response = call()
             val d = data(response)
 
-            Then("HTTP 는 200 그대로, 탐지는 ok=false 에 값, 수집기는 ok=false 에 unreachable") {
+            Then("HTTP 는 200 그대로, Detector 는 ok=false 에 값, Collector 는 ok=false 에 unreachable") {
                 response.statusCode.value() shouldBe 200
                 d["detector"]["ok"].asBoolean() shouldBe false
                 d["detector"]["age_sec"].asDouble() shouldBe 251.0

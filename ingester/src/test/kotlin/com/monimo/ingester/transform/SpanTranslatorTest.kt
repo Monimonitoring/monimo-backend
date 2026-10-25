@@ -78,11 +78,11 @@ class SpanTranslatorTest : BehaviorSpec({
                 row.statusCode shouldBe "ERROR"
             }
 
-            Then("HTTP 응답 코드는 꼬리표에서 숫자로 꺼낸다") {
+            Then("HTTP 응답 코드는 Attribute 에서 숫자로 꺼낸다") {
                 row.httpStatus shouldBe 500
             }
 
-            Then("스팬 꼬리표는 그대로 남는다") {
+            Then("스팬 Attribute 는 그대로 남는다") {
                 row.attributes shouldContain ("http.route" to "/orders")
             }
         }
@@ -141,7 +141,7 @@ class SpanTranslatorTest : BehaviorSpec({
                 row.peerAddress shouldBe "shop-payment:8080"
             }
 
-            Then("peer.service 는 에이전트가 안 넣어 주면 빈 글자다 (서버맵 매핑은 이슈 I)") {
+            Then("peer.service 는 에이전트가 안 넣어 주면 빈 글자다 (Service map 매핑은 이슈 I)") {
                 row.peerService shouldBe ""
             }
         }
@@ -153,7 +153,7 @@ class SpanTranslatorTest : BehaviorSpec({
         When("trace_state 에 monimon=canary 가 있으면") {
             val row = SpanTranslator.toRows(requestOf(span.clone().setTraceState("monimon=canary"))).single()
 
-            Then("꼬리표에 표식을 남긴다 — CH 에 trace_state 컬럼이 없어 여기서 옮겨 적는다 (ADR #41)") {
+            Then("Attribute 에 표식을 남긴다 — CH 에 trace_state 컬럼이 없어 여기서 옮겨 적는다 (ADR #41)") {
                 row.attributes shouldContain (SpanRow.CANARY_KEY to "true")
             }
         }
@@ -225,7 +225,7 @@ class SpanTranslatorTest : BehaviorSpec({
                 row.events shouldHaveSize 2
             }
 
-            Then("시각 · 이름 · 꼬리표가 그대로다. 스택트레이스도 자르지 않는다") {
+            Then("시각 · 이름 · Attribute 가 그대로다. 스택트레이스도 자르지 않는다") {
                 val first = row.events[0]
                 first.ts shouldBe Instant.ofEpochSecond(1_700_000_000L, 100_000_000L)
                 first.name shouldBe "exception"

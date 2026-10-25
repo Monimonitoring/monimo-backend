@@ -9,13 +9,13 @@ class SamplingRatesTest : BehaviorSpec({
     fun shop(ratio: Double) = ServiceRate(system = "shop", ratio = ratio)
     fun monimo(ratio: Double) = ServiceRate(system = "monimo", ratio = ratio)
 
-    Given("같은 묶음 안에서 비율이 서로 다르면") {
+    Given("같은 System 안에서 비율이 서로 다르면") {
         val rates = SamplingRates.of(
             mapOf("shop-gateway" to shop(0.01), "shop-order" to shop(0.1), "shop-payment" to shop(0.05)),
             fallback = 0.01,
         )
 
-        Then("그 묶음의 모든 서비스가 최댓값으로 걸린다 : 선이 하나라 트레이스가 쪼개지지 않는다") {
+        Then("그 System 의 모든 서비스가 최댓값으로 걸린다 : 선이 하나라 트레이스가 쪼개지지 않는다") {
             rates.appliedFor("shop-gateway") shouldBe 0.1
             rates.appliedFor("shop-order") shouldBe 0.1
             rates.appliedFor("shop-payment") shouldBe 0.1
@@ -27,7 +27,7 @@ class SamplingRatesTest : BehaviorSpec({
         }
     }
 
-    Given("묶음이 둘이면") {
+    Given("System 이 둘이면") {
         val rates = SamplingRates.of(
             mapOf(
                 "shop-gateway" to shop(0.01),
@@ -38,16 +38,16 @@ class SamplingRatesTest : BehaviorSpec({
             fallback = 0.02,
         )
 
-        Then("선이 묶음마다 하나씩 생긴다") {
+        Then("선이 System 마다 하나씩 생긴다") {
             rates.bySystem shouldBe mapOf("shop" to 0.01, "monimo" to 0.5)
         }
 
-        Then("한 묶음을 올려도 다른 묶음은 안 오른다 : 이 이슈가 풀려는 것이 이것이다") {
+        Then("한 System 을 올려도 다른 System 은 안 오른다 : 이 이슈가 풀려는 것이 이것이다") {
             rates.appliedFor("shop-order") shouldBe 0.01
             rates.appliedFor("monimo-detector") shouldBe 0.5
         }
 
-        Then("모르는 이름은 기본 선이다 (남의 묶음 값을 빌리지 않는다)") {
+        Then("모르는 이름은 기본 선이다 (남의 System 값을 빌리지 않는다)") {
             rates.appliedFor("stranger-app") shouldBe 0.02
         }
 
@@ -79,7 +79,7 @@ class SamplingRatesTest : BehaviorSpec({
             rates.appliedFor("shop-gateway") shouldBe 0.01
         }
 
-        Then("묶음별 선이 비어 있다") {
+        Then("System 별 선이 비어 있다") {
             rates.bySystem.isEmpty() shouldBe true
         }
 
@@ -96,14 +96,14 @@ class SamplingRatesTest : BehaviorSpec({
     }
 
     Given("지름길(요청을 다시 만들지 않는 길)은") {
-        Then("모든 묶음과 기본 선이 1.0 이상일 때만 열린다") {
+        Then("모든 System 과 기본 선이 1.0 이상일 때만 열린다") {
             SamplingRates.of(
                 mapOf("shop-gateway" to shop(1.0), "monimo-api-server" to monimo(1.0)),
                 fallback = 1.0,
             ).passesEverything shouldBe true
         }
 
-        Then("묶음 하나만 1.0 이면 닫힌다 : 묶음별로 걸러야 한다") {
+        Then("System 하나만 1.0 이면 닫힌다 : System 별로 걸러야 한다") {
             SamplingRates.of(
                 mapOf("shop-gateway" to shop(0.01), "monimo-api-server" to monimo(1.0)),
                 fallback = 1.0,

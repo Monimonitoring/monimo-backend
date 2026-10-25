@@ -107,7 +107,7 @@ class OtlpGrpcReceiverTest(
     // 플랫폼과 이름 풀이에 달려 있어 둘 다 받는다. 여기서 보는 것은 "연결에서 읽은 값이 메모로 붙는가" 다
     val loopback = listOf("127.0.0.1", "0:0:0:0:0:0:0:1")
 
-    Given("OTLP gRPC 수신을 켠 수집기") {
+    Given("OTLP gRPC 수신을 켠 Collector") {
         When("스팬 2개를 TraceService.Export 로 보내면") {
             val before = counter.count(OtlpReceiveCounter.Signal.TRACES) // 보내기 전 건수를 먼저 적어 둔다
             // 에이전트가 보낼 데이터를 손으로 만든다. resource → scope → span 3겹 구조 그대로

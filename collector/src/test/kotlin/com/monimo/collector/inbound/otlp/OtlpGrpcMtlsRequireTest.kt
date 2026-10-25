@@ -82,7 +82,7 @@ class OtlpGrpcMtlsRequireTest(
     fun peerAddressOf(record: ConsumerRecord<String, ByteArray>): String? =
         record.headers().lastHeader(RawHeaders.PEER_ADDRESS)?.value()?.toString(Charsets.UTF_8)
 
-    Given("손님 신분증을 반드시 요구하는 수집기 (require)") {
+    Given("손님 신분증을 반드시 요구하는 Collector (require)") {
 
         When("우리 기관 신분증(shop-order)을 낸 손님이 세 신호를 보내면") {
             val channel = OtlpTestClient.tls(server.port, ours.ca, ours.clientCertificate("shop-order"), ours.clientKey("shop-order"))
@@ -110,7 +110,7 @@ class OtlpGrpcMtlsRequireTest(
                 ExportLogsServiceRequest.parseFrom(received.getValue(RawSignal.LOGS).value()) shouldBe logs
             }
 
-            Then("#149 의 주소 메모가 세 신호에 그대로 붙는다 : TLS 를 켜도 수집기가 보는 상대 주소는 손님 주소다") {
+            Then("#149 의 주소 메모가 세 신호에 그대로 붙는다 : TLS 를 켜도 Collector 가 보는 상대 주소는 손님 주소다") {
                 received.values.forEach { loopback shouldContain peerAddressOf(it) }
             }
 
@@ -165,7 +165,7 @@ class OtlpGrpcMtlsRequireTest(
             val rejected = OtlpTestClient.rejectedWith(channel)
             channel.shutdownNow()
 
-            Then("끊긴다 : 수집기가 TLS 로 바뀌면 평문 에이전트는 설정을 바꾸기 전까지 못 붙는다") {
+            Then("끊긴다 : Collector 가 TLS 로 바뀌면 평문 에이전트는 설정을 바꾸기 전까지 못 붙는다") {
                 rejected shouldBe Status.Code.UNAVAILABLE
             }
         }

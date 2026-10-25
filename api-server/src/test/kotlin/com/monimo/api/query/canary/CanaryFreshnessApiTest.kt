@@ -63,7 +63,7 @@ class CanaryFreshnessApiTest(
 
     fun data(response: ResponseEntity<String>): JsonNode = objectMapper.readTree(response.body)["data"]
 
-    Given("파수꾼이 카나리 신선도를 물을 때") {
+    Given("Watchdog 이 카나리 신선도를 물을 때") {
         When("그 서비스의 최근 카나리가 기준 안이면") {
             val response = get("?service_name=cn-fresh")
             val data = data(response)

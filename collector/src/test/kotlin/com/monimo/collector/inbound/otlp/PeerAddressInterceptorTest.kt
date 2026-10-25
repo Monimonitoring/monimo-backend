@@ -48,7 +48,7 @@ class PeerAddressInterceptorTest : BehaviorSpec({
     fun attributesWith(address: SocketAddress): Attributes =
         Attributes.newBuilder().set(Grpc.TRANSPORT_ATTR_REMOTE_ADDR, address).build()
 
-    Given("가로채기를 붙인 수집기") {
+    Given("가로채기를 붙인 Collector") {
         When("TCP 연결로 호출이 들어오면") {
             val interceptor = PeerAddressInterceptor(SimpleMeterRegistry())
             val recorder = Recorder()

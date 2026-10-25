@@ -43,7 +43,7 @@ class LogLevelFilterTest : BehaviorSpec({
     val info = 9
     val warn = 13
 
-    Given("하한이 INFO 인 필터") {
+    Given("Minimum log level 이 INFO 인 필터") {
         When("DEBUG · INFO · WARN · 미지정(0) 이 섞여 오면") {
             val (filter, registry) = filterOf("INFO")
             val result = filter.drop(requestOf(record(debug), record(info), record(warn), record(0), record(trace)))
@@ -52,7 +52,7 @@ class LogLevelFilterTest : BehaviorSpec({
                 result.records() shouldBe listOf(info, warn, 0)
             }
 
-            Then("버린 수를 등급별로 센다") {
+            Then("버린 수를 severity 별로 센다") {
                 registry.droppedCount() shouldBe 2.0
                 registry.droppedCount("DEBUG") shouldBe 1.0
                 registry.droppedCount("TRACE") shouldBe 1.0
@@ -68,7 +68,7 @@ class LogLevelFilterTest : BehaviorSpec({
             }
         }
 
-        When("전부 하한 미만이면") {
+        When("전부 Minimum log level 미만이면") {
             val (filter, _) = filterOf("INFO")
             val result = filter.drop(requestOf(record(debug), record(trace)))
 
@@ -79,12 +79,12 @@ class LogLevelFilterTest : BehaviorSpec({
         }
     }
 
-    Given("하한이 WARN 인 필터") {
+    Given("Minimum log level 이 WARN 인 필터") {
         When("INFO 가 오면") {
             val (filter, registry) = filterOf("warn")
             val result = filter.drop(requestOf(record(info), record(warn)))
 
-            Then("INFO 도 빠진다 (등급 이름은 대소문자를 안 가린다)") {
+            Then("INFO 도 빠진다 (severity 이름은 대소문자를 안 가린다)") {
                 result.records() shouldBe listOf(warn)
                 registry.droppedCount("INFO") shouldBe 1.0
             }
@@ -93,7 +93,7 @@ class LogLevelFilterTest : BehaviorSpec({
 
     // 여기가 #236 이 고친 자리다. 전에는 숫자가 0 이면 글자를 안 보고 전부 남겨서, Ingester 가 글자로 DEBUG 라고
     // 판정하는 줄이 Minimum log level 을 빠져나가 logs 표에 쌓였다
-    Given("하한이 INFO 이고 숫자가 규약 밖인(0 · 99) 줄이 섞여 오면") {
+    Given("Minimum log level 이 INFO 이고 숫자가 규약 밖인(0 · 99) 줄이 섞여 오면") {
         val keptBlah = record(0, "blah") // 표에 없는 글자 : 무엇인지 모르는 것은 안 버린다
         val keptEmpty = record(0, "") // 숫자도 글자도 없다
         val keptInfoText = record(0, "INFO")
@@ -111,7 +111,7 @@ class LogLevelFilterTest : BehaviorSpec({
             ),
         )
 
-        Then("글자가 하한 미만을 가리키는 셋은 버린다") {
+        Then("글자가 Minimum log level 미만을 가리키는 셋은 버린다") {
             result.all() shouldBe listOf(keptBlah, keptEmpty, keptInfoText, keptInfoNumber)
         }
 
@@ -121,12 +121,12 @@ class LogLevelFilterTest : BehaviorSpec({
         }
     }
 
-    Given("하한이 WARN 이고 숫자가 0 인 로그") {
+    Given("Minimum log level 이 WARN 이고 숫자가 0 인 로그") {
         When("글자가 WARNING 이면") {
             val (filter, _) = filterOf("WARN")
             val request = requestOf(record(0, "WARNING"))
 
-            Then("하한과 같은 구간이라 남는다 (받은 객체를 그대로 돌려준다)") {
+            Then("Minimum log level 과 같은 구간이라 남는다 (받은 객체를 그대로 돌려준다)") {
                 (filter.drop(request) === request) shouldBe true
             }
         }
@@ -165,7 +165,7 @@ class LogLevelFilterTest : BehaviorSpec({
         }
     }
 
-    Given("하한이 빈 필터 (필터 꺼짐)") {
+    Given("Minimum log level 이 빈 필터 (필터 꺼짐)") {
         When("TRACE 가 와도") {
             val (filter, registry) = filterOf("  ")
             val request = requestOf(record(trace))
@@ -177,7 +177,7 @@ class LogLevelFilterTest : BehaviorSpec({
         }
     }
 
-    Given("하한 이름이 틀린 설정") {
+    Given("Minimum log level 이름이 틀린 설정") {
         Then("기동 때 터진다 (조용히 안 거르면 홍수가 다시 온다)") {
             shouldThrow<IllegalArgumentException> { filterOf("VERBOSE") }
         }

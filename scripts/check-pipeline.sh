@@ -103,8 +103,8 @@ ch_query() {
 table_of() { case "$1" in traces) echo spans ;; metrics) echo metrics_raw ;; logs) echo logs ;; esac; }
 
 for signal in traces metrics logs; do
-  before_in=$(received "$signal")  || fail "수집기 카운터($signal) 조회 실패: http://$COLLECTOR/actuator/metrics"
-  before_out=$(consumed "$signal") || fail "적재 처리기 카운터($signal) 조회 실패: http://$INGESTER/actuator/metrics"
+  before_in=$(received "$signal")  || fail "Collector 카운터($signal) 조회 실패: http://$COLLECTOR/actuator/metrics"
+  before_out=$(consumed "$signal") || fail "Ingester 카운터($signal) 조회 실패: http://$INGESTER/actuator/metrics"
   before_dropped=$(dropped_total "$signal")
   before_dlq=$(dlq_total); before_dlq=${before_dlq:-0}
   table=$(table_of "$signal")
@@ -113,7 +113,7 @@ for signal in traces metrics logs; do
   fi
 
   send "$signal" > /dev/null 2>&1 \
-    || fail "telemetrygen $signal 전송 실패 (collector:4317, TLS=$TLS). 수집기 로그의 'OTLP gRPC 수신 시작' 줄과 .env 의 COLLECTOR_TLS_CLIENT_AUTH 가 맞는지 보라"
+    || fail "telemetrygen $signal 전송 실패 (collector:4317, TLS=$TLS). Collector 로그의 'OTLP gRPC 수신 시작' 줄과 .env 의 COLLECTOR_TLS_CLIENT_AUTH 가 맞는지 보라"
 
   # 소비는 비동기라 바로 안 보인다. 기댓값(받은 수 - 버린 수)에 도달할 때까지 기다린다.
   #
@@ -132,20 +132,20 @@ for signal in traces metrics logs; do
 
   received_delta=$((cur_in - before_in))
   dropped_delta=$((cur_dropped - before_dropped))
-  [ "$received_delta" -gt 0 ] || fail "$signal 을 보냈지만 수집기가 못 받았다 ($before_in -> $cur_in)"
+  [ "$received_delta" -gt 0 ] || fail "$signal 을 보냈지만 Collector 가 못 받았다 ($before_in -> $cur_in)"
   [ "$sent" -gt 0 ] \
-    || fail "$signal 을 보냈지만 수집기가 전부 버렸다 (받은 수 $received_delta · 버린 수 $dropped_delta). MONIMO_COLLECTOR_HEALTH_CHECK_PATHS 와 MONIMO_COLLECTOR_SAMPLING_RATIO 를 확인하라"
+    || fail "$signal 을 보냈지만 Collector 가 전부 버렸다 (받은 수 $received_delta · 버린 수 $dropped_delta). MONIMO_COLLECTOR_HEALTH_CHECK_PATHS 와 MONIMO_COLLECTOR_SAMPLING_RATIO 를 확인하라"
   if [ "$got" -ne "$sent" ]; then
     cur_dlq=$(dlq_total); cur_dlq=${cur_dlq:-0}
     dlq_delta=$((cur_dlq - before_dlq))
     [ "$dlq_delta" -gt 0 ] \
-      && fail "$signal 중 ${dlq_delta}건이 적재에 실패해 raw.dlq 로 갔다 (수집기가 ${sent}건 넘김 · 적재 처리기는 ${got}건 풂). 숫자를 맞추지 않는다 : DLQ 는 실패다. 적재 처리기 로그의 'raw-N@M → raw.dlq (reason=...)' 줄과 FailureClassifier 의 분류를 확인하라"
-    fail "$signal 이 중간에서 끊겼다: 수집기가 ${sent}건 넘겼는데(받은 수 $received_delta · 버린 수 $dropped_delta) 적재 처리기는 ${got}건만 풀었다 (${WAIT_SECONDS}초 대기). raw.dlq 에도 안 갔다. Kafka 토픽 raw 와 적재 처리기 로그를 확인하라"
+      && fail "$signal 중 ${dlq_delta}건이 적재에 실패해 raw.dlq 로 갔다 (Collector 가 ${sent}건 넘김 · Ingester 는 ${got}건 풂). 숫자를 맞추지 않는다 : DLQ 는 실패다. Ingester 로그의 'raw-N@M → raw.dlq (reason=...)' 줄과 FailureClassifier 의 분류를 확인하라"
+    fail "$signal 이 중간에서 끊겼다: Collector 가 ${sent}건 넘겼는데(받은 수 $received_delta · 버린 수 $dropped_delta) Ingester 는 ${got}건만 풀었다 (${WAIT_SECONDS}초 대기). raw.dlq 에도 안 갔다. Kafka 토픽 raw 와 Ingester 로그를 확인하라"
   fi
 
   # 적재할 표가 없는 신호는 여기서 끝
   if [ -z "$table" ]; then
-    ok "$signal ${sent}건: 수집기 수신 → Kafka raw → 적재 처리기 소비까지 도착 (ClickHouse 적재는 아직 없음)"
+    ok "$signal ${sent}건: Collector 수신 → Kafka raw → Ingester 소비까지 도착 (ClickHouse 적재는 아직 없음)"
     continue
   fi
 
@@ -158,8 +158,8 @@ for signal in traces metrics logs; do
   done
   added=$((after_rows - before_rows))
   [ "$added" -gt 0 ] \
-    && ok "$signal ${sent}건: 수집기 수신 → Kafka raw → 적재 처리기 소비 → ClickHouse $table (+${added}줄)" \
-    || fail "$signal 을 적재 처리기가 풀었지만 ClickHouse $table 에 안 들어갔다 (${before_rows}줄 그대로, ${WAIT_SECONDS}초 대기). 적재 처리기 로그의 insert 오류를 확인하라"
+    && ok "$signal ${sent}건: Collector 수신 → Kafka raw → Ingester 소비 → ClickHouse $table (+${added}줄)" \
+    || fail "$signal 을 Ingester 가 풀었지만 ClickHouse $table 에 안 들어갔다 (${before_rows}줄 그대로, ${WAIT_SECONDS}초 대기). Ingester 로그의 insert 오류를 확인하라"
 done
 
 # ── 중복 대조 (#187)
@@ -187,13 +187,13 @@ RECENT="start_time >= $FROM_TS"
 # ① spans 자체 : 같은 (trace_id, span_id) 가 두 줄이면 중복이다
 dup=$(ch_query "SELECT count() - uniqExact(trace_id, span_id) FROM monimo.spans WHERE $RECENT") \
   || fail "spans 중복 대조 조회 실패"
-[ "$dup" = "0" ] || fail "spans 에 중복 ${dup}줄 (같은 trace_id·span_id 가 두 번 들어왔다). ClickHouse 중복 제거 기억이 못 걸렀다는 뜻이다 : db/clickhouse 의 non_replicated_deduplication_window 설정과 적재 처리기 재시작 이력을 보라"
+[ "$dup" = "0" ] || fail "spans 에 중복 ${dup}줄 (같은 trace_id·span_id 가 두 번 들어왔다). ClickHouse 중복 제거 기억이 못 걸렀다는 뜻이다 : db/clickhouse 의 non_replicated_deduplication_window 설정과 Ingester 재시작 이력을 보라"
 ok "spans 중복 0줄"
 
 # ② spans(SERVER) ↔ service_health_1m : Detector 가 읽는 집계다. MV 조건(span_kind = 'SERVER')을 그대로 맞춘다
 src=$(ch_query "SELECT count() FROM monimo.spans WHERE span_kind = 'SERVER' AND $RECENT") || fail "spans SERVER 조회 실패"
 agg=$(ch_query "SELECT countMerge(cnt) FROM monimo.service_health_1m WHERE ts_min >= $FROM_TS") || fail "service_health_1m 조회 실패"
-[ "$src" = "$agg" ] || fail "집계가 원본과 다르다: spans(SERVER) ${src}줄인데 service_health_1m 은 ${agg}건으로 센다. 집계만 중복되면 에러율 · P95 가 틀어진다 (탐지가 이 표를 읽는다)"
+[ "$src" = "$agg" ] || fail "집계가 원본과 다르다: spans(SERVER) ${src}줄인데 service_health_1m 은 ${agg}건으로 센다. 집계만 중복되면 에러율 · P95 가 틀어진다 (Detector 가 이 표를 읽는다)"
 ok "spans(SERVER) ${src} = service_health_1m ${agg}"
 
 # ③ transactions ↔ heatmap_1m : **연쇄 2단**이다 (spans -> transactions -> heatmap_1m).
@@ -243,4 +243,4 @@ else
   fi
 fi
 
-echo "파이프라인 관통 정상: 에이전트 → 수집기 → Kafka raw → 적재 처리기 → ClickHouse"
+echo "파이프라인 E2E 정상: 에이전트 → Collector → Kafka raw → Ingester → ClickHouse"

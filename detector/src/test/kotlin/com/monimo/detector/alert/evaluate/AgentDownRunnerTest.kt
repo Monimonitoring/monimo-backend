@@ -153,7 +153,7 @@ class AgentDownRunnerTest(
         fake.lastSignal.clear()
         val s = tickAt(8)
 
-        Then("판정 불가 — pay 까지 울리지 않고, 키 상태도 건드리지 않는다 (파수꾼 몫)") {
+        Then("판정 불가 — pay 까지 울리지 않고, 키 상태도 건드리지 않는다 (Watchdog 몫)") {
             s.fired shouldBe 0
             s.statusChanged shouldBe 0
             status("pay-a") shouldBe "UP"

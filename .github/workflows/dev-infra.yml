@@ -56,9 +56,9 @@ jobs:
       - name: 가짜 데이터 넣기
         run: ./scripts/seed-clickhouse.sh
       - uses: docker/setup-buildx-action@v4
-      - name: 수집기 · 적재 처리기 컨테이너 켜기
+      - name: Collector · Ingester 컨테이너 켜기
         run: docker compose --profile collector --profile ingester up -d --wait --build
-      - name: 파이프라인 점검 (telemetrygen → 수집기 → Kafka raw → 적재 처리기)
+      - name: 파이프라인 점검 (telemetrygen → Collector → Kafka raw → Ingester)
         run: ./scripts/check-pipeline.sh
       - name: 실패하면 로그 보기
         if: failure()
