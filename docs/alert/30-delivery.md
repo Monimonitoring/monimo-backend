@@ -7,10 +7,10 @@
 ## 1. 흐름
 
 ```
-탐지 TX ─ 평가상태 FOR UPDATE → 상태머신 → alert_events INSERT/UPDATE → notification_outbox INSERT × 켜진 채널 → COMMIT
-알림 TX① ─ SELECT … FOR NO KEY UPDATE SKIP LOCKED LIMIT batch → IN_FLIGHT · claim_token · lease_until → COMMIT
+Detector TX ─ 평가상태 FOR UPDATE → 상태머신 → alert_events INSERT/UPDATE → notification_outbox INSERT × 켜진 채널 → COMMIT
+Notifier TX① ─ SELECT … FOR NO KEY UPDATE SKIP LOCKED LIMIT batch → IN_FLIGHT · claim_token · lease_until → COMMIT
 (트랜잭션 밖) 채널 켜짐 재확인 → sender.send (timeout < lease)
-알림 TX② ─ UPDATE … WHERE id AND claim_token AND IN_FLIGHT → (끝났으면) notification_history INSERT → COMMIT
+Notifier TX② ─ UPDATE … WHERE id AND claim_token AND IN_FLIGHT → (끝났으면) notification_history INSERT → COMMIT
 ```
 
 ## 2. 결정 기록
@@ -18,10 +18,10 @@
 ### D5. 전이와 발송 의도를 한 트랜잭션에 (transactional outbox)
 
 - **문제**: 사건만 저장되고 죽으면 알림이 영영 안 간다. 먼저 보내고 저장이 실패하면 기록 없는 알림이 간다.
-- **선택**: 사건 INSERT 와 outbox INSERT 를 같은 PG 트랜잭션에. 외부 호출은 알림 워커가 나중에.
-- **다른 방법**: 탐지→알림 동기 HTTP(내구성 없음) · Kafka relay · CDC (알림 경로에 추가하지 않기로 한 것들).
+- **선택**: 사건 INSERT 와 outbox INSERT 를 같은 PG 트랜잭션에. 외부 호출은 Notifier 워커가 나중에.
+- **다른 방법**: Detector→Notifier 동기 HTTP(내구성 없음) · Kafka relay · CDC (알림 경로에 추가하지 않기로 한 것들).
 - **검증 (E3)**: `TransitionHook` 으로 "사건 저장 뒤 · outbox 저장 전" 예외 주입 → 사건 0 · outbox 0 · 평가 상태도 bad=2 그대로. 같은 버킷 재평가 시 정상 발화. ✅
-- **남은 위험**: 탐지가 `alert_rule_channels` · `alert_channels`(API 서버 표)를 읽는다. 발화 순간 켜진 채널만 대상.
+- **남은 위험**: Detector 가 `alert_rule_channels` · `alert_channels`(API server 표)를 읽는다. 발화 순간 켜진 채널만 대상.
 
 ### D6. 선점은 짧게, 외부 호출은 트랜잭션 밖
 
@@ -63,7 +63,7 @@
 - 영구 거절(400 · 404)은 채널 설정 문제이지 장애가 아니므로 "응답함"으로 본다 (회로를 닫는 쪽).
 - OPEN 중에도 `max-age` 는 지킨다 — 복구 뒤 30분 넘은 낡은 경보가 한꺼번에 가지 않게 호출 없이 FAILED.
 - **대안과 비용**: Resilience4j 는 의존성 추가(배포 담당 영역인 `libs.versions.toml`)가 필요하고, 테스트 시계로 OPEN → HALF_OPEN 을 재현하기가 번거롭다. 기능이 늘면(느린 호출 비율 · 슬라이딩 창) 교체를 검토한다.
-- **한계**: 회로는 인스턴스 메모리에 있다. 알림 인스턴스가 여러 대면 각자 연속 실패를 센다 (공유하지 않음).
+- **한계**: 회로는 인스턴스 메모리에 있다. Notifier 인스턴스가 여러 대면 각자 연속 실패를 센다 (공유하지 않음).
 - **검증**: `DeliveryWorkerTest` E8 — 503 이 이어지면 5번 뒤 OPEN, 이후 같은 채널 작업은 가짜 서버 호출 0번 · `attempt_count` 0 으로 30초 뒤 재예약, 다른 채널은 발송됨. 살아나고 30초 뒤 시험 호출 성공 → 쌓인 작업 모두 발송, 보류됐던 작업 이력의 재시도 0. OPEN 중 30분 넘은 작업은 호출 0번으로 FAILED.
 
 ## 3. 가장 중요한 한계 — 외부 exactly-once 는 없다
@@ -75,14 +75,14 @@
 | 채널 | 공급자 멱등 지원 | 근거 | 결론 |
 |---|---|---|---|
 | Slack Incoming Webhook | **문서에 없음** | [Sending messages using incoming webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks) (오류 코드 목록만 있음, 멱등 · 중복 제거 언급 없음) · [Rate limits](https://docs.slack.dev/apis/web-api/rate-limits) ("Incoming webhooks: 1 per second. Short bursts >1 allowed", 429 + Retry-After 초) | at-least-once. 중복 창을 줄이는 것만 가능 (짧은 timeout, lease 여유) |
-| PagerDuty Events v2 | `dedup_key` 로 같은 사건 묶음 (확인 필요) | 미확인 — 구현 전에 공식 문서로 확인 | 지원되면 `alert_event_uuid` 를 키로 |
+| PagerDuty Events v2 | `dedup_key` 로 같은 사건 그룹 (확인 필요) | 미확인 — 구현 전에 공식 문서로 확인 | 지원되면 `alert_event_uuid` 를 키로 |
 | Webhook | 받는 쪽 구현에 달림 | — | `Idempotency-Key` 헤더로 사건 UUID+전이 전달 제안 |
 | Email | 없음 | — | at-least-once |
 
 ## 4. 아직 안 한 것 (미실행 · 미구현)
 
 - 그룹핑 · 발화/복구 순서 (E9 · E10): **구현** — `50-grouping.md`. 같은 채널 · 서비스를 group_wait 10초 기다려 한 메시지로, RESOLVED 는 FIRING 이 끝난 뒤에만. E9 는 같은 JVM 모사(선점 후 멈춤 → 임대 만료 후 새 형제와 함께 발송)까지. 반복 알림 간격(리마인더)은 하지 않는다
-- **실제 프로세스 종료 (2026-10-10)**: `60-process-kill.md`. notifier JVM `kill -9`(확인한 지점 2곳 · 각 1회) — 묶음 대기 중 종료는 유실 없이 재시작 후 1건, Slack 수신 직후 · 기록 전 종료는 유실 없이 **91초 뒤 같은 메시지 1번 더**(DB 이력만으로는 중복이 안 보임). 같은 JVM 모사와 결과가 같다
+- **실제 프로세스 종료 (2026-10-10)**: `60-process-kill.md`. notifier JVM `kill -9`(확인한 지점 2곳 · 각 1회) — 그룹 대기 중 종료는 유실 없이 재시작 후 1건, Slack 수신 직후 · 기록 전 종료는 유실 없이 **91초 뒤 같은 메시지 1번 더**(DB 이력만으로는 중복이 안 보임). 같은 JVM 모사와 결과가 같다
 - 최종 실패 자체 알림 (FN-32): 별도 경로 + 재귀 억제. **미구현**
 - 관측: backlog 깊이 · oldest age 쿼리(`countByStatusIn` · `oldestCreatedAt`)만 있음, 지표 노출 없음
 - 성능 실험 (폴링 0.5/1/5초 · 워커 1/2/4 · 배치 10/50): **미실행**. 위 E4 는 기능 검증이지 성능 측정이 아니다

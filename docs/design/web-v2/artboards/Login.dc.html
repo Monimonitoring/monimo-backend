@@ -26,7 +26,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
 
     <div style="display: flex; flex-direction: column; gap: 16px;">
       <div style="font-size: 11px; font-weight: 600; color: #8B96A5; letter-spacing: .02em;">수집 파이프라인</div>
-      <svg width="604" height="104" viewBox="0 0 604 104" fill="none" role="img" aria-label="에이전트에서 수집기, Kafka, 적재 처리기, ClickHouse를 거쳐 API 서버로 흐르는 수집 파이프라인">
+      <svg width="604" height="104" viewBox="0 0 604 104" fill="none" role="img" aria-label="에이전트에서 Collector, Kafka, Ingester, ClickHouse를 거쳐 API server 로 흐르는 수집 파이프라인">
         <defs>
           <marker id="loginArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
             <path d="M0 0.8 L6 3.5 L0 6.2 Z" fill="#6E7A8A"></path>
@@ -39,7 +39,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
         <path d="M88 46.5 H100" stroke="#6E7A8A" stroke-width="1.4" marker-end="url(#loginArrow)"></path>
 
         <rect x="104.5" y="24.5" width="84" height="44" rx="7" fill="#1E2531" stroke="#39424F"></rect>
-        <text x="146" y="51" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">수집기</text>
+        <text x="146" y="51" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Collector</text>
         <text x="146" y="84" text-anchor="middle" font-size="10" fill="#6E7A8A" font-family="'IBM Plex Mono', Menlo, monospace">gRPC 4317</text>
         <path d="M192 46.5 H204" stroke="#6E7A8A" stroke-width="1.4" marker-end="url(#loginArrow)"></path>
 
@@ -49,7 +49,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
         <path d="M296 46.5 H308" stroke="#6E7A8A" stroke-width="1.4" marker-end="url(#loginArrow)"></path>
 
         <rect x="312.5" y="24.5" width="84" height="44" rx="7" fill="#1E2531" stroke="#39424F"></rect>
-        <text x="354" y="51" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">적재 처리기</text>
+        <text x="354" y="51" text-anchor="middle" font-size="12" font-weight="500" fill="#FFFFFF">Ingester</text>
         <text x="354" y="84" text-anchor="middle" font-size="10" fill="#6E7A8A" font-family="'IBM Plex Mono', Menlo, monospace">batch 2k</text>
         <path d="M400 46.5 H412" stroke="#6E7A8A" stroke-width="1.4" marker-end="url(#loginArrow)"></path>
 
@@ -59,7 +59,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
         <path d="M504 46.5 H516" stroke="#6E7A8A" stroke-width="1.4" marker-end="url(#loginArrow)"></path>
 
         <rect x="520.5" y="24.5" width="84" height="44" rx="7" fill="#22314F" stroke="#3E5490"></rect>
-        <text x="562" y="51" text-anchor="middle" font-size="12" font-weight="600" fill="#FFFFFF">API 서버</text>
+        <text x="562" y="51" text-anchor="middle" font-size="12" font-weight="600" fill="#FFFFFF">API server</text>
         <text x="562" y="84" text-anchor="middle" font-size="10" fill="#8FA3D8" font-family="'IBM Plex Mono', Menlo, monospace">/api/v1</text>
 
       </svg>
@@ -78,7 +78,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
 
     <div style="display: flex; align-items: center; gap: 10px; align-self: flex-start; padding: 10px 14px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px;">
       <span style="width: 8px; height: 8px; border-radius: 999px; background: #34C46A; flex-shrink: 0;"></span>
-      <span style="font-size: 12px; color: #C9D1DC;">파수꾼 카나리</span>
+      <span style="font-size: 12px; color: #C9D1DC;">Watchdog 카나리</span>
       <span style="color: #4A5461;">·</span>
       <span style="font-family: 'IBM Plex Mono', Menlo, monospace; font-size: 12px; color: #FFFFFF;">12초 전</span>
       <span style="color: #4A5461;">·</span>

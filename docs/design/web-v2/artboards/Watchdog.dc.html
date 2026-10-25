@@ -25,7 +25,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
     <div style="display: flex; flex-direction: column; gap: 2px;">
       <a href="ServerMap.dc.html" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 6px; color: #C9D1DC;">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="4" r="2"></circle><circle cx="12" cy="4" r="2"></circle><circle cx="8" cy="12" r="2"></circle><path d="M5.5 5.5 7 10M10.5 5.5 9 10M6 4h4"></path></svg>
-        <span>서버맵</span>
+        <span>Service map</span>
       </a>
       <a href="Transactions.dc.html" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 6px; color: #C9D1DC;">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13h12M2 13V3"></path><circle cx="5" cy="9" r="1"></circle><circle cx="8" cy="6" r="1"></circle><circle cx="11" cy="10" r="1"></circle><circle cx="12" cy="5" r="1"></circle></svg>
@@ -33,7 +33,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
       </a>
       <a href="Inspector.dc.html" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 6px; color: #C9D1DC;">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="2"></rect><path d="M5 10 7 7l2 2 2-4"></path></svg>
-        <span>인스펙터</span>
+        <span>Inspector</span>
       </a>
       <a href="Errors.dc.html" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border-radius: 6px; color: #C9D1DC;">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2 1.8 13h12.4L8 2Z"></path><path d="M8 6.5v3M8 11.5v.5"></path></svg>
@@ -58,7 +58,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
       </a>
     </div>
     <a href="Watchdog.dc.html" style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; text-decoration: none; color: inherit;">
-      <div style="font-size: 11px; font-weight: 600; color: #8B96A5; letter-spacing: .02em;">파수꾼 · 카나리</div>
+      <div style="font-size: 11px; font-weight: 600; color: #8B96A5; letter-spacing: .02em;">Watchdog · 카나리</div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="width: 8px; height: 8px; border-radius: 999px; background: #34C46A; flex-shrink: 0;"></span>
         <span style="font-family: 'IBM Plex Mono', Menlo, monospace; font-size: 12px; color: #FFFFFF;">12초 전</span>
@@ -70,11 +70,11 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
   <!-- ===== 우측 영역 ===== -->
   <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
 
-    <!-- 상단바 (파수꾼은 앱 선택과 무관하므로 서비스 select 없음) -->
+    <!-- 상단바 (Watchdog 은 앱 선택과 무관하므로 서비스 select 없음) -->
     <header style="height: 56px; flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #D9DEE6; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-sizing: border-box;">
       <div style="display: flex; flex-direction: column; gap: 1px;">
         <h1 style="margin: 0; font-size: 20px; font-weight: 600; line-height: 1.2;">플랫폼 상태</h1>
-        <div style="font-size: 12px; color: #5E6875;">감시 체계가 살아 있는지 카나리로 관통 확인</div>
+        <div style="font-size: 12px; color: #5E6875;">감시 체계가 살아 있는지 카나리로 E2E 확인</div>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
         <div role="group" aria-label="시간 범위" style="display: flex; border: 1px solid #B8C0CC; border-radius: 6px; overflow: hidden; height: 36px;">
@@ -126,25 +126,25 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
         </div>
       </section>
 
-      <!-- ② 카나리 관통 경로 -->
+      <!-- ② 카나리 E2E 경로 -->
       <section style="box-sizing: border-box; background: #FFFFFF; border: 1px solid #D9DEE6; border-radius: 10px; box-shadow: 0 1px 2px rgba(20,26,34,.06); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
         <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
-          <h2 style="margin: 0; font-size: 15px; font-weight: 600;">카나리 관통 경로</h2>
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600;">카나리 E2E 경로</h2>
           <span style="font-size: 12px; font-weight: 500; color: #5E6875;">마지막 카나리 <span style="font-family: 'IBM Plex Mono', Menlo, monospace; font-size: 12px; color: #3E4753;">trace_id 8f2c…41ab</span> · 발사 15:00:18 → 조회 가능 15:00:30</span>
         </div>
 
-        <svg width="1120" height="124" viewBox="0 0 1120 124" fill="none" role="img" aria-label="파수꾼에서 쇼핑몰 주문 API, OTel Agent, 수집기, Kafka, 적재 처리기, ClickHouse를 거쳐 API 서버까지 카나리가 관통한 경로와 각 단계 통과 시각">
+        <svg width="1120" height="124" viewBox="0 0 1120 124" fill="none" role="img" aria-label="Watchdog 에서 쇼핑몰 주문 API, OTel Agent, Collector, Kafka, Ingester, ClickHouse를 거쳐 API server 까지 카나리가 끝까지 지나간 경로와 각 단계 통과 시각">
           <defs>
             <marker id="wdArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
               <path d="M0 0.8 L6 3.5 L0 6.2 Z" fill="#B8C0CC"></path>
             </marker>
           </defs>
 
-          <!-- 1. 파수꾼 (스택 바깥 · 점선) -->
+          <!-- 1. Watchdog (스택 바깥 · 점선) -->
           <text x="0" y="12" font-size="10" font-weight="600" fill="#5E6875">스택 바깥</text>
           <rect x="0.5" y="22.5" width="121" height="52" rx="8" fill="#FBEFD9" stroke="#B2680A" stroke-width="1.2" stroke-dasharray="4 3"></rect>
           <circle cx="15" cy="40" r="4" fill="#1F8A4C"></circle>
-          <text x="26" y="44" font-size="12" font-weight="600" fill="#151A22">파수꾼</text>
+          <text x="26" y="44" font-size="12" font-weight="600" fill="#151A22">Watchdog</text>
           <text x="13" y="64" font-size="10" fill="#7A4806" font-family="'IBM Plex Mono', Menlo, monospace">AWS Lambda</text>
           <text x="13" y="92" font-size="10" fill="#3E4753" font-family="'IBM Plex Mono', Menlo, monospace">15:00:18</text>
           <text x="13" y="106" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">발사 기준 +0.00s</text>
@@ -169,10 +169,10 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
           <text x="297" y="106" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">+0.21s</text>
           <path d="M410 48.5 H420" stroke="#B8C0CC" stroke-width="1.4" marker-end="url(#wdArrow)"></path>
 
-          <!-- 4. 수집기 -->
+          <!-- 4. Collector -->
           <rect x="426.5" y="22.5" width="121" height="52" rx="8" fill="#FFFFFF" stroke="#D9DEE6"></rect>
           <circle cx="441" cy="40" r="4" fill="#1F8A4C"></circle>
-          <text x="452" y="44" font-size="12" font-weight="600" fill="#151A22">수집기</text>
+          <text x="452" y="44" font-size="12" font-weight="600" fill="#151A22">Collector</text>
           <text x="439" y="64" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">gRPC 4317 · mTLS</text>
           <text x="439" y="92" font-size="10" fill="#3E4753" font-family="'IBM Plex Mono', Menlo, monospace">15:00:19</text>
           <text x="439" y="106" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">+0.93s</text>
@@ -188,10 +188,10 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
           <text x="581" y="106" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">+1.40s</text>
           <path d="M694 48.5 H704" stroke="#B8C0CC" stroke-width="1.4" marker-end="url(#wdArrow)"></path>
 
-          <!-- 6. 적재 처리기 -->
+          <!-- 6. Ingester -->
           <rect x="710.5" y="22.5" width="121" height="52" rx="8" fill="#FFFFFF" stroke="#D9DEE6"></rect>
           <circle cx="725" cy="40" r="4" fill="#1F8A4C"></circle>
-          <text x="736" y="44" font-size="12" font-weight="600" fill="#151A22">적재 처리기</text>
+          <text x="736" y="44" font-size="12" font-weight="600" fill="#151A22">Ingester</text>
           <text x="723" y="64" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">batch 2,000행</text>
           <text x="723" y="92" font-size="10" fill="#3E4753" font-family="'IBM Plex Mono', Menlo, monospace">15:00:24</text>
           <text x="723" y="106" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">+6.20s</text>
@@ -206,16 +206,16 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
           <text x="865" y="106" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">+7.10s</text>
           <path d="M978 48.5 H988" stroke="#B8C0CC" stroke-width="1.4" marker-end="url(#wdArrow)"></path>
 
-          <!-- 8. API 서버 -->
+          <!-- 8. API server -->
           <rect x="994.5" y="22.5" width="121" height="52" rx="8" fill="#E4E9FB" stroke="#B3C0EE"></rect>
           <circle cx="1009" cy="40" r="4" fill="#1F8A4C"></circle>
-          <text x="1020" y="44" font-size="12" font-weight="600" fill="#151A22">API 서버</text>
+          <text x="1020" y="44" font-size="12" font-weight="600" fill="#151A22">API server</text>
           <text x="1007" y="64" font-size="10" fill="{{accent}}" font-family="'IBM Plex Mono', Menlo, monospace">canary/freshness</text>
           <text x="1007" y="92" font-size="10" fill="#3E4753" font-family="'IBM Plex Mono', Menlo, monospace">15:00:30</text>
           <text x="1007" y="106" font-size="10" fill="#5E6875" font-family="'IBM Plex Mono', Menlo, monospace">age_sec 12</text>
         </svg>
 
-        <p style="margin: 0; font-size: 12px; font-weight: 500; color: #5E6875;">판정은 상수 하트비트가 아니라 실제 관통한 카나리의 신선도(<span style="font-family: 'IBM Plex Mono', Menlo, monospace; font-size: 11px; color: #3E4753;">age_sec ≤ threshold_sec</span>)</p>
+        <p style="margin: 0; font-size: 12px; font-weight: 500; color: #5E6875;">판정은 상수 하트비트가 아니라 실제로 끝까지 지나간 카나리의 신선도(<span style="font-family: 'IBM Plex Mono', Menlo, monospace; font-size: 11px; color: #3E4753;">age_sec ≤ threshold_sec</span>)</p>
       </section>
 
       <!-- ③ 우리 서비스 6개 -->
@@ -322,7 +322,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
         </div>
       </section>
 
-      <!-- ④ 하단: 카나리 이벤트 · 파수꾼 자신 -->
+      <!-- ④ 하단: 카나리 이벤트 · Watchdog 자신 -->
       <div style="flex: 1; min-height: 0; display: flex; flex-direction: row; gap: 16px;">
 
         <section style="flex: 1.6; min-width: 0; box-sizing: border-box; background: #FFFFFF; border: 1px solid #D9DEE6; border-radius: 10px; box-shadow: 0 1px 2px rgba(20,26,34,.06); padding: 16px 20px; display: flex; flex-direction: column; gap: 12px;">
@@ -389,7 +389,7 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
 
         <section style="flex: 1; min-width: 0; box-sizing: border-box; background: #FFFFFF; border: 1px solid #D9DEE6; border-radius: 10px; box-shadow: 0 1px 2px rgba(20,26,34,.06); padding: 16px 20px; display: flex; flex-direction: column; gap: 12px;">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <h2 style="margin: 0; font-size: 15px; font-weight: 600;">파수꾼 자신</h2>
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600;">Watchdog 자신</h2>
             <span style="font-size: 12px; font-weight: 600; color: #7A4806; background: #FBEFD9; border-radius: 999px; padding: 2px 8px;">스택 외부</span>
           </div>
 
@@ -404,11 +404,11 @@ a{color:#3452D6;text-decoration:none}a:hover{color:#22389A}
             </div>
             <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #EEF1F5;">
               <span style="font-size: 12px; font-weight: 600; color: #5E6875;">알림 경로</span>
-              <span style="text-align: right; font-size: 13px; color: #151A22;">Slack 직접 발송 — 우리 알림 서비스를 거치지 않는다</span>
+              <span style="text-align: right; font-size: 13px; color: #151A22;">Slack 직접 발송 — 우리 Notifier 를 거치지 않는다</span>
             </div>
             <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
               <span style="font-size: 12px; font-weight: 600; color: #5E6875;">Dead Man's Switch</span>
-              <span style="text-align: right; font-size: 13px; color: #151A22;">Healthchecks.io — 파수꾼이 죽으면 외부가 알린다</span>
+              <span style="text-align: right; font-size: 13px; color: #151A22;">Healthchecks.io — Watchdog 이 죽으면 외부가 알린다</span>
             </div>
           </div>
 

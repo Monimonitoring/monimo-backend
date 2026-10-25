@@ -1,9 +1,9 @@
 # 1차 디자인 리뷰 (2026-09-21)
 
 ## 요약 (3줄)
-API 50행 중 미매핑(없음)은 0건이고 14건이 부분 충족이다. 화면 자체의 완성도와 필드 충실도는 높고, 특히 인스펙터·파수꾼·트레이스 상세는 그대로 구현 스펙으로 넘길 만하다.
+API 50행 중 미매핑(없음)은 0건이고 14건이 부분 충족이다. 화면 자체의 완성도와 필드 충실도는 높고, 특히 Inspector·Watchdog·트레이스 상세는 그대로 구현 스펙으로 넘길 만하다.
 가장 큰 문제는 모달·드로어가 그 화면의 존재 이유인 컬럼을 덮어버리는 것이다. 경보 이벤트의 observed_value·fired_at, 경보 규칙의 metric_kind·조건, 설정의 샘플링률 슬라이더가 세 화면 모두에서 가려져 핵심기능 ②와 ⑤의 증거가 화면에 남지 않는다.
-그다음은 데이터 정합성이다. 필터 값과 표 내용이 어긋나는 화면이 둘(에러·스레드 덤프), 같은 경보 3건을 서버맵과 경보 화면이 서로 다르게 적고, 현재 시각이 화면마다 14:05와 15:00으로 갈린다.
+그다음은 데이터 정합성이다. 필터 값과 표 내용이 어긋나는 화면이 둘(에러·스레드 덤프), 같은 경보 3건을 Service map 과 경보 화면이 서로 다르게 적고, 현재 시각이 화면마다 14:05와 15:00으로 갈린다.
 
 ---
 
@@ -38,8 +38,8 @@ API 50행 중 미매핑(없음)은 0건이고 14건이 부분 충족이다. 화�
 | ② 5xx 비율 초과가 사람에게 닿는다 | AlertRules 규칙(5XX_RATE·GT·1.0%·300초·CRITICAL) → Alerts 이벤트(FIRING·observed_value 4.2%) → 드로어 알림 발송 이력(SLACK/EMAIL/WEBHOOK SUCCESS, PAGERDUTY FAIL 재시도 2) | 충족 | 사슬 자체는 완비다. 다만 사슬의 가운데 고리인 observed_value 4.2%가 드로어 안에만 있고 이벤트 표 컬럼은 드로어에 가려 안 보인다. 표에서도 4.2%가 읽혀야 "규칙→이벤트" 연결이 한눈에 선다 |
 | ③ 에이전트별 CPU·힙·GC + 스레드 덤프 | Inspector 4차트(CPU 37.2% / 힙 1,312MB / GC 48ms·분 / 스레드 142) + InspectorDumpModal 3단계 진행 + ThreadDump 상태별 집계·스택 트레이스 | 충족 | ThreadDump 상단 칩 RUNNABLE 58 + WAITING 61 + TIMED_WAITING 19 + BLOCKED 4 = 142가 헤더 thread_count와 정확히 맞아떨어진다. 잘 만들었다. 보완은 시각 결함(스택 트레이스 우측 잘림)뿐 |
 | ④ 느린 구간 드래그 → API 목록 | Transactions 스캐터 드래그 사각형 + "선택 47건 · 실패 9" 말풍선 + 조건 칩 5개 + 하단 요청 목록 8행 | 충족 | 드래그 사각형의 y 하단이 1000ms 눈금인데 조건 칩은 min_duration_ms 900이다. 칩을 1000으로 맞추거나 사각형을 900 위치로 내려 좌표와 조건을 일치시켜야 "긁은 그대로가 조건이 된다"는 설득이 산다 |
-| ⑤ 재배포 없이 샘플링률·임계값 변경 | Settings 샘플링 카드(슬라이더·expected_version=7·409 배너) + AlertRules 모달(threshold 1.0·window_sec 300 + "재배포 없이 즉시 적용 · 탐지가 10~30초 주기로 다시 읽음") | **부족** | 임계값 쪽(AlertRules)은 문구까지 완벽하다. 샘플링률 쪽은 슬라이더 핸들이 value=5로 트랙 맨 왼쪽에 있는데 모달이 그 영역을 정확히 덮어, 화면에 남는 건 "75% 100% 5.0%"라는 읽을 수 없는 조각뿐이다. ⑤의 절반이 시각적으로 증명되지 않는다 |
-| + 파수꾼: 스택 다운 시 1분 내 알림 | Watchdog 관통 경로 8단계(+0.00s→age_sec 12) + 카나리 이벤트 표(STALE age_sec 74 > threshold 60 → "Slack 직접 발송, 알림 서비스 미경유") + 주기 30초 + Dead Man's Switch | 충족 | 판정 근거는 완비인데 "1분 내"라는 수치가 화면에 없다. 이벤트 표 조치 컬럼에 발송 시각(13:59:47 등)이나 "탐지 후 17초"를 넣으면 완료조건이 표에서 직접 읽힌다 |
+| ⑤ 재배포 없이 샘플링률·임계값 변경 | Settings 샘플링 카드(슬라이더·expected_version=7·409 배너) + AlertRules 모달(threshold 1.0·window_sec 300 + "재배포 없이 즉시 적용 · Detector 가 10~30초 주기로 다시 읽음") | **부족** | 임계값 쪽(AlertRules)은 문구까지 완벽하다. 샘플링률 쪽은 슬라이더 핸들이 value=5로 트랙 맨 왼쪽에 있는데 모달이 그 영역을 정확히 덮어, 화면에 남는 건 "75% 100% 5.0%"라는 읽을 수 없는 조각뿐이다. ⑤의 절반이 시각적으로 증명되지 않는다 |
+| + Watchdog: 스택 다운 시 1분 내 알림 | Watchdog E2E 경로 8단계(+0.00s→age_sec 12) + 카나리 이벤트 표(STALE age_sec 74 > threshold 60 → "Slack 직접 발송, Notifier 미경유") + 주기 30초 + Dead Man's Switch | 충족 | 판정 근거는 완비인데 "1분 내"라는 수치가 화면에 없다. 이벤트 표 조치 컬럼에 발송 시각(13:59:47 등)이나 "탐지 후 17초"를 넣으면 완료조건이 표에서 직접 읽힌다 |
 
 ---
 
@@ -100,9 +100,9 @@ API 50행 중 미매핑(없음)은 0건이고 14건이 부분 충족이다. 화�
 | ServerMap 상위 URL | `/api/orders/{orderId}` |
 | TraceDetail 스팬 이름 | `/api/orders`, `/api/stock`, `/payments` |
 
-감시 대상은 쇼핑몰이고 `/api/v1`은 모니모 API 서버의 경로이므로, 쇼핑몰 스팬 이름에 `/api/v1`을 쓰는 게 오히려 혼동을 준다. 쇼핑몰 쪽은 `/api/orders` 계열로 통일하고 모니모 API 경로 표기(`GET /traces/scatter` 등)와 시각적으로 구분하는 쪽을 권한다.
+감시 대상은 쇼핑몰이고 `/api/v1`은 모니모 API server 의 경로이므로, 쇼핑몰 스팬 이름에 `/api/v1`을 쓰는 게 오히려 혼동을 준다. 쇼핑몰 쪽은 `/api/orders` 계열로 통일하고 모니모 API 경로 표기(`GET /traces/scatter` 등)와 시각적으로 구분하는 쪽을 권한다.
 
-**이메일 도메인** — 같은 사람 김승조가 Login·Settings에서는 `seungjo@monimo.dev`, ThreadDump·InspectorDumpModal에서는 `seungjo@monimo.io`다. 채널·수집기 엔드포인트는 `.io`와 `.dev`가 섞여 있다. `monimo.io`로 통일 권장. (M)
+**이메일 도메인** — 같은 사람 김승조가 Login·Settings에서는 `seungjo@monimo.dev`, ThreadDump·InspectorDumpModal에서는 `seungjo@monimo.io`다. 채널·Collector 엔드포인트는 `.io`와 `.dev`가 섞여 있다. `monimo.io`로 통일 권장. (M)
 
 **축약 UUID 충돌** — `a3f1…9c2e`가 Transactions·Errors에서는 trace_id, Alerts 드로어에서는 alert_rule_uuid, Settings에서는 application_uuid, ThreadDump에서는 dump_uuid 꼬리로 쓰인다. 서로 다른 엔티티가 같은 축약값을 쓰면 데모 중 "같은 건가요?" 질문이 나온다. 엔티티마다 다른 8자리를 배정할 것. (M)
 
@@ -129,18 +129,18 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 
 ## E. UX 논리
 
-**왕복 링크** — 서버맵→트랜잭션→트레이스→인스펙터 축은 잘 이어진다. TraceDetail이 "이 파드 인스펙터 보기"와 "트랜잭션 목록" 버튼을 양쪽에 달았고, Errors·Logs 표의 trace_id 8~10개가 모두 TraceDetail로 간다. Inspector는 "덤프 이력"으로 ThreadDump에 닿는다. 끊긴 곳은 넷이다.
+**왕복 링크** — Service map→트랜잭션→트레이스→Inspector 축은 잘 이어진다. TraceDetail이 "이 파드 Inspector 보기"와 "트랜잭션 목록" 버튼을 양쪽에 달았고, Errors·Logs 표의 trace_id 8~10개가 모두 TraceDetail로 간다. Inspector는 "덤프 이력"으로 ThreadDump에 닿는다. 끊긴 곳은 넷이다.
 
 1. **Login의 "로그인" 버튼에 링크가 없다.** Login에서 나가는 유일한 링크가 "관리자에게 문의" → Settings.dc.html인데, 이건 의미도 어긋난다(비밀번호를 잊은 VIEWER가 관리자용 설정 화면에 떨어진다). 클릭 데모의 출발점이 막혀 있으므로 로그인 버튼을 ServerMap.dc.html로 잇고, 문의 링크는 `mailto:` 또는 비링크 텍스트로 바꿀 것. (H)
-2. **ThreadDump의 "다시 요청" 버튼이 Inspector.dc.html로 간다.** 주 버튼 자리에 있는 재요청 동작이 상위 화면 이동으로 연결돼 있다. 재요청은 InspectorDumpModal.dc.html로 보내고, 대신 상단에 "← 인스펙터" 되돌아가기 링크를 따로 두는 게 맞다. (H)
+2. **ThreadDump의 "다시 요청" 버튼이 Inspector.dc.html로 간다.** 주 버튼 자리에 있는 재요청 동작이 상위 화면 이동으로 연결돼 있다. 재요청은 InspectorDumpModal.dc.html로 보내고, 대신 상단에 "← Inspector" 되돌아가기 링크를 따로 두는 게 맞다. (H)
 3. **Alerts의 이벤트 표 8행이 모두 AlertRules.dc.html로 간다.** api-map #45는 행 클릭 시 이벤트 상세 드로어를 열라고 한다. 드로어는 같은 아트보드에 이미 열려 있으므로 행 링크는 Alerts.dc.html(자기 자신)로 두고, 규칙으로 가는 건 드로어 안의 "규칙 보기" 하나면 충분하다. (M)
-4. **파수꾼 배지가 어디서도 플랫폼 상태로 이어지지 않는다.** 사이드바 하단 카나리 미니 카드가 `<a>`가 아니어서, 15개 파일 전부 Watchdog로 가는 링크가 사이드바 메뉴 하나뿐이다. ia.md는 "배지 클릭 → 플랫폼 상태"를 명시한다. 미니 카드를 Watchdog.dc.html 링크로 감쌀 것. 덧붙여 Watchdog의 마지막 카나리 `trace_id 8f2c…41ab`도 TraceDetail로, STALE 이벤트도 Alerts로 이어야 파수꾼이 고립되지 않는다. (M)
+4. **Watchdog 배지가 어디서도 플랫폼 상태로 이어지지 않는다.** 사이드바 하단 카나리 미니 카드가 `<a>`가 아니어서, 15개 파일 전부 Watchdog로 가는 링크가 사이드바 메뉴 하나뿐이다. ia.md는 "배지 클릭 → 플랫폼 상태"를 명시한다. 미니 카드를 Watchdog.dc.html 링크로 감쌀 것. 덧붙여 Watchdog의 마지막 카나리 `trace_id 8f2c…41ab`도 TraceDetail로, STALE 이벤트도 Alerts로 이어야 Watchdog 이 고립되지 않는다. (M)
 
 **권한 노출** — `VIEWER`라는 단어가 Login 한 곳에만 나온다. ADMIN 전용 문이 14개인데, 화면에서 권한을 암시하는 건 InspectorDumpModal의 "권한 ADMIN" 캡션과 Settings 두 곳뿐이다. VIEWER로 로그인했을 때 "스레드 덤프 요청", "규칙 만들기", "채널 등록", "적용", "감시 대상에서 제외", enabled 스위치가 어떻게 보이는지 정보가 하나도 없다. 한 화면(AlertRules 권장)에 ADMIN 버튼을 비활성 + "ADMIN만 바꿀 수 있다" 툴팁으로 그린 VIEWER 상태 변형을 하나 추가하면 14개 문의 처리 방식이 한 번에 정해진다. (H)
 
 **에러 상태** — 노출이 충실하다. 409 APPLICATION_NAME_TAKEN(Settings 모달 인라인), 409 CONFIG_VERSION_CONFLICT(샘플링 배너), 409 CONFLICT 예고(삭제 버튼 캡션), 503 AGENT_NOT_REACHABLE·THREAD_DUMP_TIMEOUT(덤프 모달 + 직전 실패 배너), 401 UNAUTHENTICATED(Login), 404 SIGNAL_EXPIRED(Logs 상단 TTL 안내), 429 rate_limited(발송 이력 PAGERDUTY FAIL)까지 7종이 실제 위치에 있다. 빠진 건 422 TIME_RANGE_TOO_WIDE뿐이다. 시간 범위 세그먼트의 "사용자 지정" 옆에 "최대 7일" 캡션을 달면 채워진다. (L)
 
-**데이터 슬롭** — 전반적으로 억제가 잘 됐다. 검산되는 숫자가 많다(Errors 91+221=312, 예외 상위4 289+23=312, ThreadDump 58+61+19+4=142, Inspector UP4+DOWN1+UNKNOWN1=6, Watchdog 관통 경로 누적 초). 남은 슬롭 두 가지:
+**데이터 슬롭** — 전반적으로 억제가 잘 됐다. 검산되는 숫자가 많다(Errors 91+221=312, 예외 상위4 289+23=312, ThreadDump 58+61+19+4=142, Inspector UP4+DOWN1+UNKNOWN1=6, Watchdog E2E 경로 누적 초). 남은 슬롭 두 가지:
 
 - 표 하단 문구가 `312건 중 8건 표시 · limit 50`, `47건 중 8건 표시 · limit 50`, `총 42개 URL 중 8개 표시 · limit 50`으로 되어 있어 limit 50인데 8건만 보인다는 모순이 세 화면에 반복된다. "8건 표시"를 빼고 `312건 · limit 50 · 커서 페이징`으로 고칠 것. (M)
 - UrlStats는 총 42개 URL인데 "다음 50건" 버튼이 있다. 42 < 50이므로 다음 쪽이 없다. 버튼을 비활성 상태로 그리거나 총계를 128개로 올릴 것. (L)
@@ -160,11 +160,11 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 
 1. **내부 문 #4를 VIEWER+로 재노출해야 한다.** api-map에 이미 적힌 항목의 확정이다. Watchdog 상단 배너와 15개 화면 전부의 사이드바 미니 카드가 `GET /internal/canary/freshness`의 `age_sec`·`threshold_sec`·`fresh`를 그대로 쓴다. 화면이 내부 토큰을 들 수 없으므로 `GET /api/v1/platform/canary`(VIEWER+, 응답은 #4와 동일 3필드) 1행을 51번으로 추가할 것.
 
-2. **우리 서비스 6개의 readyz 상태를 읽을 문이 없다.** Watchdog "우리 서비스 6개" 카드는 서비스명·READY 여부·의존 저장소 목록·파드 수·확인 시각 5개 값을 쓰는데, 지금 명세에는 각 서비스가 `/readyz`를 연다는 기술만 있고 **화면이 6개를 한 번에 조회할 문이 없다**. 화면이 6개 서비스에 직접 붙는 건 "화면은 API 서버 하나만 호출한다"는 핵심 규칙 위반이다. `GET /api/v1/platform/services`(VIEWER+, 응답 `service_name, ready, deps[], pod_count, checked_at`)를 52번으로 추가하고, API 서버가 6개 readyz를 대신 훑도록 할 것.
+2. **우리 서비스 6개의 readyz 상태를 읽을 문이 없다.** Watchdog "우리 서비스 6개" 카드는 서비스명·READY 여부·의존 저장소 목록·파드 수·확인 시각 5개 값을 쓰는데, 지금 명세에는 각 서비스가 `/readyz`를 연다는 기술만 있고 **화면이 6개를 한 번에 조회할 문이 없다**. 화면이 6개 서비스에 직접 붙는 건 "화면은 API server 하나만 호출한다"는 핵심 규칙 위반이다. `GET /api/v1/platform/services`(VIEWER+, 응답 `service_name, ready, deps[], pod_count, checked_at`)를 52번으로 추가하고, API server 가 6개 readyz를 대신 훑도록 할 것.
 
 3. **Dead Man's Switch 상태를 읽을 문이 없다.** Watchdog가 "마지막 핑 38초 전"과 카나리 이벤트의 `DMS_MISSED` 종류를 표시하는데, 이건 Healthchecks.io 쪽 상태다. 51번 응답에 `dms_last_ping_at`을 얹든지, 카나리 이벤트 이력 자체를 문으로 여는(`GET /api/v1/platform/canary/events`) 결정이 필요하다. 지금 화면의 "최근 카나리 이벤트" 표 6행은 근거 API가 없는 상태다.
 
-4. **카나리 이벤트의 `종류` enum이 ERD에 없다.** 화면은 `FRESH`·`STALE`·`DMS_MISSED` 3값을 쓴다. 파수꾼이 이 이력을 어디에 적는지(PostgreSQL 새 테이블인지, 적지 않고 매번 계산하는지)가 정해져 있지 않다. 적는다면 `canary_events(ts, kind, age_sec, threshold_sec, action)` 테이블이 ERD에 들어가야 한다.
+4. **카나리 이벤트의 `종류` enum이 ERD에 없다.** 화면은 `FRESH`·`STALE`·`DMS_MISSED` 3값을 쓴다. Watchdog 이 이 이력을 어디에 적는지(PostgreSQL 새 테이블인지, 적지 않고 매번 계산하는지)가 정해져 있지 않다. 적는다면 `canary_events(ts, kind, age_sec, threshold_sec, action)` 테이블이 ERD에 들어가야 한다.
 
 5. **스레드 덤프 TTL이 명세와 화면에서 다르다.** api-spec은 404 SIGNAL_EXPIRED 항목에서 "트레이스·덤프 93일"이라고 하는데, ThreadDump 화면 부제는 "TTL 3일"이고 목록 하단은 "3일 지난 덤프는 S3로 내려가 목록에서 빠진다"고 쓴다. Logs 화면의 "TTL 7일 · 그 뒤 S3 cold 90일 = 97일" 표기와 형식도 다르다. 덤프도 "TTL 3일 · 그 뒤 S3 cold 90일 = 93일"이 의도였던 것으로 보이므로, **api-spec에 신호별 hot/cold 보존 기간을 표로 명시**하고 화면 문구를 그 표에 맞출 것. 지금 상태로는 화면이 명세를 어긴 것으로 읽힌다.
 
@@ -174,7 +174,7 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 
 8. **화면 목록에 아트보드 2개가 빠져 있다.** ia.md는 13화면인데 실제 작성물은 15개다. `UrlStats.dc.html`(S02b, URL 통계 탭 활성)과 `InspectorDumpModal.dc.html`(S04b, 덤프 요청 모달)이 표에 없다. ia.md 표에 두 행을 추가할 것.
 
-9. **ia.md의 파수꾼 배지 위치와 링크 대상이 design-spec·구현과 다르다.** ia.md는 "상단바 우측 파수꾼 배지 … 클릭 → S09"라고 하는데, design-spec은 "사이드바 하단 미니 카드"로 적었고 15개 화면 모두 사이드바 하단에 그렸다. 또 파수꾼 화면은 S09(설정)가 아니라 S10(플랫폼 상태)이다. ia.md를 사이드바 하단 · S10으로 고칠 것.
+9. **ia.md의 Watchdog 배지 위치와 링크 대상이 design-spec·구현과 다르다.** ia.md는 "상단바 우측 Watchdog 배지 … 클릭 → S09"라고 하는데, design-spec은 "사이드바 하단 미니 카드"로 적었고 15개 화면 모두 사이드바 하단에 그렸다. 또 Watchdog 화면은 S09(설정)가 아니라 S10(플랫폼 상태)이다. ia.md를 사이드바 하단 · S10으로 고칠 것.
 
 ---
 
@@ -213,7 +213,7 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 14. "로그인" 버튼을 `<a href="ServerMap.dc.html">`으로 감싸 클릭 데모의 출발점을 잇고, "관리자에게 문의"의 Settings 링크는 뗀다.
 
 **ThreadDump (링크)**
-15. 주 버튼 "다시 요청"의 링크를 Inspector.dc.html에서 InspectorDumpModal.dc.html로 바꾸고, 페이지 제목 왼쪽에 "← 인스펙터" 되돌아가기 링크를 따로 단다.
+15. 주 버튼 "다시 요청"의 링크를 Inspector.dc.html에서 InspectorDumpModal.dc.html로 바꾸고, 페이지 제목 왼쪽에 "← Inspector" 되돌아가기 링크를 따로 단다.
 
 ### 가능하면 (M) — 20건
 
@@ -255,7 +255,7 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 32. AlertChannels 토스트를 우측 상단 24px로 올려 모달과 40px 이상 띄운다.
 33. InspectorDumpModal의 "요청 중…" 버튼을 surface-2 배경 + ink-3 글자로 바꿔 대비를 확보한다.
 34. Logs의 level 칩 선택 상태를 통일한다(WARN 채움 / ERROR 테두리 → 둘 다 soft 배경 + 진한 글자).
-35. Login의 amber "세션 만료" 배너를 빼고 401 배너 하나만 남긴다. 좌측 패널 파이프라인 도식 아래 빈 530px에는 감시 대상 서비스 칩 줄을 넣고, 도식에 빠진 "적재 처리기"를 Kafka와 ClickHouse 사이에 추가한다.
+35. Login의 amber "세션 만료" 배너를 빼고 401 배너 하나만 남긴다. 좌측 패널 파이프라인 도식 아래 빈 530px에는 감시 대상 서비스 칩 줄을 넣고, 도식에 빠진 "Ingester"를 Kafka와 ClickHouse 사이에 추가한다.
 
 ### 선택 (L) — 6건
 
@@ -287,10 +287,10 @@ Alerts 쪽을 정본으로 삼고 ServerMap 띠를 맞추면 된다(shop-invento
 | 12 | Errors 필터 service_name "전체"·exception_type 비움 |
 | 13 | ServerMap 간선 라벨 선 위 + 흰 배경, gateway 노드 폭 조정 |
 | 14 | Login 버튼 → ServerMap 링크, 관리자 문의 링크 제거 |
-| 15 | ThreadDump "다시 요청" → InspectorDumpModal, "← 인스펙터" 링크 |
+| 15 | ThreadDump "다시 요청" → InspectorDumpModal, "← Inspector" 링크 |
 
 ### M 20건 — 전부 반영 (판단 차이 포함)
-16 현재 15:00 통일(축·부제·fired_at 14:48:30/14:44:10/14:41:44·모달 접수 15:00:19) · 17 파수꾼 미니 카드 `<a href=Watchdog>` 14개 셸 파일 전부 · 18 UUID 분리(alert_rule c71d…8b04, application e2a9…36f1, Errors·Logs 나머지 trace_id 새 값) · 19 monimo.io · 20 표 하단 `N건 · limit 50 · 커서 페이징` · 21 Transactions/Errors 공통 행 통일 + **trace a3f1…9c2e = `POST /api/v1/orders/{orderId}/pay` 2,584ms 500**(TraceDetail 루트와 동일) · 22 min_duration_ms 1000 · 23 TraceDetail = Transactions 1행 · 24 Errors span_name 200px(220 대신, 9컬럼 수용)·message 2줄·높이 1100 · 25 이벤트 행 링크 Alerts · 26 모달 display_name·description 비움 · 27 shop-coupon 제거 · 28 NOT_READY · 29 카나리 STALE 행 "Slack 직접 발송 13:59:47 · 탐지 후 17초" · 30 에러 간선 3값 · 31 metrics_1m · 32 토스트 우상단 · 33 요청 중 버튼 대비 · 34 이미 동일 구조(토큰 유지) · 35 Login 배너 제거·적재 처리기·서비스 칩
+16 현재 15:00 통일(축·부제·fired_at 14:48:30/14:44:10/14:41:44·모달 접수 15:00:19) · 17 Watchdog 미니 카드 `<a href=Watchdog>` 14개 셸 파일 전부 · 18 UUID 분리(alert_rule c71d…8b04, application e2a9…36f1, Errors·Logs 나머지 trace_id 새 값) · 19 monimo.io · 20 표 하단 `N건 · limit 50 · 커서 페이징` · 21 Transactions/Errors 공통 행 통일 + **trace a3f1…9c2e = `POST /api/v1/orders/{orderId}/pay` 2,584ms 500**(TraceDetail 루트와 동일) · 22 min_duration_ms 1000 · 23 TraceDetail = Transactions 1행 · 24 Errors span_name 200px(220 대신, 9컬럼 수용)·message 2줄·높이 1100 · 25 이벤트 행 링크 Alerts · 26 모달 display_name·description 비움 · 27 shop-coupon 제거 · 28 NOT_READY · 29 카나리 STALE 행 "Slack 직접 발송 13:59:47 · 탐지 후 17초" · 30 에러 간선 3값 · 31 metrics_1m · 32 토스트 우상단 · 33 요청 중 버튼 대비 · 34 이미 동일 구조(토큰 유지) · 35 Login 배너 제거·Ingester·서비스 칩
 
 ### L 6건 — 전부 반영
 36 히트맵 띠 확대 + 눈금·범례 · 37 사용자 지정 차트 플레이스홀더(Inspector·DumpModal 높이 1184) · 38 "최대 7일" 캡션(ServerMap·Transactions·Watchdog) · 39 "24건 중 7건" · 40 UrlStats 다음 버튼 비활성 · 41 thread 164px

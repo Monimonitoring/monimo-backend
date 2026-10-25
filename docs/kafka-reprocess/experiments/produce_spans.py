@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 격리 Kafka(raw 토픽)에 OTLP 트레이스 레코드 하나를 넣는다. 수집기와 같은 형식: 키 "traces", 값 = ExportTraceServiceRequest 바이트.
+# 격리 Kafka(raw 토픽)에 OTLP 트레이스 레코드 하나를 넣는다. Collector 와 같은 형식: 키 "traces", 값 = ExportTraceServiceRequest 바이트.
 # 사용: produce_spans.py <ok|error> <스팬 수> <버킷 분 시작 epoch초> <run-id>
 import hashlib, sys
 from kafka import KafkaProducer
