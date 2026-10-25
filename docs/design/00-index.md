@@ -13,7 +13,7 @@ refs: API 명세 v2 초안 scratchpad/api-spec-v2.md (2026-09-14, #39 기준 API
 refs: ERD 재설계 착수 전 정리(FR 8·ADR 33·Figma v4.2 대조 A~G) 2026-09-13 — 사용자 결정: Notion ERD·API 명세 페이지는 삭제 보류, ERD는 새로 그림. v4.2 즉시 수정 가능 항목 A(TTL 3계층)·B(1분 집계→MV)·F(채널)·G(파수꾼 박스)
 
 figma-todo(v4.3): 화면→탐지 '규칙 관리 API' 화살표 제거·탐지→PG '규칙 읽기+이벤트 쓰기'(#39) · D API 서버→PG 실선(설정·로그인·규칙·채널)·적재 처리기→PG(에이전트 등록)·명령 출발점 화면→API 서버·PG 소유 4분할(#35 #36) · S3 박스 'DLQ'→'cold 계층(CH 계층 저장)'·적재 처리기→Kafka raw.dlq·CH→S3 화살표(#34) · A CH TTL 3계층 표기 · B 적재 처리기 '1분 집계'→MV 자동 · C 아웃박스→PG 발송 대기 큐 · F 채널 4종(SMS 없음) · 질의 파사드→API 서버 개명
-glossary: API 서버 = 구 질의 파사드/Query API (2026-09-13 개명, Notion 3페이지 반영 완료, Figma는 v4.3에서)
+glossary: **[`glossary.md`](glossary.md) 가 용어 정본**(2026-10-26, `#240` · ADR `#73`) : 문서 · 주석은 Collector · Ingester · API server · Detector · Notifier · Watchdog 같은 현업 이름을 쓴다. 옛 기록 : API server = 구 질의 파사드/Query API (2026-09-13 개명)
 
 erd-note(2026-09-16): 경보 규칙 팀 공용 확정 · alert_rules/alert_channels에 updated_by 추가 안 함 · ERDCloud 잔여 = enabled 라벨 "설명"→"켜짐/꺼짐" · UNIQUE/FK 인덱스는 DDL 단계
 
@@ -24,4 +24,4 @@ erd-note(2026-09-16): 경보 규칙 팀 공용 확정 · alert_rules/alert_chann
 - `#70` **롤업 `metrics_1m` · `metrics_1h` 에 꼬리표(`attributes`)를 `any` 로 남겨 원본이 지워진 뒤에도 갈래를 알 수 있게 한다**(#193). 꼬리표는 원본에만 있고 롤업엔 해시만 있어 원본 TTL 105일이 지나면 2027-01-05 부터 이름 없는 선이 될 거였다. 마이그레이션 하나 · 코드 0줄, 옛 줄은 안 채운다. 처음 `Map(LowCardinality…)` 로 썼다가 `any` 가 그것을 벗겨 `Code: 36` 이 나 `Map(String, String)` 으로 고쳤다
 - `#69` **저장소 포화와 에이전트 버퍼 한계는 재서 적어 두고 지금은 고치지 않는다**(#191, Q30 · Q31 종결). ClickHouse 포화는 `Code: 243` → `transient` → `raw.dlq` 로 이미 설계대로 흐르고(유실 아님), Kafka 포화는 브로커가 스스로 죽어 **끊김으로 바뀐다**. 에이전트 큐는 2048/서비스/신호이고 50초 중단에 89.5% 를 잃는다. `UNAVAILABLE` 이 돌아간다는 설명은 **빠르게 실패할 때만** 맞다(브로커 사망 시 2분 블록 > 에이전트 30초 → `DeadlineExceeded`). 버퍼 상향 · 수집기 발행 시간 제한 · Kafka 보관 상한 · 디스크 경보 · 샘플링 1.0 올려 쪼개기 기각. 되돌림 = PVC 크기 정해지면 보관 상한과 경보 · 발행 지연 실측 뒤 시간 제한 · 분 단위 중단이 실제로 생기면 큐 상향 · 에이전트 버전 올리면 상수 재확인
 - `#68` **누적 지표는 적재가 값을 바꾸지 않고 `metrics_raw` 에 종류 · 총합 표시 칸을 남겨 조회 · 경보가 알아보게 한다**(#189, `#38` 구체화). GC 시간 합 같은 누적 카운터가 인스펙터에서 계속 오르는 선으로 보였다. 적재가 차이로 바꾸지 않는 이유는 원본을 그대로 둔다는 약속 때문이고, 읽는 쪽이 `runningDifference` 로 바꾼다. 자세한 것은 ADR 본문
-docs: 01-decisions(결정 69) · 02-open-questions · 10-requirements · **20-scope(2단계 범위 · 규모 · T0, 2026-10-11)** · 30-failure-modes(고장 나면 어떻게 되나, 2026-10-04) · ../seungjo(승조: 하네스 · 이슈별 리서치 · 프롬프트 · 결정 · ERD 영향. 2026-10-04 한 폴더로 합침, 첫 이슈 폴더 92-health-check-filter)
+docs: **glossary(용어 정본)** · 01-decisions(결정 73) · 02-open-questions · 10-requirements · **20-scope(2단계 범위 · 규모 · T0, 2026-10-11)** · 30-failure-modes(고장 나면 어떻게 되나, 2026-10-04) · ../seungjo(승조: 하네스 · 이슈별 리서치 · 프롬프트 · 결정 · ERD 영향. 2026-10-04 한 폴더로 합침, 첫 이슈 폴더 92-health-check-filter)
