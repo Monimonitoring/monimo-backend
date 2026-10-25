@@ -1,5 +1,7 @@
 # 2026-10-04 적재 실패분을 raw.dlq 로 (이슈 #96)
 
+> 용어만 glossary(`monimo-backend/docs/design/glossary.md`) 기준으로 바꿈 (`#240`) : 원문 인용도 용어만 바꾸고 문장은 그대로 뒀다
+
 - 관련 PR / 이슈: 이슈 `#96` · 브랜치 `fix/96-raw-dlq`
 - 쓴 도구
   - 웹 리서치 서브에이전트 **2개 동시**(+ 잘린 답 재요청 2회)
@@ -19,7 +21,7 @@
 출처 순서: 공식 문서(Spring Kafka reference) → 오픈소스 코드 → 기술 블로그.
 
 ## 이미 아는 것
-- Spring Boot 3.5 / Kotlin. 적재 처리기가 Kafka `raw` 토픽을 `@KafkaListener` 로 소비해
+- Spring Boot 3.5 / Kotlin. Ingester 가 Kafka `raw` 토픽을 `@KafkaListener` 로 소비해
   OTLP protobuf 를 풀고 ClickHouse 에 넣는다. ByteArrayDeserializer, group-id `ingester`,
   auto-offset-reset `earliest`.
 - `application.yml` 에 에러 핸들러 설정이 **없다** → 스프링 기본값 `DefaultErrorHandler`
@@ -61,7 +63,7 @@
 출처 순서: 공식 문서 → 오픈소스 코드(GitHub) → 기술 블로그.
 
 ## 이미 아는 것
-- 적재 처리기(Kotlin · Spring Boot 3.5)가 Kafka `raw` 를 소비해 ClickHouse 에 넣는다.
+- Ingester(Kotlin · Spring Boot 3.5)가 Kafka `raw` 를 소비해 ClickHouse 에 넣는다.
   ClickHouse 클라이언트는 **`com.clickhouse:client-v2` 0.10.0** (JDBC 아님, HTTP 기반 v2 클라이언트).
 - 넣는 방식은 JSONEachRow 형식으로 insert.
 - ClickHouse 가 죽어 있을 때 `java.net.UnknownHostException: clickhouse` 가 올라왔다.
@@ -106,11 +108,11 @@ Q3 표가 전송 중 잘렸습니다. Q3 만 다시 보내 주세요 (Q1 · Q2 �
 복구도 되며 따로 헬스 지표를 만들 필요 없이 DLQ 문제를 해결할 수 있기 때문이다.
 
 방법 C 같은 경우 방법 D 대비 추가로 만들 것이 없지만 재시도가 발생하면 그동안 poll 호출
-자체가 안되어서(적재 처리기에 있는 리스너 스레드가 잠들어있어서) 5분 동안
+자체가 안되어서(Ingester 에 있는 리스너 스레드가 잠들어있어서) 5분 동안
 (max.poll.interval.ms가 300000인데 우리가 설정한 게 아니라 기본값이다) 응답이 없으면
 카프카가 해당 컨슈머를 그룹에서 빼고 리밸런싱하고 시간이 지나 다시 돌아오면 또
-리밸런싱하게 되니까 리밸런싱하는 동안 적재 처리기로 가는 업무가 멈추고 마지막 커밋
-지점부터 다시 처리하게 되니까 컨슈머 랙도 발생하게 되는 거고 나중에 적재 처리기가 여러
+리밸런싱하게 되니까 리밸런싱하는 동안 Ingester 로 가는 업무가 멈추고 마지막 커밋
+지점부터 다시 처리하게 되니까 컨슈머 랙도 발생하게 되는 거고 나중에 Ingester 가 여러
 대로 늘어나면 남의 파티션까지 흔들려서 그만큼 더 커지니까 C는 안 하는 방향이 맞는 거
 같다.
 
@@ -199,7 +201,7 @@ DLQ 재처리 잡은 이번 이슈 범위 밖이다. ADR #34가 같은 이미지
 
 되돌리는 조건은 세 가지다. 10분 넘는 ClickHouse 장애가 반복돼서 DLQ에 쌓이는 양이 사람이
 처리할 수 없게 되면 대기 시간을 늘리거나 재처리 잡을 앞당긴다. 모르는 실패로 분류된 독성
-메시지 때문에 1분 멈추는 일이 자주 보이면 그 코드를 DLQ 목록에 추가한다. 적재 처리기를
+메시지 때문에 1분 멈추는 일이 자주 보이면 그 코드를 DLQ 목록에 추가한다. Ingester 를
 여러 대로 늘렸을 때 pause가 파티션 단위로 동작해서 한 파티션 장애가 다른 파티션까지
 멈추는 게 확인되면 pausePartition으로 좁힌다.
 

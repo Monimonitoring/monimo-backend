@@ -1,5 +1,7 @@
 # 2026-10-02 `peer_service` 를 호출 대상 주소에서 채우기
 
+> 용어만 glossary(`monimo-backend/docs/design/glossary.md`) 기준으로 바꿈 (`#240`) : 원문 인용도 용어만 바꾸고 문장은 그대로 뒀다
+
 - 관련 PR / 이슈: PR `#84` · 이슈 `#83`
 - 쓴 도구: `/oh-my-claudecode:ralph` (계획 → 가이드 .md → 구현 → 검증 → 리뷰 → PR), 리뷰는 별도 에이전트
 - 결과물: `transform/ServiceCatalog.kt` · `transform/PeerServiceResolver.kt` · `outbound/postgres/PostgresServiceCatalog.kt`, `RawConsumer.kt` 수정, 테스트 15건 추가(전체 87건 통과)
@@ -22,7 +24,7 @@ I 작업 시작해줘 /oh-my-claudecode:ralph
 | 배경 | 없음 | `AGENTS.md` §5 의 `#66`(같은 "PG 조회 + 캐시" 꼴) · §6 의 `peer_service` 줄, 앞 세션 대화 |
 | 범위 | 없음 | `AGENTS.md` §2 : 모듈끼리 `:common` 만 의존, 표 주인 규칙 |
 | 제약 | 없음 | `AGENTS.md` §2 : Kotest BehaviorSpec, 마이그레이션 규칙; 메모리 : DDD(포트 · 어댑터 분리), 한국어 설명 주석 |
-| 완료 기준 | 없음 | ralph 가 가이드 .md 의 "확인 순서" 를 완료 기준으로 썼다 : 단위 테스트 · PG 캐시 테스트 · telemetrygen 관통 · `server_map_1m` 에 `SERVICE` 간선 |
+| 완료 기준 | 없음 | ralph 가 가이드 .md 의 "확인 순서" 를 완료 기준으로 썼다 : 단위 테스트 · PG 캐시 테스트 · telemetrygen E2E · `server_map_1m` 에 `SERVICE` 간선 |
 
 - 즉 **이 한 줄 프롬프트는 "다섯 칸을 안 쓴" 게 아니라 "다섯 칸을 파일에 미리 써 둔" 경우**다
   - 이슈와 `AGENTS.md` 가 없었으면 이 한 줄로는 안 됐을 것이다
@@ -34,7 +36,7 @@ I 작업 시작해줘 /oh-my-claudecode:ralph
 - 고쳐 물은 횟수: **1**
 - 무엇이 잘못 나왔나:
   1. **SERVER 스팬에도 `peer_service` 가 채워졌다**
-     - 관통 시험 도구(telemetrygen)가 `--telemetry-attributes` 를 SERVER 스팬에도 붙이기 때문
+     - E2E 시험 도구(telemetrygen)가 `--telemetry-attributes` 를 SERVER 스팬에도 붙이기 때문
      - 실제 에이전트의 SERVER 스팬 `server.address` 는 자기 주소다
      - 채우면 "자기 자신으로 가는" 가짜 간선이 생긴다
      - 리뷰 단계에서 나왔다
@@ -50,7 +52,7 @@ I 작업 시작해줘 /oh-my-claudecode:ralph
 - 구현 뒤 "이게 뭘 하는 건지" 를 설명받는 자리에서 내가 "스팬이 어디서 왔는지" 라고 정리했다
   - 맞는 말은 **"어디로 갔는지"** 였다
 - `peer_service` 는 호출 대상이다
-  - 서버맵 화살표의 머리 쪽
+  - Service map 화살표의 머리 쪽
 - 코드는 맞았고 내 이해가 틀렸던 것이라 이 자리에서 바로잡았다
   - 이런 게 남아야 면접 답이 된다
 

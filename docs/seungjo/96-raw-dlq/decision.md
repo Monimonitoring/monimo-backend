@@ -1,5 +1,7 @@
 # 결정 : 「적재 실패 세 단 : pause · 독성만 DLQ · 분류 뒤집기」 결정
 
+> 용어만 glossary(`monimo-backend/docs/design/glossary.md`) 기준으로 바꿈 (`#240`) : 원문 인용도 용어만 바꾸고 문장은 그대로 뒀다
+
 - 정본은 [`../../design/01-decisions.md`](../../design/01-decisions.md) 의 `#51`
 - 여기는 요약과 길 안내만
 
@@ -61,7 +63,7 @@
 - [x] 뒤가 막히지 않는다
   - 독성 다음에 넣은 정상 로그가 `consumed 0 → 1`
   - `check-pipeline.sh` 통과(traces 6 · metrics 3 · logs 3)
-- [x] 테스트 : 적재 처리기 전체 **113건** 통과
+- [x] 테스트 : Ingester 전체 **113건** 통과
   - `FailureClassifierTest` 12건
   - `RawErrorHandlerTest` 7건(파티션 1 · 2차 통과 `x-dlq-attempt=2` 시나리오 포함)
   - `BackOffMappingTest` 7건(세 단 대응을 컨테이너 없이 고정)

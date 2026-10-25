@@ -6,9 +6,9 @@
 
 - 2026-10-07 / 승조(`@SeungJo-02`) / 「transactions 는 서비스가 받은 요청 기준 + is_root」 결정 / 이슈 [`#118`](https://github.com/2026-techeer-project-team-b/monimo-backend/issues/118) · 후속 [`#119`](https://github.com/2026-techeer-project-team-b/monimo-backend/issues/119)
 - 유저 플로우에서 어디
-  - 에이전트 → 수집기 → Kafka → 적재 처리기 → **ClickHouse 안의 MV** → 조회 API → 스캐터 화면
+  - 에이전트 → Collector → Kafka → Ingester → **ClickHouse 안의 MV** → 조회 API → 스캐터 화면
   - 코드가 아니라 **DB 안에서 표를 채우는 규칙** 한 줄이 걸려 있다
-  - 수집기 · 적재 처리기 · 조회 코드는 0줄 바뀐다
+  - Collector · Ingester · 조회 코드는 0줄 바뀐다
 
 ## 문제
 
@@ -139,7 +139,7 @@
   - `AGENTS.md` §5 · §6
 - 새 파일 : 이 폴더(`README` · `research` · `prompts` · `decision` · `tables`)
 - 후속 이슈 : [`#119`](https://github.com/2026-techeer-project-team-b/monimo-backend/issues/119) 운영 ClickHouse 마이그레이션 수단
-- 코드 0줄 : 수집기 · 적재 처리기 · 조회 API
+- 코드 0줄 : Collector · Ingester · 조회 API
 
 ## 읽는 순서
 
