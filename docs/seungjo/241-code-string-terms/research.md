@@ -159,7 +159,7 @@ Slack 경보       → 팀 Slack 채널 (사람)
 
 | 방법 | 얻는 것 | 포기하는 것 | 구현 크기 |
 |---|---|---|---|
-| **A. 바꾼다** : `'모니모 수집기'` → `'Monimo Collector'` · `'… 자기 감시(B평면)'` → `'… Self-monitoring'` | 설정 화면에 보이는 이름이 메뉴 · 문서와 같다 | 이미 시드를 넣은 로컬은 다시 넣어야 보인다 (`seed` 를 다시 돌리면 된다) | 다섯 줄 |
+| **A. 바꾼다** : `'모니모 수집기'` → `'Monimo Collector'` · `'… 자기 감시(B평면)'` → `'… Self-monitoring'` | 설정 화면에 보이는 이름이 메뉴 · 문서와 같다 | 이미 시드를 넣은 로컬은 **그대로 옛 이름이다** : 시드가 `ON CONFLICT (name) DO NOTHING` 이라 다시 돌려도 안 바뀐다. 새 이름을 보려면 `docker compose down -v` 뒤 다시 넣는다 | 다섯 줄 |
 | B. 둘 다 | 표시 이름은 그대로 · 설명만 | 한 화면에 이름이 둘 | 다섯 줄 |
 
 - 이 파일은 `db/*/V*.sql` 이 아니라 `scripts/seed/` 라서 Flyway checksum 과 상관없다 (시드는 사람이 돌린다)
@@ -203,7 +203,7 @@ Slack 경보       → 팀 Slack 채널 (사람)
 
 | 결정 | 사용자 눈에 같은 이름인가 | 다시 해야 하는 일 | 깨질 위험 |
 |---|---|---|---|
-| 5.1 A | 예 | 로컬 시드 다시 | 없음 |
+| 5.1 A | 예 | 로컬은 볼륨을 비우고 시드 다시 (`DO NOTHING`) | 없음 |
 | 5.2 A | 예 (GitHub 까지) | 라벨 스크립트 한 번 | 없음 |
 | 5.3 A | 예 (개발자 화면) | 없음 | 없음 |
 | 5.4 A | 예 | 없음 | 낮음 (기계 검사) |
@@ -218,10 +218,93 @@ Slack 경보       → 팀 Slack 채널 (사람)
 
 ## 6. 2차 질문 (사람 차례)
 
+- 승조 : 「추천하는 방향으로 정하고 다음 단계하고 8절 프롬프트까지 작성해줘」 (2026-10-26) : 5.1 ~ 5.5 전부 A. 더 묻지 않았다
+
 ---
 
 ## 7. 2차 정리
 
+- 아직 결정이 아니다 : 결정은 8
+
+- 좁혀진 선택지 (3 · 5 에서 승조가 고른 것)
+  - 바꾼다 : 테스트 이름 · 스크립트 출력 · Slack 경보 · 화면 메뉴와 제목(영어) · API 응답 메시지 · 로그 문구
+  - 5.1 시드 표시 이름 · 설명도 바꾼다
+  - 5.2 라벨 설명 · CI 단계 이름 · Terraform 설명을 바꾸고 라벨 스크립트를 한 번 다시 돌린다
+  - 5.3 지표 설명 · Swagger 제목도 바꾼다
+  - 5.4 `#240` 과 같은 방법 : 뜻이 하나인 말은 문자열 안만 스크립트로, 나머지는 문맥으로. 화면은 이름만 영어, 안내 문장은 한국어
+  - 5.5 승조가 다섯 레포를 바꾸고 담당 리뷰를 요청한다. 노션 API 명세 문구도 같이
+- 결정을 가르는 기준
+  - **사람 눈에 닿는 이름이 문서와 같은가** : 모든 선택이 이 기준으로 「바꾼다」 쪽이었다
+  - **깨지는 것이 있나** : 글자 비교는 watchdog 테스트 세 줄뿐이고 같이 고친다
+- 무엇을 정해야 하나 : 없음 (8 에 옮긴다)
+
+### 여기서 나온 면접 질문
+
+1. 화면 메뉴를 영어로 바꾼 이유는? Pinpoint 는 어떻게 부르나
+2. 에러 메시지 문구를 바꿨는데 화면이 안 깨진 이유는? (`code` 로 분기)
+3. 로그 문구를 바꿔도 되는지 어떻게 확인했나 (글자로 거르는 규칙이 있는지)
+4. 지표 설명과 지표 이름은 무엇이 다르고, 왜 이름은 안 바꿨나
+5. 다른 파트 코드의 문자열을 바꿀 때 어떻게 나눴나
+
 ---
 
 ## 8. 구현 프롬프트 (사람 차례)
+
+- **이번 8 은 AI 가 승조의 선택을 문장으로 옮긴 초안을 승조가 확정한 것이다** (2026-10-26, `#240` 과 같은 방식)
+  - 승조가 고른 것 : 3절 셋(화면 메뉴 영어 · 응답 메시지 Collector · 로그도) · 6절(5.1 ~ 5.5 전부 A)
+  - 승조 확정 원문 : 「추천하는 방향으로 정하고 다음 단계하고 8절 프롬프트까지 작성해줘」 (`prompts.md`)
+  - AI 가 붙인 것 : 시드 표시 이름 다섯의 글자 · 시드는 `DO NOTHING` 그대로 둔다 · glossary 두 줄 고침 · watchdog 부정 단언 바꾸기 · 라벨 스크립트를 돌리는 레포와 때 · 레포 순서 · 끝났다는 것 · 되돌림
+
+```
+구현
+
+코드 안 문자열의 옛 용어를 glossary 이름으로 바꾼다 (#240 의 후속)
+- 이름표는 docs/design/glossary.md 그대로 : Collector · Ingester · API server · Detector · Notifier · Watchdog · Attribute · Minimum log level · System · Service map · Inspector · Agent registry · Self-monitoring
+- 스팬 · 트레이스 · 샘플링 · 카나리 · 스레드 덤프는 그대로
+
+바꾸는 것
+- 테스트 이름 (Given · When · Then · describe · it 문자열)
+- 스크립트 출력 (step · ok · fail · echo)
+- Slack 경보 문구 : 「:rotating_light: 파수꾼 —」 → 「:rotating_light: Watchdog —」, 「탐지 평가」 → 「Detector 평가」, 「수집기 비율 갱신」 → 「Collector 비율 갱신」
+  - 이 글자를 검사하는 watchdog 테스트 세 줄도 같이 : 124 · 125 줄(있어야 하는 글자)은 새 글자로, 108 줄(`"탐지" not in text and "수집기" not in text`, 없어야 하는 글자)은 `"Detector" · "Collector"` 로 바꾼다. 그대로 두면 아무것도 검사하지 않게 된다
+- 화면 : 메뉴 · 화면 제목 · 상태 카드 이름만 영어로 (서버맵 → Service map · 인스펙터 → Inspector · 파수꾼 → Watchdog). 안내 문장은 한국어 그대로 두고 그 안의 모듈 이름만 바꾼다 (「Service map 을 불러오는 중입니다…」 · 「Detector 가 10~30초 주기로 다시 읽음」)
+- API 응답 메시지 : 「파드에 연결된 Collector 가 없습니다.」 · 「Notifier 가 응답하지 않습니다.」 처럼. code · 상태 코드 · 필드는 그대로
+  - 출처 셋 : api-server `ErrorCode.kt` · `ChannelTest*` / Collector 가 직접 내는 `AgentCommandController.kt:77` 「이 Collector 에 연결된 에이전트가 아닙니다.」 (같은 글이 `ThreadDumpApiTest.kt:44` 가짜 본문에도) / web 가짜 응답 `src/api/mocks/threadDumps.ts:199` 는 서버 문구와 같은 글로
+- 로그 문구 : 「Minimum log level: 꺼짐 …」 · 「… Collector 신분증 … · Collector 열쇠 …」 · 「샘플링 비율 갱신 : System 별 …」
+- 지표 설명(.description) · Swagger 제목
+- 시드 표시 이름 · 설명 (`scripts/seed/postgres-applications.sql`) : 「모니모 수집기 · 적재 처리기 · API 서버 · 탐지 · 알림」 → 「Monimo Collector · Monimo Ingester · Monimo API server · Monimo Detector · Monimo Notifier」, 설명 끝 「자기 감시(B평면)」 → 「Self-monitoring」
+  - `ON CONFLICT (name) DO NOTHING` 은 그대로 둔다 (사람이 고친 값을 시드가 덮지 않게). 이미 넣은 로컬은 볼륨을 비워야 새 이름이 보인다 : README 에 한 줄
+- GitHub 라벨 설명 · CI 단계 이름 · Terraform description. 라벨은 머지 뒤 backend · web 의 setup-labels.sh 를 한 번 돌려 GitHub 에 반영한다 (shop · deploy · watchdog 라벨에는 옛 이름이 없다)
+- 스크립트 안내문 「수집기 로그의 'OTLP gRPC 수신 시작' 줄」 은 「Collector 로그의 …」 로 : 따옴표 안 머리말은 로그 글자 그대로라 안 바꾼다
+- glossary 두 줄 : 「코드 안 문자열은 후속 이슈에서」 · 「API 응답 메시지 · 로그 문구는 바꾸지 않는다」 를 이번 결정대로 고친다 (안 고치면 정본이 코드와 반대를 말한다)
+
+안 바꾸는 것
+- 지표 이름 · 에러 code · URL · 라벨 이름 · 환경변수 이름 (기계가 읽는 이름)
+- Flyway 가 적용한 V*.sql
+- 지난 research 에 인용된 로그 줄 (그때의 기록)
+
+바꾸는 방법은 #240 과 같다
+- 뜻이 하나인 조어는 스크립트로 문자열 안만 치환한다
+- 평면 · 묶음 · 하한 · 탐지 · 알림 은 문맥을 보고 바꾼다 (알림 파트 같은 사람 파트 이름 · 보통 말은 그대로)
+- 바뀐 줄이 문자열 안인지 기계로 검사한다 (#240 과 반대 방향 : 이번엔 주석은 안 건드린다)
+
+노션 API 명세에서 응답 메시지 문구를 같은 글로 고친다
+
+진행은 레포별 PR 이다 : backend → shop → deploy → web → watchdog
+- web 은 4명 공동 파트라 슬랙에 「메뉴 이름이 영어로 바뀐다」 한 줄을 알린다
+- watchdog 은 재범 리뷰 : Slack 채널을 「파수꾼」 키워드로 거르는 설정이 있는지 같이 묻는다
+- 알림 · 조회 쪽 테스트 이름은 ukong · Nova 리뷰
+
+끝났다는 것
+- 레포마다 옛 용어(수집기 · 적재 처리기 · 파수꾼 · 꼬리표 · 서버맵 · 인스펙터 · API 서버 · 평면 · 하한 · 관통 · 명부 · 모듈 뜻의 탐지 · 알림 서비스) grep 이 **코드 안 문자열**에서 0
+  - 남겨도 되는 것 : V*.sql · 지난 기록 인용 · 사람 파트 이름 · 보통 말(「알림 60초」 · System 이 아닌 「묶음」 은 glossary 의 다른 말로)
+  - 주석과 문서는 `#240` 이 끝냈으니 이번 grep 대상이 아니다
+- 레포마다 테스트 · 빌드가 그대로 통과 (backend ./gradlew build · shop test · web build · test · watchdog pytest · deploy bash -n · kustomize)
+- web 을 띄워 메뉴가 Service map · Inspector · Watchdog 으로 보인다
+- 노션 API 명세의 응답 메시지가 코드와 같다
+- 라벨 설명이 GitHub 에서 새 이름이다
+
+되돌림
+- 화면 메뉴를 영어로 바꾼 뒤 팀원 · 멘토가 한국어 메뉴가 낫다고 하면 메뉴만 되돌린다 (문서 이름은 그대로)
+- Slack 경보를 키워드로 거르는 설정이 나오면 그 키워드를 새 이름으로 바꾼다
+```
