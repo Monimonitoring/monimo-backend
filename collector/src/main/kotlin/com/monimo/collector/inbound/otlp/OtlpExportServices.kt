@@ -1,7 +1,7 @@
 package com.monimo.collector.inbound.otlp
 
 import com.monimo.collector.filter.HealthCheckFilter // 헬스체크 스팬 빼내기 (SERVER + url.path)
-import com.monimo.collector.filter.LogLevelFilter // 로그 하한 미만 빼내기 (#215)
+import com.monimo.collector.filter.LogLevelFilter // Minimum log level 미만 빼내기 (#215)
 import com.monimo.collector.outbound.kafka.RawProducer // 나가는 문 (Kafka raw 발행)
 import com.monimo.collector.sampling.TraceSampler // 남길 스팬 고르기 (비율 + 카나리 예외)
 import com.monimo.collector.sampling.spanCount // 요청 안의 스팬 수 세기
@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 // OTLP 들어오는 문. 받은 요청을 protobuf 바이트 그대로 Kafka raw 에 넣고, 넣기가 끝나면 응답한다.
-// 중간 단계 : 트레이스는 헬스체크 거르기 → 샘플링, 로그는 하한 거르기(`#215`), 메트릭은 전부 통과.
+// 중간 단계 : 트레이스는 헬스체크 거르기 → 샘플링, 로그는 Minimum log level 거르기(`#215`), 메트릭은 전부 통과.
 // 부분 실패(partial_success)는 쓰지 않는다. 받았으면 전부 받은 것이다.
 //
 // 세 신호 모두 Kafka 에 넣을 때 보낸 쪽 주소를 봉투 메모로 붙인다 (`#149`, ADR `#63`). 주소는
@@ -49,8 +49,8 @@ class OtlpTraceService(
         //
         // 순서가 중요하다: 헬스체크를 먼저 빼고 그 다음에 비율로 고른다. 뒤집으면 헬스체크가
         // 1% 샘플링을 통과한 뒤 버려져 샘플링 카운터가 헛돈다.
-        // 위의 counter.received 는 거르기 전 숫자를 그대로 센다 (check-pipeline.sh 가 수집기 수신 수와
-        // 적재 처리기 소비 수를 대조하므로 수신 쪽을 줄이면 그 대조의 뜻이 달라진다)
+        // 위의 counter.received 는 거르기 전 숫자를 그대로 센다 (check-pipeline.sh 가 Collector 수신 수와
+        // Ingester 소비 수를 대조하므로 수신 쪽을 줄이면 그 대조의 뜻이 달라진다)
         val filtered = healthCheckFilter.drop(request)
         val sampled = sampler.sample(filtered)
         val keptSpans = sampled.spanCount()
@@ -102,7 +102,7 @@ class OtlpMetricsService(
 class OtlpLogsService(
     private val counter: OtlpReceiveCounter,
     private val producer: RawProducer,
-    private val logLevelFilter: LogLevelFilter, // 하한 미만 등급 빼내기 (#215)
+    private val logLevelFilter: LogLevelFilter, // Minimum log level 미만 등급 빼내기 (#215)
 ) : LogsServiceGrpc.LogsServiceImplBase() {
 
     override fun export(request: ExportLogsServiceRequest, responseObserver: StreamObserver<ExportLogsServiceResponse>) {
@@ -112,7 +112,7 @@ class OtlpLogsService(
 
         val filtered = logLevelFilter.drop(request)
         val kept = filtered.resourceLogsList.sumOf { rl -> rl.scopeLogsList.sumOf { it.logRecordsCount } }
-        if (kept == 0) { // 전부 하한 미만. Kafka 에 빈 메시지를 넣을 이유가 없다
+        if (kept == 0) { // 전부 Minimum log level 미만. Kafka 에 빈 메시지를 넣을 이유가 없다
             log.debug("로그 하한에서 레코드 {}건 전부 제외", records)
             responseObserver.respondNow(ExportLogsServiceResponse.getDefaultInstance())
             return

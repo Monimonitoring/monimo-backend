@@ -24,7 +24,7 @@ class PostgresAgentRegistryTest(
     val seenAt = Instant.parse("2026-10-01T03:04:05Z")
     val laterAt = Instant.parse("2026-10-02T06:07:08Z") // 주소가 바뀐 뒤에 본 시각
 
-    // ip 는 수집기가 봉투 메모로 보내 주는 값이라 기본값을 null 로 둔다. 메모가 없는 메시지가 그 모양이다
+    // ip 는 Collector 가 봉투 메모로 보내 주는 값이라 기본값을 null 로 둔다. 메모가 없는 메시지가 그 모양이다
     fun sighting(service: String, key: String, ip: String? = null, at: Instant = seenAt) = AgentSighting(
         serviceName = service,
         agentKey = key,
@@ -145,7 +145,7 @@ class PostgresAgentRegistryTest(
     }
 
     // 주소는 다른 칸과 성격이 다르다. 처음 값이 영구히 남으면 안 되고, 바뀌면 그 줄을 고쳐야 한다 (`#149`, ADR `#63`).
-    // 적재 처리기가 이 표를 **고치는** 첫 자리다
+    // Ingester 가 이 표를 **고치는** 첫 자리다
     Given("주소가 담긴 목격") {
         val service = newService("shop-payment")
 

@@ -7,12 +7,12 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 
-// gRPC 가 준 소켓 주소를 명부에 넣을 글자로 바꾸는 규칙. 컨테이너 없이 돈다.
+// gRPC 가 준 소켓 주소를 Agent registry 에 넣을 글자로 바꾸는 규칙. 컨테이너 없이 돈다.
 //
 // 여기서 고정하는 것 둘 :
 //   ① 글자 다듬기 : IPv4 를 IPv6 칸에 담은 꼴은 네 토막으로, 영역 꼬리(`%2`)는 뗀다. PG INET 은 앞엣것을
 //      조용히 받아 주소 종류를 IPv6 로 기록하고 뒤엣것은 거절한다(실측 2026-10-12). 어느 쪽도 좋지 않다
-//   ② 주소라고 할 수 없는 것은 null 이다. null 이면 봉투 메모를 아예 안 붙이고 명부의 주소 칸도 안 건드린다
+//   ② 주소라고 할 수 없는 것은 null 이다. null 이면 봉투 메모를 아예 안 붙이고 Agent registry 의 주소 칸도 안 건드린다
 class PeerAddressTest : BehaviorSpec({
 
     // 바이트 16개로 IPv6 주소를 직접 만든다. InetAddress.getByAddress 로 만들면 자바가 IPv4 매핑을

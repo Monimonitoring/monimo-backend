@@ -16,7 +16,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
-// alert_rules 표. 주인: API 서버. 탐지는 읽기만 한다
+// alert_rules 표. 주인: API server. 탐지는 읽기만 한다
 @Entity
 @Table(name = "alert_rules")
 class AlertRule(

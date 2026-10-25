@@ -70,7 +70,7 @@ class AgentDownRunnerTest(
     val orderRule = rule(orderApp)
     rule(payApp)
 
-    // 적재 처리기가 하는 등록을 흉내 낸다
+    // Ingester 가 하는 등록을 흉내 낸다
     fun register(appId: Long, key: String) =
         jdbc.update("INSERT INTO agents (application_id, agent_key) VALUES (?, ?) ON CONFLICT (agent_key) DO NOTHING", appId, key)
     listOf("order-a", "order-b").forEach { register(orderApp, it) }

@@ -13,7 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling
 @EnableConfigurationProperties(EvaluationProperties::class)
 class EvaluationConfig {
 
-    // 내부 문 공유 비밀값. API 서버와 같은 이름 · 같은 값 (MONIMO_INTERNAL_TOKEN)
+    // 내부 문 공유 비밀값. API server 와 같은 이름 · 같은 값 (MONIMO_INTERNAL_TOKEN)
     @Bean
     fun serviceHealthClient(
         props: EvaluationProperties,
@@ -26,7 +26,7 @@ class EvaluationConfig {
     fun evaluationAge(registry: MeterRegistry) =
         LastSuccessAge(registry, "monimo.detector.evaluation.age", "평가 주기(규칙 읽기 · 판정 · 기록)가 마지막으로 끝까지 돈 뒤 흐른 시간")
 
-    // agents/active 도 같은 API 서버 · 같은 내부 토큰
+    // agents/active 도 같은 API server · 같은 내부 토큰
     @Bean
     fun agentActivityClient(
         props: EvaluationProperties,

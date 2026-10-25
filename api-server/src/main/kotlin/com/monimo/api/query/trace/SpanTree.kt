@@ -5,7 +5,7 @@ import com.monimo.api.query.trace.dto.SpanResponse
 import com.monimo.api.query.support.NanoTime
 import com.monimo.api.query.trace.dto.TraceResponse
 
-// 평면 스팬 목록을 부모-자식 트리로 조립한다. ClickHouse 에는 트리 조회가 없어 서버 코드에서 쌓는다
+// flat 스팬 목록을 부모-자식 트리로 조립한다. ClickHouse 에는 트리 조회가 없어 서버 코드에서 쌓는다
 object SpanTree {
 
     // 부모 스팬이 없는 스팬이 2개 이상일 때 루트로 세우는 자리. 실제 스팬이 아니라 span_id 가 비어 있다 (#50 B안)

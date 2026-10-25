@@ -112,7 +112,7 @@ class EvaluationRecorder(
         outbox.saveAll(channelIds.map { NotificationOutboxEntity.pending(eventId, OutboxTransition.RESOLVED, it, payload, now) })
     }
 
-    // 규칙-채널 연결은 API 서버 표다. 탐지는 읽기만 한다. 발화 순간 켜져 있는 채널에만 발송 의도를 만든다
+    // 규칙-채널 연결은 API server 표다. 탐지는 읽기만 한다. 발화 순간 켜져 있는 채널에만 발송 의도를 만든다
     @Suppress("UNCHECKED_CAST")
     private fun enabledChannelIds(alertRuleId: Long): List<Long> =
         (

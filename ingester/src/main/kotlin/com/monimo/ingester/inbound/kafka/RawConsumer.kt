@@ -1,7 +1,7 @@
 package com.monimo.ingester.inbound.kafka
 
 import com.monimo.common.kafka.RawHeaders // 봉투 메모(헤더) 이름 약속
-import com.monimo.common.kafka.RawSignal // 토픽 이름 · 키 약속 (수집기가 넣을 때 쓴 것과 같은 파일)
+import com.monimo.common.kafka.RawSignal // 토픽 이름 · 키 약속 (Collector 가 넣을 때 쓴 것과 같은 파일)
 import com.monimo.ingester.transform.AgentRegistry // 처음 본 파드를 명단에 올리는 곳
 import com.monimo.ingester.transform.AgentSighting
 import com.monimo.ingester.transform.LogStore
@@ -26,9 +26,9 @@ import java.time.Instant
 // raw 토픽에서 꺼내 protobuf 로 풀고, 우리 모델로 옮겨 ClickHouse 에 넣는 곳. 세 신호 모두.
 // 넣은 뒤에는 그 신호를 보낸 파드를 PG agents 표에 등록한다 (처음 보는 파드만).
 //
-// 수집기와 정확히 대칭이다:
-//   수집기      request.toByteArray()  → Kafka        (넣을 때 객체를 바이트로)
-//   적재 처리기  Kafka → parseFrom(record.value())     (꺼낼 때 바이트를 다시 객체로)
+// Collector 와 정확히 대칭이다:
+//   Collector      request.toByteArray()  → Kafka        (넣을 때 객체를 바이트로)
+//   Ingester  Kafka → parseFrom(record.value())     (꺼낼 때 바이트를 다시 객체로)
 @Component
 class RawConsumer(
     private val counter: RawConsumeCounter, // 카운터는 스프링이 넣어 준다
@@ -48,14 +48,14 @@ class RawConsumer(
 
         // 신호별로 알맞은 protobuf 로 풀고 → 변환 → 저장. enum 이라 세 경우를 다 다뤘는지 컴파일러가 검사해 준다.
         //
-        // 카운터는 수집기와 같은 단위로 센다 (스팬 수 · 메트릭 수 · 레코드 수). check-pipeline.sh 가 두 숫자를 대조하기 때문이다.
+        // 카운터는 Collector 와 같은 단위로 센다 (스팬 수 · 메트릭 수 · 레코드 수). check-pipeline.sh 가 두 숫자를 대조하기 때문이다.
         // 메트릭은 "줄 수" 와 "메트릭 수" 가 다르다 — 히스토그램 하나가 .count · .sum · .min · .max 4줄이 된다. 줄 수는 로그에만 남긴다
         // 적재하면서 이 메시지에 실려 온 resource 목록을 같이 모아 둔다. 파드 등록 재료다
         val resources: List<Resource>
         val count = when (signal) {
             RawSignal.TRACES -> {
                 val request = ExportTraceServiceRequest.parseFrom(record.value())
-                // 변환 → peer_service 채움 → 저장. 채우는 자리가 save 앞이어야 서버맵 MV 가 SERVICE 로 분류한다 (#83)
+                // 변환 → peer_service 채움 → 저장. 채우는 자리가 save 앞이어야 Service map MV 가 SERVICE 로 분류한다 (#83)
                 val rows = PeerServiceResolver.fill(SpanTranslator.toRows(request), serviceCatalog.activeNames())
                 spanStore.save(rows)
                 resources = request.resourceSpansList.map { it.resource }
@@ -95,7 +95,7 @@ class RawConsumer(
         return resources.map { it.sighting(now, peerAddress) }
     }
 
-    // 요청 안의 메트릭 개수. 수집기(OtlpExportServices)가 세는 것과 같은 식
+    // 요청 안의 메트릭 개수. Collector(OtlpExportServices)가 세는 것과 같은 식
     private fun ExportMetricsServiceRequest.metricCount(): Int =
         resourceMetricsList.sumOf { rm -> rm.scopeMetricsList.sumOf { it.metricsCount } }
 
@@ -104,13 +104,13 @@ class RawConsumer(
     }
 }
 
-// 봉투 메모에서 보낸 쪽 주소를 꺼낸다. 수집기가 gRPC 연결에서 읽어 붙여 준 값이다 (ADR `#63`).
+// 봉투 메모에서 보낸 쪽 주소를 꺼낸다. Collector 가 gRPC 연결에서 읽어 붙여 준 값이다 (ADR `#63`).
 //
-// 메모가 없으면 null 이다 : 옛 수집기가 넣은 메시지 · 점검 스크립트(telemetrygen)가 직접 넣은 메시지가 그렇다.
+// 메모가 없으면 null 이다 : 옛 Collector 가 넣은 메시지 · 점검 스크립트(telemetrygen)가 직접 넣은 메시지가 그렇다.
 // 그때도 적재와 등록은 그대로 돌고 주소 칸만 비어 있다.
 //
-// 한 메시지 = 한 gRPC 호출 = 에이전트 하나라, 안에 resource 묶음이 여럿이어도 전부 같은 파드의 것이다.
-// 그래서 메모 하나를 모든 목격에 나눠 준다. 중간에 다른 수집기를 끼우면 깨지는 전제인데 우리는 끼우지 않는다.
+// 한 메시지 = 한 gRPC 호출 = 에이전트 하나라, 안에 resource 가 여럿이어도 전부 같은 파드의 것이다.
+// 그래서 메모 하나를 모든 목격에 나눠 준다. 중간에 다른 Collector 를 끼우면 깨지는 전제인데 우리는 끼우지 않는다.
 //
 // 클래스 밖에 둔 이유 : 컨테이너를 띄우지 않고 레코드 하나로 시험한다 (RawErrorHandlerConfig.backOffFor 와 같은 이유)
 internal fun ConsumerRecord<String, ByteArray>.peerAddress(): String? =

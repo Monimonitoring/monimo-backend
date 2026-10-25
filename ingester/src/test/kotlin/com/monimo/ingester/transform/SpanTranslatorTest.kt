@@ -24,7 +24,7 @@ class SpanTranslatorTest : BehaviorSpec({
     fun attr(key: String, value: String): KeyValue =
         KeyValue.newBuilder().setKey(key).setValue(AnyValue.newBuilder().setStringValue(value)).build()
 
-    // 스팬 하나가 든 요청을 만든다. resource 꼬리표와 스팬 꼬리표를 따로 받는다
+    // 스팬 하나가 든 요청을 만든다. resource Attribute 와 스팬 Attribute 를 따로 받는다
     fun requestOf(
         span: Span.Builder,
         resourceAttrs: List<KeyValue> = listOf(attr("service.name", "shop-order")),

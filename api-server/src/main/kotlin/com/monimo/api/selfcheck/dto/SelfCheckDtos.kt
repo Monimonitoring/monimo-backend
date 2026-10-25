@@ -1,6 +1,6 @@
 package com.monimo.api.selfcheck.dto
 
-// 파수꾼이 읽는 자기 점검 결과. 어느 항목이 ok=false 라도 HTTP 는 200 — 판단은 파수꾼이 한다
+// Watchdog 이 읽는 자기 점검 결과. 어느 항목이 ok=false 라도 HTTP 는 200 — 판단은 Watchdog 이 한다
 data class SelfCheckResponse(
     val postgres: PostgresCheck,
     val detector: AgeCheck,

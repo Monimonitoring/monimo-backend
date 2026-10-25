@@ -58,7 +58,7 @@ class PostgresAgentRegistry(
             serviceName = sighting.serviceName,
             agentKey = sighting.agentKey,
             hostname = sighting.hostname,
-            ip = sighting.ip, // 수집기가 봉투 메모로 보내 준 주소. 없으면 null 이고 칸이 빈다
+            ip = sighting.ip, // Collector 가 봉투 메모로 보내 준 주소. 없으면 null 이고 칸이 빈다
             jvmVersion = sighting.jvmVersion,
             agentVersion = sighting.agentVersion,
             // 신호 안의 시각이 아니라 본 시각을 쓴다. 에이전트 시계가 틀릴 수 있고,
@@ -77,7 +77,7 @@ class PostgresAgentRegistry(
         // 0줄이면 두 경우다. 이미 있으면 캐시에 넣어 다음부터 PG 를 안 치고,
         // 모르는 서비스면 캐시에 넣지 않는다 — 화면에서 서비스를 등록하면 다음 메시지에서 들어가야 하니까
         if (repository.countService(sighting.serviceName) > 0) {
-            // 줄은 있는데 우리가 안 넣은 것이다(다른 적재 처리기가 넣었거나 재시작 전에 넣었다).
+            // 줄은 있는데 우리가 안 넣은 것이다(다른 Ingester 가 넣었거나 재시작 전에 넣었다).
             // 그 줄의 주소가 지금 주소와 같은지 알 수 없으므로 "모른다" 로 기억해 두고, 주소를 알면 바로 고친다
             known[sighting.agentKey] = NO_IP
             trimCache()

@@ -19,7 +19,7 @@ import java.time.Duration
 
 // 스레드 덤프 명령 문 셋 (#122, monimo-shop #34 research ⑧).
 //   /agent/**    : 쇼핑몰 Extension 이 부른다. X-Monimo-Agent-Token
-//   /internal/** : API 서버 팬아웃이 부른다(ADR #36, 재범). 지금은 curl 로 시험한다. X-Internal-Token
+//   /internal/** : API server 팬아웃이 부른다(ADR #36, 재범). 지금은 curl 로 시험한다. X-Internal-Token
 @RestController
 class AgentCommandController(
     private val hub: CommandHub,
@@ -54,8 +54,8 @@ class AgentCommandController(
         @param:JsonProperty("timeout_ms") val timeoutMs: Long? = null,
     )
 
-    // API 서버 팬아웃이 수집기마다 부른다. 이 수집기가 그 에이전트를 쥐고 있으면 덤프를 받아 동기로 돌려주고(200),
-    // 아니면 503 AGENT_NOT_REACHABLE (API 서버는 200 을 준 한 대의 결과를 쓴다, 합의안 1). 에이전트가 늦으면 504
+    // API server 팬아웃이 Collector 마다 부른다. 이 Collector 가 그 에이전트를 쥐고 있으면 덤프를 받아 동기로 돌려주고(200),
+    // 아니면 503 AGENT_NOT_REACHABLE (API server 는 200 을 준 한 대의 결과를 쓴다, 합의안 1). 에이전트가 늦으면 504
     @PostMapping("/internal/thread-dump")
     fun threadDump(
         @RequestHeader(INTERNAL_TOKEN_HEADER, required = false) token: String?,
@@ -76,7 +76,7 @@ class AgentCommandController(
         private val NOT_REACHABLE: ResponseEntity<Any> =
             ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(mapOf("code" to "AGENT_NOT_REACHABLE", "message" to "이 수집기에 연결된 에이전트가 아닙니다."))
 
-        // 설정이 비어 있으면 어떤 값도 통과시키지 않는다 (문이 닫힌다). 길이가 달라도 시간이 같도록 상수 시간 비교 (API 서버 InternalTokenFilter 와 같은 규칙)
+        // 설정이 비어 있으면 어떤 값도 통과시키지 않는다 (문이 닫힌다). 길이가 달라도 시간이 같도록 상수 시간 비교 (API server InternalTokenFilter 와 같은 규칙)
         internal fun matches(expected: String, presented: String?): Boolean =
             expected.isNotBlank() && presented != null && MessageDigest.isEqual(expected.toByteArray(), presented.toByteArray())
     }

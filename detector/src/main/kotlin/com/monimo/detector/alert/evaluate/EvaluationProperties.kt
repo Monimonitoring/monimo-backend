@@ -30,7 +30,7 @@ data class EvaluationProperties(
     )
 
     data class Query(
-        // API 서버 주소 (내부 문 service-health)
+        // API server 주소 (내부 문 service-health)
         val baseUrl: String = "http://localhost:8080",
         val connectTimeout: Duration = Duration.ofSeconds(1),
         val requestTimeout: Duration = Duration.ofSeconds(3),

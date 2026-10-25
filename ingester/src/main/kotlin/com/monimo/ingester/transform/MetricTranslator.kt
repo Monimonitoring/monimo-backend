@@ -12,7 +12,7 @@ import io.opentelemetry.proto.metrics.v1.NumberDataPoint
 // 분포(Histogram · ExponentialHistogram · Summary)는 숫자가 여럿이라 이름에 접미를 붙여 여러 줄로 편다.
 //
 // 값은 바꾸지 않는다 (ADR #38 "OTel 모양 그대로"). 누적 → 구간 값 계산은 직전 값을 기억해야 해서 상태가 생기고,
-// 적재 처리기가 여러 대면 그 기억이 갈라진다. 대신 OTel 이 보내 준 종류 · 누적 여부를 버리지 않고
+// Ingester 가 여러 대면 그 기억이 갈라진다. 대신 OTel 이 보내 준 종류 · 누적 여부를 버리지 않고
 // 줄마다 (metricType · isCounter) 로 남겨, 읽는 쪽이 어느 줄에 차이 계산을 걸지 알게 한다 (#189, ADR #68).
 object MetricTranslator {
 
@@ -86,7 +86,7 @@ object MetricTranslator {
     }
 
     // 분포 포인트 → <이름>.count · <이름>.sum (+ 있으면 .min · .max). 버킷은 버린다.
-    // 인스펙터는 평균 · 최대만 그린다. 분포가 필요해지면 그때 표를 따로 판다
+    // Inspector 는 평균 · 최대만 그린다. 분포가 필요해지면 그때 표를 따로 판다
     private fun distributionRows(
         name: String, type: MetricType, cumulative: Boolean,
         attributes: List<KeyValue>, timeUnixNano: Long, origin: Origin,

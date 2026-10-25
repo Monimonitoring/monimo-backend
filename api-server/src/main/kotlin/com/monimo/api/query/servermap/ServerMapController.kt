@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
-// 서버맵 (API 명세 #41 · FN-21 · FN-22, VIEWER+)
+// Service map (API 명세 #41 · FN-21 · FN-22, VIEWER+)
 @RestController
 @RequestMapping("/api/v1/server-map")
 class ServerMapController(

@@ -9,7 +9,7 @@ import io.kotest.matchers.string.shouldContain
 import java.net.InetSocketAddress
 import java.time.Instant
 
-// 조회 파트 #48 의 실제 응답 모양(봉투 · snake_case · cnt_4xx)을 흉내 내는 가짜 API 서버
+// 조회 파트 #48 의 실제 응답 모양(봉투 · snake_case · cnt_4xx)을 흉내 내는 가짜 API server
 class HttpServiceHealthClientTest : BehaviorSpec({
 
     var status = 200

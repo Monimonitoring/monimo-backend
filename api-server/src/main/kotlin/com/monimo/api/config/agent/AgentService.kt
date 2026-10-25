@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
-// 파드 목록 · 상세. 읽기만 한다 — 등록은 적재 처리기, status 갱신은 탐지 (ADR #39)
+// 파드 목록 · 상세. 읽기만 한다 — 등록은 Ingester, status 갱신은 탐지 (ADR #39)
 @Service
 class AgentService(
     private val agents: AgentRepository,

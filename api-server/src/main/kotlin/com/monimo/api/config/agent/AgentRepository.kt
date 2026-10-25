@@ -33,7 +33,7 @@ private const val AGENT_FILTER = """
     and (:status is null or a.status = :status)
 """
 
-// agents 표는 수집 파트 소유다 (ADR #39 — 등록은 적재 처리기, status 갱신은 탐지).
+// agents 표는 수집 파트 소유다 (ADR #39 — 등록은 Ingester, status 갱신은 탐지).
 // Entity 를 만들지 않고 네이티브 쿼리로 읽기만 한다 (알림 파트 #70 과 같은 방식).
 // 타입이 Application 인 것은 Spring Data 가 관리되는 타입을 요구하기 때문이고, 이 표를 쓴다는 뜻이 아니다
 interface AgentRepository : Repository<Application, Long> {

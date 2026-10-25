@@ -1,5 +1,5 @@
 -- 가짜 파드 8개. ClickHouse 가짜 신호(clickhouse-fake-signals.sql, 같은 폴더)의 agent_id 와 같은 글자여야
--- 인스펙터의 파드 목록에서 지표 · 스레드 덤프 조회로 이어진다. 평소에는 적재 처리기가 처음 본 파드를 넣는다.
+-- Inspector 의 파드 목록에서 지표 · 스레드 덤프 조회로 이어진다. 평소에는 Ingester 가 처음 본 파드를 넣는다.
 --
 -- 넣는 법: ./scripts/seed-clickhouse.sh (CH 와 함께 들어간다)
 --

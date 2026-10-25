@@ -34,7 +34,7 @@ class CanaryRepository(
     }
 
     companion object {
-        // 적재 처리기 SpanRow.CANARY_KEY 와 같은 글자여야 한다
+        // Ingester SpanRow.CANARY_KEY 와 같은 글자여야 한다
         const val CANARY_KEY = "monimo.canary"
     }
 }

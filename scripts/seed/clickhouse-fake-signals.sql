@@ -4,8 +4,8 @@
 -- 원본 표(spans · metrics_raw · logs · thread_dumps)에만 넣는다. 집계 7표는 MV가 알아서 채운다.
 -- 모양은 OTel Java Agent 2.x 가 실제로 보내는 형식에 맞춘다.
 --   - 서버 스팬 이름 = "메서드 경로틀" (POST /orders), HTTP 클라이언트 스팬 이름 = 메서드만 (POST)
---   - HTTP 꼬리표 = 안정판 이름 (http.request.method · http.route · http.response.status_code · url.full)
---   - DB 꼬리표 = 에이전트 2.x 기본값인 옛 이름 (db.system · db.name · db.statement · db.operation)
+--   - HTTP Attribute = 안정판 이름 (http.request.method · http.route · http.response.status_code · url.full)
+--   - DB Attribute = 에이전트 2.x 기본값인 옛 이름 (db.system · db.name · db.statement · db.operation)
 --   - 서버 스팬은 4xx 여도 status UNSET, 5xx 만 ERROR. 클라이언트 스팬은 4xx 부터 ERROR.
 --   - 서비스 이름은 monimo-deploy 에서 쓸 이름 그대로 (shop-gateway · shop-order · shop-payment · shop-inventory)
 --
@@ -15,7 +15,7 @@
 --   - 결제 5xx: 평소 2%, 5~15분 전에는 15% (5XX_RATE 경보 시험용)
 --   - 결제 1%는 0.8~2.5초로 느리다 (스캐터에서 위로 튀는 점)
 --   - 주문 조회의 3%는 없는 주문이라 404 (4XX_RATE 시험용)
---   - shop-payment 2번 파드는 힙이 1시간 동안 꾸준히 늘어난다 (인스펙터 시험용)
+--   - shop-payment 2번 파드는 힙이 1시간 동안 꾸준히 늘어난다 (Inspector 시험용)
 
 -- 1) 스팬 ---------------------------------------------------------------------------------------
 INSERT INTO monimo.spans
@@ -52,7 +52,7 @@ WITH
     concat('shop-order-7c9d5f-',     ['2xk8p', 'b4n7t'][1 + cityHash64(n, 'or')  % 2]) AS a_or,
     concat('shop-inventory-5b6c8d-', ['h3v2w', 'q9z5c'][1 + cityHash64(n, 'in')  % 2]) AS a_in,
     concat('shop-payment-84f6c9-',   ['m5t1s', 'x8d3f'][1 + cityHash64(n, 'pay') % 2]) AS a_pay,
-    -- 스팬 목록: (번호, 부모 번호, 시작 오프셋ns, 걸린ns, 서비스, 파드, 이름, 종류, 상태, HTTP코드, 상대주소, 상대서비스, 꼬리표, 예외여부)
+    -- 스팬 목록: (번호, 부모 번호, 시작 오프셋ns, 걸린ns, 서비스, 파드, 이름, 종류, 상태, HTTP코드, 상대주소, 상대서비스, Attribute, 예외여부)
     if(is_create,
         [
             (1, 0, 0,                          d_gw,     'shop-gateway',   a_gw,  'POST /api/orders',        'SERVER', if(code >= 500, 'ERROR', 'UNSET'), code,     '', '',
@@ -106,12 +106,12 @@ SELECT
 FROM (SELECT number AS n FROM numbers(30000));
 
 -- 2) 메트릭 (15초마다, 파드 8대) ------------------------------------------------------------------
--- 모양은 적재 처리기가 OTel Java Agent 2.x 신호를 넣는 그대로 (2026-10-17 실데이터 shop-order-local-1 과 대조).
+-- 모양은 Ingester 가 OTel Java Agent 2.x 신호를 넣는 그대로 (2026-10-17 실데이터 shop-order-local-1 과 대조).
 --   - 히스토그램(jvm.gc.duration)은 .count · .sum · .min · .max 네 줄로 펴고 metric_type = histogram.
 --     .count · .sum 은 켜진 뒤 총합(is_counter = 1)이라 계속 오른다 — 조회가 칸마다 빼서 보여 준다 (#189 · #196)
 --   - 그 밖의 JVM 지표는 sum(is_counter = 0), CPU 사용률만 gauge
---   - jvm.thread.count 는 daemon × state 꼬리표로 여러 줄이고 조회가 합쳐서 스레드 수를 낸다
---   - series_hash = 꼬리표를 키 순으로 "k=v" 줄로 잇고 SHA-256 앞 8바이트 (ingester MetricRow.seriesHashOf 와 같은 식)
+--   - jvm.thread.count 는 daemon × state Attribute 로 여러 줄이고 조회가 합쳐서 스레드 수를 낸다
+--   - series_hash = Attribute 를 키 순으로 "k=v" 줄로 잇고 SHA-256 앞 8바이트 (ingester MetricRow.seriesHashOf 와 같은 식)
 INSERT INTO monimo.metrics_raw (service_name, agent_id, metric_name, metric_type, is_counter, series_hash, attributes, ts, value)
 WITH
     toStartOfInterval(now(), INTERVAL 15 SECOND) AS anchor,

@@ -32,8 +32,8 @@ import org.springframework.context.annotation.Import
 import org.springframework.core.env.Environment
 import org.springframework.jdbc.core.JdbcTemplate
 
-// 수집기 테스트가 소비자를 만들어 확인했다면, 여기서는 반대로 생산자를 만들어 넣는다.
-// 수집기가 넣는 것과 같은 모양(키 = 신호 글자 · 값 = protobuf 바이트)으로 직접 넣고, 적재 처리기가 풀어 세는지 본다.
+// Collector 테스트가 소비자를 만들어 확인했다면, 여기서는 반대로 생산자를 만들어 넣는다.
+// Collector 가 넣는 것과 같은 모양(키 = 신호 글자 · 값 = protobuf 바이트)으로 직접 넣고, Ingester 가 풀어 세는지 본다.
 @SpringBootTest
 @Import(TestInfraConfig::class) // 진짜 Kafka · ClickHouse · PostgreSQL 컨테이너를 띄워 붙인다
 class RawConsumerTest(
@@ -43,7 +43,7 @@ class RawConsumerTest(
     clickHouse: Client, // peer_service 가 채워져 들어갔는지 본다
 ) : BehaviorSpec({
 
-    // 수집기 역할을 하는 생산자
+    // Collector 역할을 하는 생산자
     val producer = KafkaProducer<String, ByteArray>(
         mapOf(
             ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to environment.getRequiredProperty("spring.kafka.bootstrap-servers"),
@@ -66,7 +66,7 @@ class RawConsumerTest(
     }
 
     // 만든 요청을 protobuf 바이트로 바꿔 raw 토픽에 넣는다. .get() = 브로커가 받을 때까지 기다린다.
-    // peerAddress 를 주면 수집기가 붙이는 봉투 메모를 흉내 낸다 (`#149`)
+    // peerAddress 를 주면 Collector 가 붙이는 봉투 메모를 흉내 낸다 (`#149`)
     fun sendToRaw(signal: RawSignal, payload: ByteArray, peerAddress: String? = null) {
         val record = ProducerRecord(RawSignal.TOPIC, signal.key, payload)
         peerAddress?.let { record.headers().add(RawHeaders.PEER_ADDRESS, it.toByteArray()) }

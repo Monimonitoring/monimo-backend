@@ -6,7 +6,7 @@ import java.time.Duration
 // 트레이스 샘플링 설정. application.yml 의 monimo.collector.sampling.* 를 읽는다.
 //
 // ratio = PG 를 못 읽었을 때 쓸 비율. **정본이 아니다.**
-//   정본은 PG application_configs.sampling_rate 이고 수집기가 30초마다 읽는다 (ADR #33 · #53).
+//   정본은 PG application_configs.sampling_rate 이고 Collector 가 30초마다 읽는다 (ADR #33 · #53).
 //   읽는 데 성공하면 PG 가 이기고, 한 번도 못 읽었으면 이 값으로 돈다.
 //   빈 값을 쓰지 않는 이유: 0 이면 전부 버리고 1 이면 전부 통과시켜 둘 다 사고다.
 //   환경변수 MONIMO_COLLECTOR_SAMPLING_RATIO 로 덮어쓸 수 있는데 그것도 이 기본값 자리를 바꾸는 것뿐이다.
@@ -15,7 +15,7 @@ import java.time.Duration
 //   주의: 주기를 실제로 정하는 것은 PostgresSamplingRateSource 의 @Scheduled 플레이스홀더가 읽는
 //   같은 키다. 이 칸의 기본값만 바꾸면 아무 일도 안 일어나므로 두 곳을 같이 바꾼다
 //   (notifier DeliveryProperties.pollInterval · detector EvaluationProperties.interval 도 같은 모양이다).
-// canaryMarker = 파수꾼이 붙이는 표시. span 의 trace_state 에 이 항목이 있으면 비율과 무관하게 통과시킨다 (ADR #41)
+// canaryMarker = Watchdog 이 붙이는 표시. span 의 trace_state 에 이 항목이 있으면 비율과 무관하게 통과시킨다 (ADR #41)
 @ConfigurationProperties("monimo.collector.sampling")
 data class SamplingProperties(
     val ratio: Double = 0.01,

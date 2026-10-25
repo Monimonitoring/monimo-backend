@@ -8,7 +8,7 @@ import org.hibernate.annotations.Immutable
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 
-// alert_channels 읽기 전용 (주인: API 서버). 보내기 직전에 켜짐 · 설정을 다시 읽는다
+// alert_channels 읽기 전용 (주인: API server). 보내기 직전에 켜짐 · 설정을 다시 읽는다
 @Entity
 @Immutable
 @Table(name = "alert_channels")

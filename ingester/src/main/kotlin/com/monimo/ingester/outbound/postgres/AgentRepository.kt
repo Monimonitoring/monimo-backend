@@ -17,12 +17,12 @@ interface AgentRepository : JpaRepository<AgentEntity, Long> {
     //   사람이 화면에서 등록하지 않은 서비스면 SELECT 가 0줄이라 INSERT 도 0줄이 된다(ADR #36).
     //
     // ON CONFLICT (agent_key) DO NOTHING
-    //   같은 파드 메시지가 계속 들어와도 줄이 늘지 않는다. 적재 처리기를 여러 대 띄워 동시에 넣어도 한 줄만 남는다.
+    //   같은 파드 메시지가 계속 들어와도 줄이 늘지 않는다. Ingester 를 여러 대 띄워 동시에 넣어도 한 줄만 남는다.
     //
     // CAST(:ip AS inet)
     //   ip 는 글자가 아니라 주소 전용 타입(INET)이다. 그냥 넘기면 드라이버가 글자로 보내 타입이 안 맞는다.
     //   null 도 그대로 넘어간다(CAST(NULL AS inet) = NULL). 주소를 모르는 메시지면 칸이 빈다.
-    //   주소 글자에서 `::ffff:` 군더더기를 떼는 일은 수집기가 한다 (ADR `#63`)
+    //   주소 글자에서 `::ffff:` 군더더기를 떼는 일은 Collector 가 한다 (ADR `#63`)
     //
     // 돌려주는 값은 넣은 줄 수다. 0 이면 "이미 있음" 또는 "모르는 서비스" 두 경우다.
     // ADR #42 가드레일 ①: 선점 · 충돌 처리는 JPA 에 맡기지 않고 SQL 을 그대로 드러낸다 (탐지의 insertIfAbsent 와 같은 방식)

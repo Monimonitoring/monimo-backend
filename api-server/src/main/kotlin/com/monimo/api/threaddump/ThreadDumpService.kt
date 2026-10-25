@@ -20,7 +20,7 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-// 스레드 덤프 요청 · 목록 · 상세 (API 명세 15 · 16 · 17). 요청은 수집기 팬아웃 → Extension → CH 저장까지 동기로 끝낸다
+// 스레드 덤프 요청 · 목록 · 상세 (API 명세 15 · 16 · 17). 요청은 Collector 팬아웃 → Extension → CH 저장까지 동기로 끝낸다
 @Service
 class ThreadDumpService(
     private val agents: AgentRepository,
@@ -89,7 +89,7 @@ class ThreadDumpService(
             outcomes = collectors.threadDump(service, instance, timeout)
         }
         outcomes.firstOrNull { it is DumpOutcome.Dumped }?.let { return (it as DumpOutcome.Dumped).body }
-        // 504 는 에이전트를 쥔 수집기가 있었다는 뜻이라 "연결 없음" 과 다른 코드로 낸다
+        // 504 는 에이전트를 쥔 Collector 가 있었다는 뜻이라 "연결 없음" 과 다른 코드로 낸다
         if (outcomes.any { it is DumpOutcome.Timeout }) throw ApiException(ErrorCode.THREAD_DUMP_TIMEOUT)
         throw ApiException(ErrorCode.AGENT_NOT_REACHABLE)
     }
@@ -121,7 +121,7 @@ class ThreadDumpService(
     private companion object {
         const val DEFAULT_TIMEOUT_MS = 5_000L
         const val MIN_TIMEOUT_MS = 1_000L
-        // 수집기 max-dump-timeout(30초)과 같다. 더 길게 보내도 수집기가 30초에서 자른다
+        // Collector max-dump-timeout(30초)과 같다. 더 길게 보내도 Collector 가 30초에서 자른다
         const val MAX_TIMEOUT_MS = 30_000L
         const val AUTO_REQUESTED_BY = "detector"
         // 경보는 사건마다 한 번 뜨지만 CPU · HEAP · GC 가 같은 파드에서 같이 뜨면 덤프 셋이 연달아 간다. 그것을 하나로
