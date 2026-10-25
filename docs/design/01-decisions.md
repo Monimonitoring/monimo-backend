@@ -124,7 +124,7 @@
 ---
 ## 2026-09-04 · 신규 계획(쇼핑몰 MSA + APM + Watchdog) 반영 — 전부 `[TENTATIVE]`, 사용자 확인 후 확정
 
-## `#13` [확정 · Q14 종결 → `#38` · **`#73` 으로 대체 제안**] 3평면 재정의 (`#01` 개정)
+## `#13` [확정 · Q14 종결 → `#38` · **`#73` 으로 대체**] 3평면 재정의 (`#01` 개정)
 
 2026-09-04 | 팀원이 3평면을 이해하지 못하는 문제의 원인이 표기에 있음
 - **채택**: **A = 감시 대상**(쇼핑몰 MSA, 만들지 않음) / **B = APM 관제**(만듦) / **C = 파수꾼**(만듦). 도그푸딩은 표에서 내리고 "B를 B 자신에게도 붙인다" 한 줄로 유지
@@ -1240,9 +1240,9 @@ G로 가는데 그러면 전파가 생겨서 이 문제 자체가 사라진다. 
 
 - **범위**: `collector/sampling/SamplingRateSource.kt`(`ServiceRate` 신설 · `SamplingRates` 에 `bySystem` · `fallback` · `appliedFor` · `passesEverything`) · `collector/sampling/TraceSampler.kt`(System 마다 선 고르기 · 지름길 조건) · `collector/outbound/postgres/PostgresSamplingRateSource.kt`(SQL 에 `a.system` · 로그에 System 별 선) · 테스트 셋 · `01-decisions.md` · `AGENTS.md` §5 · §6 · `00-index.md`
 
-## `#73` [제안] 「평면」 을 그만 쓴다 : A = Monitored app · B = APM · C = Watchdog · B 자기 감시 = Self-monitoring (`#13` 대체, `#240`)
+## `#73` [확정] 「평면」 을 그만 쓴다 : A = Monitored app · B = APM · C = Watchdog · B 자기 감시 = Self-monitoring (`#13` 대체, `#240`)
 
-2026-10-26 | 승조 확정 예정 · 슬랙 공지 뒤 [확정] | 결정 프롬프트 원문은 `docs/seungjo/240-terms-readme/research.md` 8절
+2026-10-26 | 사용자 확정 (슬랙 공지 뒤, 문서 PR 다섯 머지) | 결정 프롬프트 원문은 `docs/seungjo/240-terms-readme/research.md` 8절
 - **채택**: A평면 → **Monitored app** · B평면 → **APM** · C평면 → **Watchdog** · B평면 자기 감시 → **Self-monitoring**. 문서 · 주석은 `#240` 에서, 테스트 이름 · 화면 · 경보 문구는 그 후속 이슈에서 바꾼다. 대응표는 [`glossary.md`](glossary.md)
 - **기각**: ① **그대로 두고 glossary 에서 뜻만 설명** : 사유 = 매번 설명이 필요한 말은 이름으로 실패한 것이다 ② **밖에 보이는 글(README · 레포 소개)에서만 버림** : 사유 = 안팎 이름이 갈려 팀 문서와 README 를 오갈 때 다시 바꿔 읽어야 하고, 일부만 고치면 또 안 고쳐졌다는 피드백이 온다
 - **사유**: 현업에서 plane 은 control plane · data plane 으로 굳은 말이다([Kubernetes](https://kubernetes.io/docs/concepts/overview/components/) · [Istio](https://istio.io/latest/docs/ops/deployment/architecture/)). 면접관 · 멘토일수록 그 뜻으로 읽으려다 막힌다. 멘토 피드백(2026-10)이 용어를 직접 짚었다
