@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 격리 CH(exp-ch)의 exp2 DB 에서만. 적재 처리기와 같은 HTTP + JSONEachRow, 서버 기본 설정(async_insert=1 · wait=1)
+# 격리 CH(exp-ch)의 exp2 DB 에서만. Ingester 와 같은 HTTP + JSONEachRow, 서버 기본 설정(async_insert=1 · wait=1)
 set -uo pipefail
 CH(){ docker exec exp-ch clickhouse-client --user monimo --password monimo --multiquery -q "$1"; }
 ins(){ local t=$1; shift; curl -sS -f -u monimo:monimo "http://localhost:28123/?query=INSERT%20INTO%20exp2.$t%20FORMAT%20JSONEachRow$*" --data-binary @- || echo "INSERT 실패 $t"; }

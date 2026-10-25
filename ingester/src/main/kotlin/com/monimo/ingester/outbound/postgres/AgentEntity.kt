@@ -13,7 +13,7 @@ import java.util.UUID
 //
 // 넣는 것은 아래 AgentRepository 의 네이티브 INSERT 한 문장이라 이 클래스로 저장하지는 않는다.
 // 그래도 두는 이유: ddl-auto=validate 가 기동할 때 표와 이 클래스를 대조해서 어긋나면 서버를 안 띄운다.
-// 적재 처리기가 agents 표의 주인이니(ADR #39) 표가 바뀌면 가장 먼저 알아야 한다.
+// Ingester 가 agents 표의 주인이니(ADR #39) 표가 바뀌면 가장 먼저 알아야 한다.
 //
 // data class 가 아니라 class 다 (ADR #42). data class 는 모든 필드로 equals 를 만드는데
 // JPA 는 PK 로 같음을 따지므로 어긋난다.
@@ -44,7 +44,7 @@ class AgentEntity(
     @Column(name = "first_seen_at")
     val firstSeenAt: Instant?,
 
-    // 탐지가 CH 부재 규칙으로 UP · DOWN 을 쓴다(ADR #39). 우리는 기본값 UNKNOWN 으로 두고 건드리지 않는다
+    // Detector 가 CH 부재 규칙으로 UP · DOWN 을 쓴다(ADR #39). 우리는 기본값 UNKNOWN 으로 두고 건드리지 않는다
     @Column(nullable = false, length = 20)
     var status: String = "UNKNOWN",
 

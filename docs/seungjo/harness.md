@@ -37,7 +37,7 @@
 | 설계 절차 | `모니모니터링` 스킬 (개인 설정) | 결정 4요소(채택 · 기각 · 기각 사유 · 되돌리는 조건)가 없으면 결정으로 기록하지 못하게 막는다. 결과가 [`docs/design/01-decisions.md`](../design/01-decisions.md) |
 | 착수 · 마무리 | `issue-starter` · `push-merge` 에이전트 (개인 설정) | 이슈 → 브랜치 → PR 을 같은 모양으로. PR 머지는 사람이 누른다 |
 | 계획 · 실행 | `/ralplan` · `/ralph` (oh-my-claudecode) | 구현 전에 계획을 받아 읽고, 실행은 검증 기준을 통과할 때까지 돈다 |
-| 검증 | critic · verifier 에이전트, CI (`build` · `dev-infra` · `docker-image`) | 만든 쪽이 스스로 통과시키지 못하게. `dev-infra` 는 `scripts/check-pipeline.sh` 로 수집기 → Kafka → 적재 처리기 → ClickHouse 가 실제로 이어지는지 PR 마다 본다 |
+| 검증 | critic · verifier 에이전트, CI (`build` · `dev-infra` · `docker-image`) | 만든 쪽이 스스로 통과시키지 못하게. `dev-infra` 는 `scripts/check-pipeline.sh` 로 Collector → Kafka → Ingester → ClickHouse 가 실제로 이어지는지 PR 마다 본다 |
 | 가드(hooks) | **없음** | 규칙은 아직 글로만 있다. 마이그레이션 수정 차단 · 모듈 경계 차단을 걸 예정 : 아래 "안 된 것" 에 걸어야 할 이유가 있다 |
 
 ## 작업 흐름
@@ -51,7 +51,7 @@
 | 이슈 · 브랜치 | 무엇을 할지 고른다 | `issue-starter` 가 `origin/develop` 에서 브랜치를 판다 |
 | 가이드 .md | **읽고 모르는 줄을 그 자리에서 묻는다** | 코드를 쓰기 전에 "왜 · 고치는 파일 · 새로 나오는 것 · 확인 순서 · 자주 틀리는 것" 을 사람이 읽을 글로 먼저 쓴다 |
 | 코드 | diff 를 남의 PR 처럼 읽는다 | 한국어 설명 주석을 붙여 쓴다. DDD 는 모듈이 허락하는 만큼 |
-| 검증 | 결과를 본다 : "될 겁니다" 는 증거가 아니다 | 테스트 + compose 관통 + 일부러 깨뜨려 보기(제약 위반 · ClickHouse 정지) |
+| 검증 | 결과를 본다 : "될 겁니다" 는 증거가 아니다 | 테스트 + compose E2E + 일부러 깨뜨려 보기(제약 위반 · ClickHouse 정지) |
 | PR | 머지 버튼을 누른다 | PR 본문 작성. 커밋 · PR 에 AI 서명을 남기지 않는다 |
 | 기록 | 노션에 내 말로 다시 정리한다 | `AGENTS.md` §5 · §6 을 같은 PR 에 갱신한다 |
 
@@ -123,10 +123,10 @@
   - `#66`(파드 등록)은 "다음 업무 진행할 수 있는 상태까지만 만들고 진행은 하지 말라" 고 시켜 가이드만 먼저 받았다
   - 읽고 묻고 고친 뒤 구현에 들어가니 구현 중 방향 수정이 없었다
 - **CI 가 숫자를 대조한다**
-  - `check-pipeline.sh`(`#44` · `#62`)가 수집기 수신 건수와 적재 처리기 소비 건수, ClickHouse 줄 수 증가를 PR 마다 본다
+  - `check-pipeline.sh`(`#44` · `#62`)가 Collector 수신 건수와 Ingester 소비 건수, ClickHouse 줄 수 증가를 PR 마다 본다
   - 적재를 깨뜨리는 변경은 사람이 보기 전에 CI 에서 걸린다
 - **일부러 깨뜨려 본다**
-  - CHECK 제약 위반 · ClickHouse 정지 상태에서 적재 처리기가 어떻게 되는지 직접 확인했다
+  - CHECK 제약 위반 · ClickHouse 정지 상태에서 Ingester 가 어떻게 되는지 직접 확인했다
   - 성공 경로만 본 검증은 검증이 아니다
 
 ### 안 된 것 : AI 가 틀렸고, 어떻게 잡았나

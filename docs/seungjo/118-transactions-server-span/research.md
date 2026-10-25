@@ -1,5 +1,7 @@
 # 리서치 : `transactions` 를 서비스가 받은 요청 기준으로
 
+> 용어만 glossary(`monimo-backend/docs/design/glossary.md`) 기준으로 바꿈 (`#240`) : 원문 인용도 용어만 바꾸고 문장은 그대로 뒀다
+
 - 2026-10-07 시작 / 관련 이슈 [`#118`](https://github.com/2026-techeer-project-team-b/monimo-backend/issues/118)
 - 쓴 도구: 로컬 compose 실데이터 측정 · 레포 DDL · 조회 코드 직접 확인 · 조회 파트 이슈 글
 
@@ -23,7 +25,7 @@
 | | |
 |---|---|
 | 건드리는 모듈 · 파일 | `db/clickhouse/004_create_materialized_views.sql`(MV 조건) · 필요하면 `003_create_rollup_tables.sql`(컬럼) · `docs/design/web-v2/erd.md` · 노션 「ERD」 · `docs/design/01-decisions.md`(ADR 신설) · `AGENTS.md` §5 · §6 |
-| 건드리지 않는 것 | **수집기 · 적재 처리기 코드 0줄.** 이 표를 읽지도 쓰지도 않는다. **조회 코드도 0줄** : `ScatterRepository` 가 `service_name` 과 시간 범위로만 읽어서 줄이 들어오면 그대로 동작한다. `scripts/seed-clickhouse.sh` 도 표 이름만 쓰므로 그대로다 |
+| 건드리지 않는 것 | **Collector · Ingester 코드 0줄.** 이 표를 읽지도 쓰지도 않는다. **조회 코드도 0줄** : `ScatterRepository` 가 `service_name` 과 시간 범위로만 읽어서 줄이 들어오면 그대로 동작한다. `scripts/seed-clickhouse.sh` 도 표 이름만 쓰므로 그대로다 |
 | 이 이슈 범위 밖 (후속) | `GET /traces/transactions`(요청 목록)과 `GET /traces/heatmap` 구현은 조회 파트 몫이다. S3 cold 계층(「DLQ 는 Kafka 토픽 · S3 는 ClickHouse cold 계층」 결정)도 배포 단계 |
 
 **조사 들어가기 전에 내가 알던 것 (세 줄)**
@@ -105,7 +107,7 @@
 | `PARTITION BY` | `toDate(start_time)` |
 | TTL | 93일 뒤 삭제 |
 | 채우는 것 | `mv_transactions`(MV). 사람도 코드도 직접 넣지 않는다 |
-| 읽는 것 | 조회 API 뿐. 수집기 · 적재 처리기는 안 본다 |
+| 읽는 것 | 조회 API 뿐. Collector · Ingester 는 안 본다 |
 
 ### 2.3 MV 가 무엇이고 언제 도나
 
@@ -159,7 +161,7 @@ SERVER  gateway   POST /api/orders     parent 없음  ← 루트이면서 SERVER
 ### 2.5 데이터는 어디로 흐르나
 
 ```
-쇼핑몰 ─OTLP─▶ 수집기 ─▶ Kafka raw ─▶ 적재 처리기 ─▶ ClickHouse spans
+쇼핑몰 ─OTLP─▶ Collector ─▶ Kafka raw ─▶ Ingester ─▶ ClickHouse spans
                                                             │
                                       mv_transactions       │  (조건 : 지금은 루트만)
                                                             ▼
@@ -242,7 +244,7 @@ SERVER  gateway   POST /api/orders     parent 없음  ← 루트이면서 SERVER
 - **Q1.** `transactions` 는 CH 인지 PG 인지 확인, 이 안에 컬럼이 어떤 것들이 있고 수집 쪽에서 수정이 필요한지
 
 > **ClickHouse** 다. `db/clickhouse/003_create_rollup_tables.sql`. 컬럼 8개이고 `span_id` 는 없다(2.2 절 표).
-> **수집 쪽 수정은 없다.** 수집기 · 적재 처리기는 이 표를 읽지도 쓰지도 않는다. 채우는 것은 DB 안의 MV, 읽는 것은 조회 API 뿐이다.
+> **수집 쪽 수정은 없다.** Collector · Ingester 는 이 표를 읽지도 쓰지도 않는다. 채우는 것은 DB 안의 MV, 읽는 것은 조회 API 뿐이다.
 > 내 쪽에 걸리는 것은 둘이다 : `db/clickhouse/` 는 CODEOWNERS 기본 리뷰어가 수집이라 리뷰가 자동으로 온다. 그리고 `scripts/seed-clickhouse.sh` 가 이 표를 비우는 목록에 넣고 있지만 이름만 쓰므로 규칙이 바뀌어도 그대로 돈다.
 
 - **Q2.** 표를 채우는 규칙을 수정하면 스캐터가 비는 이슈가 해결된다는 부분이 이해가 안 된다
@@ -287,7 +289,7 @@ SERVER  gateway   POST /api/orders     parent 없음  ← 루트이면서 SERVER
 
 - **Q7.** 요청을 보내는 쪽 스팬이 부모 스팬이고 받는 스팬이 도착지 스팬인가
 
-> "받는 쪽 = 도착지" 는 맞고 **"보내는 쪽 = 부모" 는 축이 다르다.** CLIENT 와 SERVER 는 한 쌍일 때 CLIENT 가 부모, SERVER 가 자식이다. 그런데 부모·자식은 kind 와 별개라 **SERVER 도 부모가 될 수 있다.** 그래서 SERVER 를 지우면 고아 스팬이 생긴다.
+> "받는 쪽 = 도착지" 는 맞고 **"보내는 쪽 = 부모" 는 축이 다르다.** CLIENT 와 SERVER 는 한 쌍일 때 CLIENT 가 부모, SERVER 가 자식이다. 그런데 부모·자식은 kind 와 별개라 **SERVER 도 부모가 될 수 있다.** 그래서 SERVER 를 지우면 orphan span 이 생긴다.
 
 - **Q8.** CLIENT 안에 여러 SERVER 가 생기나. 예시를 보면 SERVER 안에 CLIENT 가 많은데
 
@@ -410,7 +412,7 @@ SERVER  gateway   POST /api/orders     parent 없음  ← 루트이면서 SERVER
 **확실한 것**
 
 - `transactions` 는 ClickHouse 표이고 **MV 가 채우고 조회 API 만 읽는다**
-  - 수집기 · 적재 처리기 코드는 0줄 바뀐다
+  - Collector · Ingester 코드는 0줄 바뀐다
 - 비는 원인은 **MV 조건이 루트 스팬만 통과시키는 것**이다
   - `spans` 에는 네 서비스 스팬이 다 있다
 - **루트는 SERVER 의 부분집합**이라 조건을 SERVER 로 넓히면 잃는 것이 없다
@@ -475,7 +477,7 @@ SERVER  gateway   POST /api/orders     parent 없음  ← 루트이면서 SERVER
 | **Jaeger SPM** | **`span.kind = server` 단독** | 공식 문서. **다만 "unspecified 나 client kind 스팬은 안 보인다" 고 바로 경고한다** |
 
 - **Pinpoint 는 이미 우리가 가려는 기준이다**
-  - 컬렉터의 `HbaseTraceService.insertSpan` 이 들어온 모든 Span 에 대해 스캐터 인덱스를 조건 없이 넣는다
+  - Collector 의 `HbaseTraceService.insertSpan` 이 들어온 모든 Span 에 대해 스캐터 인덱스를 조건 없이 넣는다
   - 행키에 `applicationName` 이 들어간다
   - 그래서 서비스를 골라 보는 것이 자연스럽고 중간 서비스에도 점이 찍힌다
   - 우리가 참고하는 제품이 그렇게 하고 있었다

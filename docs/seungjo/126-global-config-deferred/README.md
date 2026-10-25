@@ -15,7 +15,7 @@
 
 ```
 샘플링 비율        PG 에 있다   → 화면에서 바꾼다        끝났다 (#121)
-헬스체크 거를 주소   수집기 env   → 바꾸려면 재배포해야 함  남아 있다
+헬스체크 거를 주소   Collector env   → 바꾸려면 재배포해야 함  남아 있다
 ```
 
 - 헬스체크 거를 주소는 도커 · 쿠버네티스가 찌르는 `/actuator/health` 를 버리는 목록이다(`#92` 헬스체크 스팬 거르기)
@@ -34,23 +34,23 @@
 | 설정 | 이슈가 말한 것 | 실제 |
 |---|---|---|
 | 샘플링 비율 | PG `application_configs` | 맞다. 이미 옮겼다 |
-| 헬스체크 거를 주소 | 수집기 env | 맞다 |
-| **로그 하한** | 수집기 env | **코드에 아예 없다** |
+| 헬스체크 거를 주소 | Collector env | 맞다 |
+| **Minimum log level** | Collector env | **코드에 아예 없다** |
 
 - `MIN_LOG_LEVEL` 은 레포 전체에서 문서 두 곳에만 있다
   - `01-decisions.md` 의 「metrics_raw 는 long 1지표 1행 · 설정은 앱 단위」 결정 ④
   - `api-spec.md` 의 `LogsService/Export` 행
-- 수집기 `filter/` 에는 `HealthCheckFilter` 하나뿐이다
+- Collector `filter/` 에는 `HealthCheckFilter` 하나뿐이다
   - 로그를 거르는 코드가 없다
-- **API 명세가 "하한 미만 등급은 여기서 버려짐" 이라고 적어 뒀는데 사실이 아니었다**
+- **API 명세가 "Minimum log level 미만 severity 는 여기서 버려짐" 이라고 적어 뒀는데 사실이 아니었다**
 - `#121` 때 ERD 의 `version` 과 `updated_at` 설명이 틀렸던 것과 같은 종류다
   - 문서가 결정을 적어 두고 구현이 따라가지 않으면 그 문서가 거짓말이 된다
 
 ## 결정
 
 - **고른 것** : 전역 설정 표를 지금 만들지 않는다
-  - 헬스체크 거를 주소는 수집기 전역 env 에 그대로 둔다
-  - 로그 하한은 폐기가 아니라 보류로 적고 발동 조건을 둔다
+  - 헬스체크 거를 주소는 Collector 전역 env 에 그대로 둔다
+  - Minimum log level 은 폐기가 아니라 보류로 적고 발동 조건을 둔다
   - `api-spec.md` 의 틀린 기술을 고친다
   - `application_configs.sampling_rate` 의 DB 주석(`#128`)은 새 마이그레이션 파일로 재지정한다
 - **버린 것과 이유**
@@ -59,16 +59,16 @@
     - 전부 글자가 되어 `sampling_rate` 의 `CHECK (0 <= x <= 1)` 같은 보호가 사라진다
   - `application_configs` 에 전역용 줄 추가 : `application_id` 가 `NOT NULL` FK 라 가짜 서비스를 만들어야 한다
     - `#38`("설정 단위는 앱 단위만")과도 어긋난다
-  - 로그 하한 지금 구현 : 거를 것도 읽을 사람도 없다
-  - 로그 하한 폐기 : 남의 앱이 `DEBUG` 를 켜고 들어오는 경우가 진짜다
+  - Minimum log level 지금 구현 : 거를 것도 읽을 사람도 없다
+  - Minimum log level 폐기 : 남의 앱이 `DEBUG` 를 켜고 들어오는 경우가 진짜다
     - 그때 처음부터 다시 정하게 된다
   - 기존 마이그레이션 파일 직접 수정 : Flyway checksum 이 어긋난다
     - 팀원 전원이 `repair` 를 돌려야 한다
 - **다시 볼 조건 넷**
   - ① 옮길 값이 셋 이상이 될 때
   - ② 값이 안 늘어도 그 주소를 바꾸려고 재배포한 일이 실제로 두 번 생기면
-  - ③ 쇼핑몰이 아닌 앱이 붙을 때 로그 하한을 만든다
-  - ④ 로그 검색 화면이 생길 때 로그 하한을 만든다
+  - ③ 쇼핑몰이 아닌 앱이 붙을 때 Minimum log level 을 만든다
+  - ④ 로그 검색 화면이 생길 때 Minimum log level 을 만든다
 
 ### 왜 셋인가
 
@@ -102,15 +102,15 @@ PG 로 옮길 수 있는 것    운영 중 사람이 화면에서 바꾸는 값
 |---|---|
 | 못 읽었을 때 쓸 값을 **값마다** 정해야 한다 | `#121` 은 비율 하나에 네 선택지를 비교했다(`0.01` · `1.0` · `0.0` · 기동 실패) |
 | PG 장애가 번지는 범위가 넓어진다 | 지금은 비율 하나만 낡는다. 전부 PG 면 전부 낡는다 |
-| 언제 적용됐는지가 흐려진다 | 30초 캐시다. 수집기가 여러 대면 그동안 서로 다른 값으로 돈다 |
+| 언제 적용됐는지가 흐려진다 | 30초 캐시다. Collector 가 여러 대면 그동안 서로 다른 값으로 돈다 |
 | 로컬과 테스트에 seed 가 필요해진다 | `#121` 때 팀원 전원이 `docker compose down -v` 를 돌려야 했다 |
 
 ## 어떻게 확인했나
 
-- 로그 하한을 보류한 근거는 전부 실측이다
+- Minimum log level 을 보류한 근거는 전부 실측이다
 
 ```
-ClickHouse 로그 등급    INFO 51,336 · ERROR 2,643 · WARN 578 · WARNING 7
+ClickHouse 로그 severity INFO 51,336 · ERROR 2,643 · WARN 578 · WARNING 7
                       DEBUG · TRACE 0건 (쇼핑몰 앱이 INFO 아래를 안 만든다)
 
 저장 비중              spans 99.47 MiB (1,405,331줄)
@@ -129,11 +129,11 @@ api-server 에서 level 을 쓰는 코드   0건
 ## 범위 밖으로 남긴 것
 
 - `WARN` 578건과 `WARNING` 7건이 **같은 뜻인데 따로 세어진다**
-  - 적재 처리기 `LogTranslator` 가 `severity_text` 를 대문자로만 바꾸고 표준 이름으로 맞추지 않는다
-- 하한과 무관하게 틀린 숫자다
+  - Ingester `LogTranslator` 가 `severity_text` 를 대문자로만 바꾸고 표준 이름으로 맞추지 않는다
+- Minimum log level 과 무관하게 틀린 숫자다
   - 그런데 고치면 ClickHouse 에 저장되는 값이 바뀌는 동작 변경이라 이 결정 범위 밖으로 뒀다
   - `AGENTS.md` §6 에 올렸다
-- 후속 `#144`(로그 등급 여섯 이름 고정) · 「로그 등급은 severity_number 가 정본」 결정 에서 해소했다
+- 후속 `#144`(로그 severity 여섯 이름 고정) · 「로그 등급은 severity_number 가 정본」 결정 에서 해소했다
   - 거기서 이 7건이 가짜 데이터가 낼 수 없는 값이라 진짜 생산자의 것이었다는 것이 밝혀졌다
   - 그 뒤 볼륨이 새로 만들어져 지금 표에는 없다는 것도 밝혀졌다
 
@@ -141,7 +141,7 @@ api-server 에서 level 을 쓰는 코드   0건
 
 - `docs/design/01-decisions.md` : 「전역 설정 표는 지금 안 만든다」 결정
 - `docs/design/web-v2/api-spec.md` : `LogsService/Export` 행
-  - "하한 미만 등급은 여기서 버려짐" 이 사실이 아니었다
+  - "Minimum log level 미만 severity 는 여기서 버려짐" 이 사실이 아니었다
 - `db/postgres/config/V202610091330__comment_application_configs_sampling_rate.sql` : `#128`
   - 새 파일로 `COMMENT` 재지정
 - `AGENTS.md` : §5 `#126`, §6 전역 설정 행 교체 + `WARN` / `WARNING` 행 추가

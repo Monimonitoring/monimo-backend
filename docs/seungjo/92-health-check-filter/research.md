@@ -1,5 +1,7 @@
 # 헬스체크 스팬을 어디서, 무엇으로 거르나
 
+> 용어만 glossary(`monimo-backend/docs/design/glossary.md`) 기준으로 바꿈 (`#240`) : 원문 인용도 용어만 바꾸고 문장은 그대로 뒀다
+
 - 날짜 2026-10-04 / 걸린 시간 약 1시간 / 이슈 `#92`
   - 웹 리서치 에이전트 1개 + 로컬 ClickHouse · PG 조회
 - 알고 있던 것 (세 줄)
@@ -28,13 +30,13 @@
 
 | 방법 | 어디서 | 무엇으로 매칭 | 장점 | 단점 | 출처 |
 |---|---|---|---|---|---|
-| **A. 우리 수집기에서 버림** (Kafka 발행 전) | 수집기 | `url.path` (+ 보조로 `user_agent.original`) | 앱 재배포 없이 한 곳에서. MV 세 개 + 저장 비용 한 번에 해결. OTel Collector 의 filter processor 자리를 우리 수집기가 가져가는 것 : 「에이전트 자체 구현 폐기」 결정 `#33` 과 맞음 | 버린 스팬은 영영 못 본다. 목록을 잘못 쓰면 진짜 트래픽이 사라진다 | [filterprocessor README](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/filterprocessor/README.md) · [SigNoz drop-spans](https://signoz.io/docs/traces-management/guides/drop-spans/) |
+| **A. 우리 Collector 에서 버림** (Kafka 발행 전) | Collector | `url.path` (+ 보조로 `user_agent.original`) | 앱 재배포 없이 한 곳에서. MV 세 개 + 저장 비용 한 번에 해결. OTel Collector 의 filter processor 자리를 우리 Collector 가 가져가는 것 : 「에이전트 자체 구현 폐기」 결정 `#33` 과 맞음 | 버린 스팬은 영영 못 본다. 목록을 잘못 쓰면 진짜 트래픽이 사라진다 | [filterprocessor README](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/filterprocessor/README.md) · [SigNoz drop-spans](https://signoz.io/docs/traces-management/guides/drop-spans/) |
 | B. ClickHouse MV 3개에서 거름 | 저장 | `span_name` 또는 `attributes['url.path']` | `spans` 원본은 남는다 | MV 3개 drop · recreate(DDL 변경), 지난 줄은 어차피 안 고쳐짐, Kafka · CH 저장 비용 그대로 | : (우리 DDL `db/clickhouse/004_*.sql`) |
-| C. 에이전트 선언형 설정 `rule_based_routing` 샘플러 (`action: DROP`) | 에이전트 | `url.path` 정규식 + `span_kind: SERVER` | 네트워크 · 수집기 비용 0. OTel 메인테이너가 권하는 방식 | **실험적** · 3.0 에서 제거 예정(PR #20249 로 deprecated). 설정 파일을 쓰면 **env · 시스템 속성 설정이 전부 무시**돼 OTLP 엔드포인트까지 YAML 로 옮겨야 함. 쇼핑몰 4개마다 적용 → "에이전트만 붙이면 된다"(「에이전트는 OTel Java Agent 기성품」 결정) 와 어긋남 | [OTel 선언형 설정](https://opentelemetry.io/blog/2025/declarative-config/) · [Java 설정](https://opentelemetry.io/docs/languages/java/configuration/) · [PR #20249](https://github.com/open-telemetry/opentelemetry-java-instrumentation/pull/20249) |
+| C. 에이전트 선언형 설정 `rule_based_routing` 샘플러 (`action: DROP`) | 에이전트 | `url.path` 정규식 + `span_kind: SERVER` | 네트워크 · Collector 비용 0. OTel 메인테이너가 권하는 방식 | **실험적** · 3.0 에서 제거 예정(PR #20249 로 deprecated). 설정 파일을 쓰면 **env · 시스템 속성 설정이 전부 무시**돼 OTLP 엔드포인트까지 YAML 로 옮겨야 함. 쇼핑몰 4개마다 적용 → "에이전트만 붙이면 된다"(「에이전트는 OTel Java Agent 기성품」 결정) 와 어긋남 | [OTel 선언형 설정](https://opentelemetry.io/blog/2025/declarative-config/) · [Java 설정](https://opentelemetry.io/docs/languages/java/configuration/) · [PR #20249](https://github.com/open-telemetry/opentelemetry-java-instrumentation/pull/20249) |
 | D. 커스텀 `Sampler` 확장 jar | 에이전트 | 자유 | 로직 자유 | 직접 빌드 · 배포 · 유지. C 와 같은 "에이전트마다" 문제 | [discussion #6605](https://github.com/open-telemetry/opentelemetry-java-instrumentation/discussions/6605) |
-| E. 헬스체커가 `traceparent` 에 `sampled=0` 을 붙여 보냄 | 호출자 | : | 앱 · 수집기 손 안 댐 | 도커 · kubelet 프로브에 헤더를 못 넣는다 | [discussion #6605](https://github.com/open-telemetry/opentelemetry-java-instrumentation/discussions/6605) |
+| E. 헬스체커가 `traceparent` 에 `sampled=0` 을 붙여 보냄 | 호출자 | : | 앱 · Collector 손 안 댐 | 도커 · kubelet 프로브에 헤더를 못 넣는다 | [discussion #6605](https://github.com/open-telemetry/opentelemetry-java-instrumentation/discussions/6605) |
 | (참고) Pinpoint `profiler.tomcat.excludeurl` | 에이전트 | Ant 스타일 URL 패턴 (`/aa/*.html`, `**`) | 설정 한 줄, 검증된 방식 | WAS 플러그인별 속성이 따로(`profiler.jetty.*` …). 내장 톰캣에서 안 먹는 사례(issue #5942) | [tomcat 플러그인 README](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/tomcat) |
-| (참고) OTel Collector `tail_sampling` `type: drop` | 수집기 | `string_attribute key: url.path` | 트레이스 단위라 안 깨짐 | 버퍼링(메모리 · 지연) | [SigNoz tail sampling](https://signoz.io/docs/traces-management/guides/tail-sampling/) |
+| (참고) OTel Collector `tail_sampling` `type: drop` | Collector | `string_attribute key: url.path` | 트레이스 단위라 안 깨짐 | 버퍼링(메모리 · 지연) | [SigNoz tail sampling](https://signoz.io/docs/traces-management/guides/tail-sampling/) |
 
 **질문 ① 답**
 
@@ -81,7 +83,7 @@
 
 ## 고른 것과 이유 (확정, 2026-10-04)
 
-**A. 수집기에서 `url.path` 로 버린다 · 목록은 수집기 전역 env**
+**A. Collector 에서 `url.path` 로 버린다 · 목록은 Collector 전역 env**
 
 **버린 자리와 사유**
 
@@ -118,15 +120,15 @@
 
 **SERVER 만**
 
-- CLIENT 는 파수꾼 · 게이트웨이가 남의 `/health` 를 호출한 진짜 기록이다
-- CLIENT 는 서버맵 화살표에 필요하다
+- CLIENT 는 Watchdog · 게이트웨이가 남의 `/health` 를 호출한 진짜 기록이다
+- CLIENT 는 Service map 화살표에 필요하다
 
-**목록은 수집기 전역 env**
+**목록은 Collector 전역 env**
 
 - 이름은 `MONIMO_COLLECTOR_HEALTH_CHECK_PATHS`(기본 `/actuator/health`)
 - 이유 셋
-  1. 수집기에 이미 env 로 설정을 받는 길이 있다(`MONIMO_COLLECTOR_SAMPLING_RATIO`)
-     - 「metrics_raw 는 long 1지표 1행 · 설정은 앱 단위」 결정 이 로그 하한도 전역 env 로 정해 뒀다
+  1. Collector 에 이미 env 로 설정을 받는 길이 있다(`MONIMO_COLLECTOR_SAMPLING_RATIO`)
+     - 「metrics_raw 는 long 1지표 1행 · 설정은 앱 단위」 결정 이 Minimum log level 도 전역 env 로 정해 뒀다
      - 그래서 설정 셋이 한 자리에 모인다
   2. 목록을 비우면 필터가 꺼진다
      - 머지 전후 숫자를 비교할 수 있다
@@ -140,7 +142,7 @@
   - env 로 지금 만드는 것이 이사를 막지 않는다
   - 「에이전트는 OTel Java Agent 기성품」 결정 이 `SamplingProperties` 를 PG 값 없을 때의 기본값으로 쓰기로 적어 뒀다
 
-**고아 스팬은 1차에서 다루지 않는다**
+**orphan span 은 1차에서 다루지 않는다**
 
 - 로컬 실데이터에 자식 스팬이 0개라 생기지 않는다
   - 헬스체크 트레이스 57개 = 스팬 57개
@@ -167,7 +169,7 @@
 
 1. 모니터링 시스템이 자기 헬스체크를 손님으로 세던 걸 어떻게 발견했나
    - 왜 화면에서는 안 보였나
-2. 에이전트 · 수집기 · 저장소 세 자리 중 어디서 걸렀고, 다른 두 자리는 왜 버렸나
+2. 에이전트 · Collector · 저장소 세 자리 중 어디서 걸렀고, 다른 두 자리는 왜 버렸나
 3. `url.path` 와 `http.route` 는 뭐가 다르고 왜 `url.path` 를 골랐나
    - semconv 의 Required 와 Conditionally Required 가 뭔가
 4. 부모 스팬만 버리면 자식 스팬은 어떻게 되나

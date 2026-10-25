@@ -9,7 +9,7 @@ import io.opentelemetry.proto.logs.v1.LogRecord
 import io.opentelemetry.proto.logs.v1.ResourceLogs
 import io.opentelemetry.proto.logs.v1.ScopeLogs
 
-// 로그 하한 거르기 규칙만 확인하는 단위 테스트. 스프링도 컨테이너도 띄우지 않는다 (HealthCheckFilterTest 와 같은 꼴)
+// Minimum log level 거르기 규칙만 확인하는 단위 테스트. 스프링도 컨테이너도 띄우지 않는다 (HealthCheckFilterTest 와 같은 꼴)
 class LogLevelFilterTest : BehaviorSpec({
 
     fun filterOf(minLevel: String): Pair<LogLevelFilter, SimpleMeterRegistry> {
@@ -91,8 +91,8 @@ class LogLevelFilterTest : BehaviorSpec({
         }
     }
 
-    // 여기가 #236 이 고친 자리다. 전에는 숫자가 0 이면 글자를 안 보고 전부 남겨서, 적재 처리기가 글자로 DEBUG 라고
-    // 판정하는 줄이 하한을 빠져나가 logs 표에 쌓였다
+    // 여기가 #236 이 고친 자리다. 전에는 숫자가 0 이면 글자를 안 보고 전부 남겨서, Ingester 가 글자로 DEBUG 라고
+    // 판정하는 줄이 Minimum log level 을 빠져나가 logs 표에 쌓였다
     Given("하한이 INFO 이고 숫자가 규약 밖인(0 · 99) 줄이 섞여 오면") {
         val keptBlah = record(0, "blah") // 표에 없는 글자 : 무엇인지 모르는 것은 안 버린다
         val keptEmpty = record(0, "") // 숫자도 글자도 없다

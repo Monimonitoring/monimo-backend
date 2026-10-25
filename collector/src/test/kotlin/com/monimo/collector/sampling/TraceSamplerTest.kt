@@ -23,7 +23,7 @@ import kotlin.random.Random
 // PostgresSamplingRateSourceTest 가 따로 본다
 class TraceSamplerTest : BehaviorSpec({
 
-    // 비율 하나를 그대로 주는 가짜 공급자. 묶음 하나에 줄 하나면 그 묶음의 선이 그 값이고,
+    // 비율 하나를 그대로 주는 가짜 공급자. System 하나에 줄 하나면 그 System 의 선이 그 값이고,
     // 기본 선(미등록 · 이름 없는 요청)도 같은 값으로 둬서 resource 가 없는 요청에도 같은 선이 걸린다
     fun fixedRate(ratio: Double) =
         SamplingRateSource { SamplingRates.of(mapOf("shop-gateway" to ServiceRate("shop", ratio)), ratio) }
@@ -39,7 +39,7 @@ class TraceSamplerTest : BehaviorSpec({
             .setName("GET /orders")
             .build()
 
-    // resource 에 service.name 을 붙인 묶음 하나. 서비스 이름은 스팬이 아니라 한 겹 위에 있다
+    // resource 에 service.name 을 붙인 resource 하나. 서비스 이름은 스팬이 아니라 한 겹 위에 있다
     fun resourceSpansOf(serviceName: String, vararg spans: Span): ResourceSpans.Builder =
         ResourceSpans.newBuilder()
             .setResource(
@@ -212,7 +212,7 @@ class TraceSamplerTest : BehaviorSpec({
         }
     }
 
-    // 이 이슈(#206 · ADR #72)의 본 동작. 묶음마다 선을 따로 고르는지 본다
+    // 이 이슈(#206 · ADR #72)의 본 동작. System 마다 선을 따로 고르는지 본다
     Given("쇼핑몰은 0.0 · 모니모는 1.0 인데 한 요청에 둘이 섞여 오면") {
         val sampler = TraceSampler(
             SamplingProperties(),
@@ -228,7 +228,7 @@ class TraceSamplerTest : BehaviorSpec({
             SimpleMeterRegistry(),
         )
 
-        // resource 묶음 두 개가 든 요청 하나. 규격상 이렇게 섞여 올 수 있다
+        // resource 두 개가 든 요청 하나. 규격상 이렇게 섞여 올 수 있다
         fun mixedRequest(): ExportTraceServiceRequest =
             ExportTraceServiceRequest.newBuilder()
                 .addResourceSpans(resourceSpansOf("shop-order", span(), span(), span()))
@@ -250,7 +250,7 @@ class TraceSamplerTest : BehaviorSpec({
     }
 
     Given("같은 묶음의 서로 다른 서비스가 같은 trace_id 로 오면") {
-        // 둘 다 shop 묶음이라 선은 0.5 하나다. 트레이스가 쪼개지지 않는 것이 ADR #53 의 약속
+        // 둘 다 shop System 이라 선은 0.5 하나다. 트레이스가 쪼개지지 않는 것이 ADR #53 의 약속
         val sampler = TraceSampler(
             SamplingProperties(),
             SamplingRateSource {

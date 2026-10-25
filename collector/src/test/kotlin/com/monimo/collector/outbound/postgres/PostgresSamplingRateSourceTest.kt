@@ -150,7 +150,7 @@ class PostgresSamplingRateSourceTest : BehaviorSpec({
         }
     }
 
-    // 묶음이 둘일 때가 이 이슈(#206 · ADR #72)의 본 목적이다. 묶음끼리 선이 독립이어야 한다
+    // System 이 둘일 때가 이 이슈(#206 · ADR #72)의 본 목적이다. System 끼리 선이 독립이어야 한다
     Given("묶음이 둘이면") {
         val jdbc = FakeJdbc(
             mapOf("shop-gateway" to 0.02, "shop-order" to 0.01, "monimo-api-server" to 0.5),

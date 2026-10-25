@@ -13,5 +13,5 @@ data class LogRow(
     val thread: String, // 스레드 이름. 예: http-nio-8080-exec-3. 없으면 ''
     val level: String, // TRACE · DEBUG · INFO · WARN · ERROR · FATAL 여섯 중 하나. 등급을 모르면 빈 글자 (ADR #59)
     val message: String, // 사람이 읽는 본문
-    val attributes: Map<String, String>, // 코드가 로그마다 붙인 꼬리표(MDC) 묶음
+    val attributes: Map<String, String>, // 코드가 로그마다 붙인 Attribute(MDC) 모음
 )

@@ -5,12 +5,12 @@
 > 이 폴더가 **8단계 리서치 꼴을 처음 쓴 이슈**다.
 
 - 날짜 2026-10-04 시작 / 승조(`@SeungJo-02`) / 「적재 실패 세 단 : pause · 독성만 DLQ · 분류 뒤집기」 결정 / 이슈 [`#96`](https://github.com/2026-techeer-project-team-b/monimo-backend/issues/96) · 브랜치 `fix/96-raw-dlq`
-- 유저 플로우에서 어디: 에이전트 → 수집기 → Kafka → **적재 처리기** → ClickHouse 중 **적재 처리기**
+- 유저 플로우에서 어디: 에이전트 → Collector → Kafka → **Ingester** → ClickHouse 중 **Ingester**
   - 신호가 저장소에 들어가는 마지막 관문이라 여기서 버리면 되돌릴 데가 없다
 
 ## 문제
 
-- ClickHouse 가 잠깐 죽어 있는 동안 들어온 메시지를 **적재 처리기가 조용히 버린다**
+- ClickHouse 가 잠깐 죽어 있는 동안 들어온 메시지를 **Ingester 가 조용히 버린다**
   - `ingester/application.yml` 에 에러 핸들러 설정이 없다
   - 그래서 스프링 기본값(`DefaultErrorHandler` = `FixedBackOff(0, 9)`)이 적용된다
   - **간격 0초로 10번 시도한 뒤 오프셋을 넘긴다**
@@ -80,7 +80,7 @@
 | 독성인데 **분류에 안 걸린다** | 1분 막히고 그 뒤 DLQ. **데이터는 안 잃는다** | 1분 멈춤이 로그에 남는다. 잦으면 되돌림 조건 ② |
 | 디스크가 꽉 찬다 | `243` 이 긴 쪽에 올라가 있어 10분 기다린다. 그 안에 늘려 주면 유실 0 | `raw.dlq` 가 천천히 오른다 |
 | **DLQ 발행 자체가 실패한다** | `setFailIfSendResultIsError` 때문에 예외가 올라와 **오프셋이 안 넘어간다.** 다시 시도한다 | 적재가 멈춘다. Kafka 자체 문제라 파이프라인 전체가 이미 멈춰 있다 |
-| 적재 처리기가 **여러 대**가 된다 | pause 가 파티션 단위라 한 파티션 장애가 다른 파티션까지 멈출 수 있다 | **미확인.** 되돌림 조건 ③ |
+| Ingester 가 **여러 대**가 된다 | pause 가 파티션 단위라 한 파티션 장애가 다른 파티션까지 멈출 수 있다 | **미확인.** 되돌림 조건 ③ |
 
 - 표별 영향은 [`tables.md`](tables.md)(구현 시 채움)
 - 파이프라인 전체 고장 표는 [`../../design/30-failure-modes.md`](../../design/30-failure-modes.md) ⑤

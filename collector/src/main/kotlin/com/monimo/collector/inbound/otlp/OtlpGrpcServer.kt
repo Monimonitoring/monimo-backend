@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 //
 // 자격증명을 받는 꼴(Grpc.newServerBuilderForPort)로 만든다 (#159 · ADR #64). 설정이 none 이면 평문,
 // optional · require 면 TLS 로 받고 손님 신분증의 도장을 본다. 어느 쪽이든 `#149` 의 주소 가로채기는 그대로 걸린다 :
-// 이 수집기가 TLS 를 직접 끝내므로 상대 주소가 입구 주소로 바뀌지 않는다 (research 2.5 · 7절 "이 선택이 만드는 것")
+// 이 Collector 가 TLS 를 직접 끝내므로 상대 주소가 입구 주소로 바뀌지 않는다 (research 2.5 · 7절 "이 선택이 만드는 것")
 @Component
 @EnableConfigurationProperties(OtlpGrpcProperties::class)
 class OtlpGrpcServer(
@@ -45,7 +45,7 @@ class OtlpGrpcServer(
             .build()
             .start()
         server = started
-        // 돌고 있는 수집기의 실제 상태를 확인할 자리. HealthCheckFilter 가 거를 목록을 찍는 것과 같은 이유 (`#92`)
+        // 돌고 있는 Collector 의 실제 상태를 확인할 자리. HealthCheckFilter 가 거를 목록을 찍는 것과 같은 이유 (`#92`)
         if (tls.clientAuth == OtlpGrpcProperties.ClientAuth.NONE) {
             log.info("OTLP gRPC 수신 시작: 포트 {} · TLS 꺼짐(평문) · 손님 신분증 요구 none", started.port)
         } else {

@@ -46,7 +46,7 @@
 
 ### ClickHouse 포화를 우리 코드가 어떻게 보나
 
-- 가득 찬 그 서버에 **적재 처리기를 실제로 붙여** 돌렸다
+- 가득 찬 그 서버에 **Ingester 를 실제로 붙여** 돌렸다
 
 ```
 raw-0@0 → raw.dlq (reason=transient, cause=Code: 243. DB::Exception:
@@ -79,15 +79,15 @@ raw-0@0 → raw.dlq (reason=transient, cause=Code: 243. DB::Exception:
 
 ### 그때 보낸 쪽이 받는 것 : 적어 둔 것이 틀렸다
 
-- 죽은 Kafka 를 가리키는 수집기를 띄우고 가짜 발신기로 쏘았다
+- 죽은 Kafka 를 가리키는 Collector 를 띄우고 가짜 발신기로 쏘았다
 
 | | |
 |---|---|
 | `AGENTS.md` §6 에 적혀 있던 것 | "에이전트에 **`UNAVAILABLE`** 로 돌려보내므로 유실은 아니고 수집이 안 되는 상태다" |
 | 실측 | 보낸 쪽이 받는 것은 **`code = DeadlineExceeded` (context deadline exceeded)** 다 |
 
-- 수집기 쪽 로그는 `Bootstrap broker localhost:39092 (id: -1) disconnected` 를 1초마다 반복한다
-- **수집기는 응답을 아예 주지 않는다**
+- Collector 쪽 로그는 `Bootstrap broker localhost:39092 (id: -1) disconnected` 를 1초마다 반복한다
+- **Collector 는 응답을 아예 주지 않는다**
   - 끝내는 쪽은 **보낸 쪽의 시간 제한**이다(에이전트 기본 30초 · 가짜 발신기 10초)
 - 왜 달랐나 : **코드는 `UNAVAILABLE` 을 돌려준다**(`OtlpResponder.kt`)
   - 틀린 것은 그 응답에 **닿는다는 전제**였다
@@ -95,11 +95,11 @@ raw-0@0 → raw.dlq (reason=transient, cause=Code: 243. DB::Exception:
 
 | 경우 | 발행이 실패하는 데 걸리는 시간 | 보낸 쪽이 받는 것 |
 |---|---|---|
-| 토픽이 없다 | 즉시 (`UNKNOWN_TOPIC_OR_PARTITION`) | **`UNAVAILABLE`** (수집기가 돌려준다) |
+| 토픽이 없다 | 즉시 (`UNKNOWN_TOPIC_OR_PARTITION`) | **`UNAVAILABLE`** (Collector 가 돌려준다) |
 | 브로커가 죽었다 · 가득 찼다 | **최대 2분** (`delivery.timeout.ms` 기본값) | **`DeadlineExceeded`** (에이전트 전송 제한 30초가 먼저 끊는다) |
 
 - 두 경우를 하나로 적어 둔 것이 틀렸다
-  - `2분 > 30초` 라서 뒤쪽은 **수집기의 오류 응답에 영원히 닿지 못한다**
+  - `2분 > 30초` 라서 뒤쪽은 **Collector 의 오류 응답에 영원히 닿지 못한다**
 - 차이가 중요한 이유
   - 오류를 돌려받으면 에이전트가 **바로 다음 배치를 준비**한다
   - 응답이 없으면 **30초를 기다린다**
@@ -118,7 +118,7 @@ raw-0@0 → raw.dlq (reason=transient, cause=Code: 243. DB::Exception:
 | 설정 | 스팬 (`BatchSpanProcessor`) | 로그 (`BatchLogRecordProcessor`) |
 |---|---|---|
 | 큐 크기 | **2048** | 2048 |
-| 한 묶음 | 512 | 512 |
+| 한 batch | 512 | 512 |
 | 보내는 주기 | 5000ms | 1000ms |
 | 전송 시간 제한 | 30000ms | 30000ms |
 
@@ -131,14 +131,14 @@ raw-0@0 → raw.dlq (reason=transient, cause=Code: 243. DB::Exception:
 
 ### 실제로 얼마나 사라지나
 
-- 수집기를 멈추고 쇼핑몰에 요청을 넣어 버퍼를 넘긴 뒤 살려서, 수집기 카운터로 도착분을 셌다
+- Collector 를 멈추고 쇼핑몰에 요청을 넣어 버퍼를 넘긴 뒤 살려서, Collector 카운터로 도착분을 셌다
 - 카운터를 쓴 이유는 **샘플링을 피하려고**다
   - ClickHouse 줄 수로 세면 1% 만 보인다
 
 | 무엇 | 값 |
 |---|---|
-| 요청당 스팬 | **13.24개** (요청 50건에 662 스팬, 수집기 정상 상태에서 실측) |
-| 수집기 중단 시간 | 약 50초 (05:20:08 멈춤 → 05:20:59 복귀) |
+| 요청당 스팬 | **13.24개** (요청 50건에 662 스팬, Collector 정상 상태에서 실측) |
+| Collector 중단 시간 | 약 50초 (05:20:08 멈춤 → 05:20:59 복귀) |
 | 그 사이 요청 | 1,500건 (24초에 보냈다) |
 | 생산한 스팬 | 약 **19,860개** |
 | 살아 온 스팬 | **2,084개** |
@@ -164,7 +164,7 @@ raw-0@0 → raw.dlq (reason=transient, cause=Code: 243. DB::Exception:
 - **네 서비스가 고르게 만들지 않는다**
   - 재고가 바닥나 주문이 `inventory error` 로 실패했고, 그래서 payment 로 가는 호출이 적다
   - 서비스별 생산량이 다르다
-- **내보내려다 실패한 묶음은 그대로 사라진다**
+- **내보내려다 실패한 batch 는 그대로 사라진다**
   - 큐에 남아 있는 것만 살아남는다
   - 5초마다 512개씩 내보내려 하므로 50초면 10번 시도 = 최대 5,120개가 **큐 밖에서** 버려진다
 - 그래서 **"큐 2048" 은 상한이고 실제로 살아 오는 것은 그보다 적다**
@@ -173,7 +173,7 @@ raw-0@0 → raw.dlq (reason=transient, cause=Code: 243. DB::Exception:
 ### 서비스별로 쪼개지 못한 것
 
 - 도착분을 서비스별로 가르지 못했다
-  - 수집기 카운터에 서비스 꼬리표가 없다
+  - Collector 카운터에 서비스 Attribute 가 없다
   - ClickHouse 는 샘플링 1% 라 줄이 20개쯤밖에 안 된다
 - 쪼개려면 샘플링을 1.0 으로 올려야 한다
   - 그런데 공유 PG 를 바꾸는 일이라 하지 않았다
@@ -197,7 +197,7 @@ raw-0@0 → raw.dlq (reason=transient, cause=Code: 243. DB::Exception:
 - 요약하면
   - ClickHouse 포화는 **이미 설계대로** 흘러간다 (243 → `transient` → DLQ)
   - Kafka 자살은 고치려면 **디스크 감시 · 보관 상한 · 경보**가 붙고 그 셋이 배포 단계의 일이다
-  - 수집기가 발행 실패에 응답을 안 주는 것은 고칠 자리가 있다(발행 시간 제한을 짧게 끊기)
+  - Collector 가 발행 실패에 응답을 안 주는 것은 고칠 자리가 있다(발행 시간 제한을 짧게 끊기)
     - 그런데 **지금 그 값을 정할 근거가 없다**
     - 에이전트 전송 제한 30초와 맞춰야 하고 그 숫자는 운영 실측이 필요하다
 

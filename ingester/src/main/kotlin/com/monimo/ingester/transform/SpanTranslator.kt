@@ -8,16 +8,16 @@ import io.opentelemetry.proto.trace.v1.Status
 //
 // **스프링도 ClickHouse 도 모르는 순수 코드다.** 어노테이션이 없고 객체도 안 만든다(object).
 // 그래서 컨테이너 없이 테스트가 돌고, 저장소를 바꿔도 이 파일은 그대로다.
-// OTLP 값 다루기(꼬리표 → Map, 16진수, 나노초, resource 에서 서비스 · 파드)는 세 변환기가 같이 쓰는 OtlpValues.kt 에 있다.
+// OTLP 값 다루기(Attribute → Map, 16진수, 나노초, resource 에서 서비스 · 파드)는 세 변환기가 같이 쓰는 OtlpValues.kt 에 있다.
 object SpanTranslator {
 
-    // 카나리 표식 (ADR #41). 수집기의 SamplingProperties.canaryMarker 와 같은 글자여야 한다
+    // 카나리 표식 (ADR #41). Collector 의 SamplingProperties.canaryMarker 와 같은 글자여야 한다
     private const val CANARY_MARKER = "monimon=canary"
 
-    // HTTP 응답 코드가 들어오는 꼬리표. 안정판 이름이 먼저, 옛 이름이 뒤
+    // HTTP 응답 코드가 들어오는 Attribute. 안정판 이름이 먼저, 옛 이름이 뒤
     private val HTTP_STATUS_KEYS = listOf("http.response.status_code", "http.status_code")
 
-    // 호출 대상 주소를 만들 때 쓰는 꼬리표
+    // 호출 대상 주소를 만들 때 쓰는 Attribute
     private const val SERVER_ADDRESS_KEY = "server.address"
     private const val SERVER_PORT_KEY = "server.port"
     private const val PEER_SERVICE_KEY = "peer.service"
@@ -61,7 +61,7 @@ object SpanTranslator {
         attributes = attributesList.toStringMap(),
     )
 
-    // 카나리면 표식을 꼬리표에 하나 더한다. 아니면 아무것도 안 더한다(빈 map)
+    // 카나리면 표식을 Attribute 에 하나 더한다. 아니면 아무것도 안 더한다(빈 map)
     private fun canaryMark(span: Span): Map<String, String> =
         if (isCanary(span.traceState)) mapOf(SpanRow.CANARY_KEY to "true") else emptyMap()
 

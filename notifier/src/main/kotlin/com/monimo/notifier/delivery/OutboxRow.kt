@@ -14,7 +14,7 @@ import java.util.UUID
 // 발송 작업 상태. 공개 사건 상태(FIRING/RESOLVED)와 다른 축이다
 enum class DeliveryStatus { PENDING, IN_FLIGHT, SENT, FAILED, CANCELLED }
 
-// notification_outbox 를 알림 쪽에서 본 모양. 줄은 탐지가 만들고, 알림은 상태 컬럼만 바꾼다 (A안 컬럼 단위 소유)
+// notification_outbox 를 Notifier 쪽에서 본 모양. 줄은 Detector 가 만들고, Notifier 는 상태 컬럼만 바꾼다 (A안 컬럼 단위 소유)
 @Entity
 @Table(name = "notification_outbox")
 class OutboxRow(

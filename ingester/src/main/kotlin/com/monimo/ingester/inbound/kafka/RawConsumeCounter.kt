@@ -1,13 +1,13 @@
 package com.monimo.ingester.inbound.kafka // 들어오는 문(inbound) — Kafka 쪽
 
-import com.monimo.common.kafka.RawSignal // 신호 3종 약속 (수집기와 같은 파일을 본다)
+import com.monimo.common.kafka.RawSignal // 신호 3종 약속 (Collector 와 같은 파일을 본다)
 import io.micrometer.core.instrument.Counter // 숫자를 세는 계량기 (한 번 오르면 안 내려간다)
 import io.micrometer.core.instrument.MeterRegistry // 계량기를 등록해 두는 곳. 스프링이 넣어 준다
 import org.springframework.stereotype.Component // "스프링이 이 객체를 만들어 관리한다" 표시
 
 // 푼 건수를 신호별로 센다. /actuator/metrics/monimo.ingester.raw.consumed?tag=signal:traces 로 본다.
 // 세 신호를 미리 등록해 두어 한 건도 안 왔을 때도 0 으로 보이게 한다 (점검 스크립트가 before/after 를 비교한다).
-// 수집기의 OtlpReceiveCounter 와 같은 모양이지만, 신호 enum 은 common 의 RawSignal 을 그대로 쓴다.
+// Collector 의 OtlpReceiveCounter 와 같은 모양이지만, 신호 enum 은 common 의 RawSignal 을 그대로 쓴다.
 @Component
 class RawConsumeCounter(registry: MeterRegistry) {
 

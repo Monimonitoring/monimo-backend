@@ -13,7 +13,7 @@ import java.io.File
 // "켠 줄 알았는데 안 켜진" 상태가 되고 그게 가장 나쁘다 (8절 ⑥). 파일은 기동할 때 한 번 읽는다.
 //
 // 손님 신분증은 **도장만** 본다 : 기관 인증서를 trustManager 로 주는 것이 전부고, 신분증에 적힌 이름은
-// 검사하지 않는다 (7절 묶음 2). 이름까지 보려면 ADR #64 되돌림 ② 로 올린다
+// 검사하지 않는다 (7절 항목 2). 이름까지 보려면 ADR #64 되돌림 ② 로 올린다
 internal fun serverCredentialsOf(tls: OtlpGrpcProperties.Tls): ServerCredentials {
     if (tls.clientAuth == OtlpGrpcProperties.ClientAuth.NONE) return InsecureServerCredentials.create()
 

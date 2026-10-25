@@ -13,7 +13,7 @@ import io.opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest
 // raw 토픽 메시지의 **봉투 겉면** 약속을 못박는 시험 (개발환경 9단계 · ADR `#65`).
 //
 // 값(protobuf 바이트)은 `OtlpProtobufRoundTripTest` 가 본다. 여기서 보는 것은 글자들이다 :
-// 토픽 이름 · 신호 키 셋 · 헤더 이름. 붙이는 쪽(수집기)과 꺼내는 쪽(적재 처리기)이 **다른 모듈**이라
+// 토픽 이름 · 신호 키 셋 · 헤더 이름. 붙이는 쪽(Collector)과 꺼내는 쪽(Ingester)이 **다른 모듈**이라
 // 한쪽에서 글자를 바꾸면 빌드는 통과하는데 돌 때 조용히 어긋난다. 그 조용한 어긋남을 막는 자리다.
 //
 // 토픽 이름은 코드 밖에서도 쓰인다 : compose 의 `kafka-init` 이 그 이름으로 토픽을 만들고,
@@ -51,7 +51,7 @@ class RawMessageFormatTest : BehaviorSpec({
 
         When("신호 키와 protobuf 타입의 짝을 보면") {
             Then("키 셋이 OTLP Export 요청 셋과 하나씩 맞는다") {
-                // 값은 "수집기가 받은 Export*ServiceRequest 그대로" 다. 그 셋 말고 다른 타입은 이 토픽에 안 들어온다.
+                // 값은 "Collector 가 받은 Export*ServiceRequest 그대로" 다. 그 셋 말고 다른 타입은 이 토픽에 안 들어온다.
                 // 빈 요청을 풀어 보는 것으로 "이 키는 이 타입" 짝을 코드로 적어 둔다
                 RawSignal.entries.forEach { signal ->
                     val parsed = when (signal) {

@@ -29,7 +29,7 @@ metrics_raw ─> metrics_1m ─> metrics_1h     ← 연쇄 2단
 logs  (MV 없음. 그래도 원본이라 중복된다)
 ```
 
-`thread_dumps` 는 API 서버가 넣는 표라 넣지 않았다.
+`thread_dumps` 는 API server 가 넣는 표라 넣지 않았다.
 
 ## 2. 도구 판
 
@@ -38,7 +38,7 @@ logs  (MV 없음. 그래도 원본이라 중복된다)
 | v1 · v2 | 1단계 (유경) | 원자료 그대로 보존 |
 | **v3 (이번)** | 3단계 | `check()` 가 **스팬에서 갈라져 나오는 집계 표 전부**를 본다 : `transactions` · `heatmap_1m` · `url_stats_1m` · `server_map_1m`. v2 는 `service_health_1m` 하나만 봤고, 그러면 **연쇄 2단을 못 본다**. 기대값은 새 환경변수 없이 원본 줄 수에서 나온다(스팬이 전부 SERVER 라서) |
 
-실행 환경 : `experiments` 의 격리 Kafka(39092) · ClickHouse(`clickhouse/clickhouse-server:26.8.10.6`, 28123) · 적재 처리기 jar 는 이 브랜치 그대로. 파이썬 묶음(`kafka-python` · `opentelemetry-proto`)은 레포 밖 가상환경에 넣었다.
+실행 환경 : `experiments` 의 격리 Kafka(39092) · ClickHouse(`clickhouse/clickhouse-server:26.8.10.6`, 28123) · Ingester jar 는 이 브랜치 그대로. 파이썬 패키지(`kafka-python` · `opentelemetry-proto`)은 레포 밖 가상환경에 넣었다.
 
 ## 3. 결과
 
@@ -85,9 +85,9 @@ logs  (MV 없음. 그래도 원본이라 중복된다)
 | ② 같은 바이트 다시 | 2 | 1 | **걸렀다** |
 | ③ `peer_service` 만 바뀐 같은 레코드 | **4** | **2** | **못 걸렀다** |
 
-**한 스팬의 한 칸이 바뀌면 레코드 전체가 다른 묶음이 되어, 안 바뀐 SERVER 스팬까지 두 번 들어간다.**
+**한 스팬의 한 칸이 바뀌면 레코드 전체가 다른 batch 가 되어, 안 바뀐 SERVER 스팬까지 두 번 들어간다.**
 
-안 한 것을 분명히 적는다 : **적재 처리기를 거친 전 과정으로는 재현하지 않았다.** `peer_service` 는 CLIENT · PRODUCER 스팬에만 채워지는데 실험 발신기(`produce_spans.py`)는 SERVER 스팬만 만든다. 그 길로 재려면 발신기에 CLIENT 스팬을 더하고 PG `applications` 를 실험 중에 바꿔야 한다. 위 셋으로 **중복 제거가 바이트에 민감하다는 것**은 실제 표에서 확인됐고, `peer_service` 가 바뀔 수 있다는 것은 코드로 확인됐다. 둘을 이어 붙인 결론이다.
+안 한 것을 분명히 적는다 : **Ingester 를 거친 전 과정으로는 재현하지 않았다.** `peer_service` 는 CLIENT · PRODUCER 스팬에만 채워지는데 실험 발신기(`produce_spans.py`)는 SERVER 스팬만 만든다. 그 길로 재려면 발신기에 CLIENT 스팬을 더하고 PG `applications` 를 실험 중에 바꿔야 한다. 위 셋으로 **중복 제거가 바이트에 민감하다는 것**은 실제 표에서 확인됐고, `peer_service` 가 바뀔 수 있다는 것은 코드로 확인됐다. 둘을 이어 붙인 결론이다.
 
 이것을 고치는 길은 토큰(안 2)이고 이번에 안 갔다. ADR 되돌림 ① 이 그 조건이다.
 
@@ -123,7 +123,7 @@ logs  (MV 없음. 그래도 원본이라 중복된다)
 
 | 실측 | |
 |---|---|
-| `telemetrygen` 이 같은 이름 · 같은 꼬리표(`series_hash` 동일)의 지표 셋을 보낸다 | |
+| `telemetrygen` 이 같은 이름 · 같은 Attribute(`series_hash` 동일)의 지표 셋을 보낸다 | |
 | `metrics_raw.ts` 가 **초 단위**라 둘이 같은 초에 떨어졌다 | |
 | **값이 서로 달랐다** (`0` 과 `1`) | 중복이 아니라 **진짜 점 둘**이다 |
 
@@ -144,7 +144,7 @@ logs  (MV 없음. 그래도 원본이라 중복된다)
 
 밀도가 낮은 환경에서만 돌려 보고 "통과" 라고 적으면 안 된다. `#119` 가 "CI 는 빈 러너라 옛 볼륨 경로를 영원히 못 잡는다" 를 적었는데, 이번은 **반대 방향**이다 : 로컬이 희박해서 못 잡고 CI 가 빽빽해서 잡았다.
 
-최종 점검 결과 : `spans 중복 0줄` · `spans(SERVER) = service_health_1m` · `transactions = heatmap_1m` · 관통 정상.
+최종 점검 결과 : `spans 중복 0줄` · `spans(SERVER) = service_health_1m` · `transactions = heatmap_1m` · E2E 정상.
 
 ## 5. 아는 한계
 
@@ -153,8 +153,8 @@ logs  (MV 없음. 그래도 원본이라 중복된다)
 | 같은 스팬이 **새 오프셋**으로 다시 온 경우 | **못 막는다.** 바이트가 같을 때만 운 좋게 막힌다 |
 | 기억에서 **밀려 나간 뒤**의 재처리 (`raw.dlq` 되넣기 · 오프셋 되감기 · 보관 기간 재생) | **못 막는다** |
 | `peer_service` 가 재처리 사이에 바뀌는 경우 | **못 막는다** (3-4 에서 재현) |
-| ClickHouse 가 적재 처리기와 **같이 죽는** 경우 기억이 사는지 | **안 쟀다** |
-| 창 100 이 **적재 처리기 2대 이상**에서도 충분한지 | **안 쟀다.** 1대일 때는 죽어 있는 동안 넣는 쪽이 없어 거의 안 밀린다. `raw` 가 파티션 3개라 최대 3대까지 뜬다 |
+| ClickHouse 가 Ingester 와 **같이 죽는** 경우 기억이 사는지 | **안 쟀다** |
+| 창 100 이 **Ingester 2대 이상**에서도 충분한지 | **안 쟀다.** 1대일 때는 죽어 있는 동안 넣는 쪽이 없어 거의 안 밀린다. `raw` 가 파티션 3개라 최대 3대까지 뜬다 |
 
 앞 셋의 해법은 **원본에서 다시 집계하는 것** 하나뿐이고(4절 절차가 그 손 판이다), 되넣는 잡을 만들 때 자동화를 같이 정한다.
 

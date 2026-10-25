@@ -18,14 +18,14 @@ import org.springframework.stereotype.Component
 //   그러면 5XX_RATE · P95_LATENCY 경보가 안 터지고 히트맵에도 쌓인다.
 //
 // 왜 여기서 버리나: 집계표(MV)는 insert 시점에 계산된다. spans 에 들어간 뒤에는 조회가 못 고친다
-//   (#83 에서 겪은 것과 같은 이유). 그리고 수집기에서 버리면 Kafka · ClickHouse 저장도 안 하고,
+//   (#83 에서 겪은 것과 같은 이유). 그리고 Collector 에서 버리면 Kafka · ClickHouse 저장도 안 하고,
 //   히트맵이 거쳐 가는 transactions 까지 한 번에 깨끗해진다.
 //   에이전트에서 거르는 방법도 있지만 쇼핑몰 4곳에 설정 파일이나 jar 를 얹어야 해서
 //   "에이전트만 붙이면 된다"는 전제(ADR #33)가 깨진다.
 //
 // 거르는 기준 2가지를 모두 만족해야 버린다
-//  1) SERVER 스팬이다 - 헬스체크를 "받은" 기록. CLIENT 는 남긴다. 파수꾼이나 게이트웨이가 남의
-//     /health 를 "호출한" 기록은 진짜 호출이라 서버맵 화살표에 필요하다
+//  1) SERVER 스팬이다 - 헬스체크를 "받은" 기록. CLIENT 는 남긴다. Watchdog 이나 게이트웨이가 남의
+//     /health 를 "호출한" 기록은 진짜 호출이라 Service map 화살표에 필요하다
 //  2) url.path 가 목록과 정확히 같다 - http.route 가 아니라 url.path 를 보는 이유는 OTel 규약에서
 //     url.path 는 Required(항상 있다)이고 http.route 는 Conditionally Required(프레임워크가
 //     알려 줄 때만)라서다. 지금은 둘 다 채워지지만 WebFlux · 게이트웨이로 바꾸면 route 가 빌 수 있다
@@ -54,7 +54,7 @@ class HealthCheckFilter(
     }
 
     init {
-        // 돌고 있는 수집기의 실제 목록을 확인할 방법이 필요하다. 관리 문은 health · metrics 만 열려 있어
+        // 돌고 있는 Collector 의 실제 목록을 확인할 방법이 필요하다. 관리 문은 health · metrics 만 열려 있어
         // configprops 로 못 보고, 목록을 잘못 쓰면 진짜 트래픽이 사라지는 설정이라 기동 때 한 줄 남긴다
         if (properties.paths.isEmpty()) {
             log.info("헬스체크 거르기: 꺼짐 (목록이 비어 있어 스팬을 버리지 않는다)")
@@ -69,7 +69,7 @@ class HealthCheckFilter(
         if (properties.paths.isEmpty()) return request
 
         // 버릴 게 하나도 없으면 받은 객체를 그대로 돌려준다.
-        // 성능 때문이 아니라 약속 때문이다: 수집기는 받은 protobuf 바이트를 풀지 않고 그대로
+        // 성능 때문이 아니라 약속 때문이다: Collector 는 받은 protobuf 바이트를 풀지 않고 그대로
         // Kafka 에 넣는다(#16). 다시 만들면 바이트가 같다는 보장이 "스키마가 이러하므로 같을 것"
         // 이라는 가정으로 내려앉는다. TraceSampler 도 같은 이유로 ratio >= 1.0 지름길을 둔다
         if (request.resourceSpansList.none { rs -> rs.scopeSpansList.any { it.spansList.any(::isHealthCheck) } }) {

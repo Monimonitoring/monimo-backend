@@ -4,7 +4,7 @@ import com.monimo.api.common.error.ApiException
 import com.monimo.api.common.error.ErrorCode
 
 // 채널 유형별 config 규칙. 검사 · 비밀값 가리기 · 수정 때 가린 값 되돌리기를 한 곳에 둔다
-// 키 이름은 알림 서비스 어댑터가 읽는 이름과 같다 (SLACK webhook_url = SlackWebhookSender)
+// 키 이름은 Notifier 어댑터가 읽는 이름과 같다 (SLACK webhook_url = SlackWebhookSender)
 object ChannelConfigPolicy {
     const val MASK = "****"
 

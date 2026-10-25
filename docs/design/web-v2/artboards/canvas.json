@@ -22,7 +22,7 @@
    "y": 300,
    "w": 1440,
    "h": 960,
-   "title": "S01 서버맵"
+   "title": "S01 Service map"
   },
   "TraceDetail.dc.html": {
    "x": 3040,
@@ -64,7 +64,7 @@
    "y": 3220,
    "w": 1440,
    "h": 1184,
-   "title": "S04 인스펙터"
+   "title": "S04 Inspector"
   },
   "InspectorDumpModal.dc.html": {
    "x": 1520,
@@ -113,7 +113,7 @@
    "y": 6140,
    "w": 1440,
    "h": 1100,
-   "title": "S10 플랫폼 상태 (파수꾼)"
+   "title": "S10 플랫폼 상태 (Watchdog)"
   }
  },
  "order": [
@@ -137,7 +137,7 @@
   "row0": {
    "x": 0,
    "y": 50,
-   "text": "① 로그인 · 서버맵 · 트레이스 콜스택 — 핵심기능 1 (Agent·트레이스 추적)",
+   "text": "① 로그인 · Service map · 트레이스 콜스택 — 핵심기능 1 (Agent·트레이스 추적)",
    "kind": "title1",
    "maxW": 4480
   },
@@ -151,7 +151,7 @@
   "row2": {
    "x": 0,
    "y": 2970,
-   "text": "③ 인스펙터 · 스레드 덤프 — 핵심기능 3 (시스템 메트릭)",
+   "text": "③ Inspector · 스레드 덤프 — 핵심기능 3 (시스템 메트릭)",
    "kind": "title1",
    "maxW": 4480
   },
@@ -165,7 +165,7 @@
   "row4": {
    "x": 0,
    "y": 5890,
-   "text": "⑤ 설정 — 핵심기능 5 (config UI) / + 파수꾼 플랫폼 상태",
+   "text": "⑤ 설정 — 핵심기능 5 (config UI) / + Watchdog 플랫폼 상태",
    "kind": "title1",
    "maxW": 2960
   },
@@ -173,7 +173,7 @@
    "x": 4640,
    "y": 50,
    "w": 880,
-   "text": "모니모니터링 웹 디자인 v2 (2026-09-21)\n- 입력: 모니모니터링 스킬 · Notion ERD(PG 9+CH 11) · 기능명세 FN-1~61 · API 명세 v3 REST 50행\n- 화면 13개 + 상태 변형 2개. 핵심기능 5 + 파수꾼 전부 포함\n- API 50행 → 화면·UI 요소·트리거 매핑표는 별도 문서(api-map.md)\n- 내부 문 5건(#2 #4 #40 #49 #50)은 화면이 직접 호출하지 않고 결과만 노출\n- 룩: Ops console · 쿨 뉴트럴 라이트 · IBM Plex Sans KR + Plex Mono · 악센트 인디고 1개 + 상태색 3",
+   "text": "모니모니터링 웹 디자인 v2 (2026-09-21)\n- 입력: 모니모니터링 스킬 · Notion ERD(PG 9+CH 11) · 기능명세 FN-1~61 · API 명세 v3 REST 50행\n- 화면 13개 + 상태 변형 2개. 핵심기능 5 + Watchdog 전부 포함\n- API 50행 → 화면·UI 요소·트리거 매핑표는 별도 문서(api-map.md)\n- 내부 문 5건(#2 #4 #40 #49 #50)은 화면이 직접 호출하지 않고 결과만 노출\n- 룩: Ops console · 쿨 뉴트럴 라이트 · IBM Plex Sans KR + Plex Mono · 악센트 인디고 1개 + 상태색 3",
    "color": "blue"
   }
  },

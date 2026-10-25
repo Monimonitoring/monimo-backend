@@ -20,7 +20,7 @@ import java.util.UUID
 
 enum class EventState { FIRING, RESOLVED }
 
-// alert_events 표. 주인: 탐지. API 서버는 읽기만 한다 (@Immutable 이라 실수로 고쳐도 UPDATE 가 나가지 않는다)
+// alert_events 표. 주인: 탐지. API server 는 읽기만 한다 (@Immutable 이라 실수로 고쳐도 UPDATE 가 나가지 않는다)
 @Entity
 @Immutable
 @Table(name = "alert_events")

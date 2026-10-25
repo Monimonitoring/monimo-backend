@@ -1,6 +1,6 @@
 # 로컬 인프라(compose.yaml)가 Intel 계열(amd64) 컴퓨터에서도 뜨는지, 그리고
-# 에이전트 → 수집기 → Kafka raw → 적재 처리기 한 줄이 실제로 이어지는지 확인한다.
-# compose · DDL · 가짜 데이터 · 점검 스크립트 · 수집기 · 적재 처리기가 바뀐 PR에서만 돈다.
+# 에이전트 → Collector → Kafka raw → Ingester 한 줄이 실제로 이어지는지 확인한다.
+# compose · DDL · 가짜 데이터 · 점검 스크립트 · Collector · Ingester 가 바뀐 PR에서만 돈다.
 name: dev-infra
 
 on:

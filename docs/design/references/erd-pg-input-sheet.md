@@ -93,7 +93,7 @@
 | 11 | `created_at` | TIMESTAMPTZ | NN | |
 | 12 | `updated_at` | TIMESTAMPTZ | NN | |
 
-> 탐지기는 이 규칙을 읽고 CH `service_health_1m` / `metrics_1m` 을 주기 조회한다 (`#30` — Kafka 컨슈머 아님).
+> Detector 는 이 규칙을 읽고 CH `service_health_1m` / `metrics_1m` 을 주기 조회한다 (`#30` — Kafka 컨슈머 아님).
 
 ---
 
@@ -255,7 +255,7 @@
 
 기능 대조에서 **빠진 컬럼**이 나왔다. `alert_rules.metric_kind`에 `CPU`·`HEAP`·`GC_TIME`이 있는데 이건 **에이전트 단위** 지표다. 인시던트가 "어느 에이전트에서" 났는지 없으면 화면에서 보여줄 수가 없다. → `alert_events.agent_id`(NULL 허용) 추가.
 
-②와 같은 논리로 괜찮다: 이벤트는 "이 규칙이 / 이 에이전트에서" 났다는 사실 둘을 가리킨다. `event.agent.application == event.rule.application`은 탐지기가 보장할 불변식이다.
+②와 같은 논리로 괜찮다: 이벤트는 "이 규칙이 / 이 에이전트에서" 났다는 사실 둘을 가리킨다. `event.agent.application == event.rule.application`은 Detector 가 보장할 불변식이다.
 
 ### 기능 대조표
 
@@ -266,5 +266,5 @@
 | 3 · 시스템 메트릭 | 스레드 덤프 요청 상태 | ✅ `thread_dump_requests` (본문 위치는 Q16) |
 | 4 · 히트맵 | 없음 — CH 집계만 | ✅ (PG 불필요) |
 | 5 · config UI | 샘플링률·모듈·로그레벨 / 경보 임계값 | ✅ `application_configs` / `alert_rules.threshold` |
-| + 파수꾼 | **없음 — 의도적** | ✅ 파수꾼은 우리 PG가 죽어도 알려야 한다. 설정은 파일/환경변수, 상태는 자기 메모리. 이 ERD에 넣으면 목적이 무너진다 (ADR `#01` 3평면) |
+| + Watchdog | **없음 — 의도적** | ✅ Watchdog 은 우리 PG가 죽어도 알려야 한다. 설정은 파일/환경변수, 상태는 자기 메모리. 이 ERD에 넣으면 목적이 무너진다 (ADR `#01` 세 구분(Monitored app · APM · Watchdog)) |
 | 로그인 | 사용자·역할 | ✅ `users` |

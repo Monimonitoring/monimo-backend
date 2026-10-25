@@ -33,7 +33,7 @@ import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
-// 사건 3개 문을 실제 HTTP 로 돈다. 사건 · 이력은 탐지 · 알림이 쓰는 표라 테스트는 SQL 로 직접 넣는다. PG 는 Testcontainers
+// 사건 3개 문을 실제 HTTP 로 돈다. 사건 · 이력은 Detector · Notifier 가 쓰는 표라 테스트는 SQL 로 직접 넣는다. PG 는 Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestInfraConfig::class)
 class AlertEventApiTest(

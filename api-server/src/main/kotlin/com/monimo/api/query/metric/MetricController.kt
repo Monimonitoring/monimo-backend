@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
-// 인스펙터 지표 그래프 (API 명세 #15 · FN-33 · FN-37, VIEWER+). step 을 안 주면 기간에 맞춰 서버가 고른다
+// Inspector 지표 그래프 (API 명세 #15 · FN-33 · FN-37, VIEWER+). step 을 안 주면 기간에 맞춰 서버가 고른다
 @RestController
 @RequestMapping("/api/v1/metrics")
 class MetricController(

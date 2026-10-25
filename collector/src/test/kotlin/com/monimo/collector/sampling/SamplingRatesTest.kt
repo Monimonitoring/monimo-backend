@@ -3,7 +3,7 @@ package com.monimo.collector.sampling
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 
-// 비율 한 벌을 만드는 규칙만 본다. 묶음별 최댓값 계산과 방어 복사가 전부다 (ADR #53 · #72)
+// 비율 한 벌을 만드는 규칙만 본다. System 별 최댓값 계산과 방어 복사가 전부다 (ADR #53 · #72)
 class SamplingRatesTest : BehaviorSpec({
 
     fun shop(ratio: Double) = ServiceRate(system = "shop", ratio = ratio)

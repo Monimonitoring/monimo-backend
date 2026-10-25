@@ -145,7 +145,7 @@ class AlertRuleService(
         return value
     }
 
-    // 탐지가 1분 버킷으로 평가하므로 60초 단위
+    // Detector 가 1분 버킷으로 평가하므로 60초 단위
     private fun windowOf(value: Int?): Int {
         if (value == null || value !in WINDOW_MIN..WINDOW_MAX || value % WINDOW_MIN != 0) {
             throw invalid("window_sec 은 ${WINDOW_MIN}~${WINDOW_MAX} 사이 ${WINDOW_MIN}의 배수여야 합니다.")

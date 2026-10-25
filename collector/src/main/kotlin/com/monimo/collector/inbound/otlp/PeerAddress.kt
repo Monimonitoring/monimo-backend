@@ -8,8 +8,8 @@ import java.net.SocketAddress
 // 연결 상대(에이전트가 붙은 파드)의 주소를 글자로 만드는 자리. 스프링을 모르는 순수 함수들이다.
 //
 // 주소는 데이터 안에 없다. 에이전트 기본값은 호스트 이름과 CPU 종류만 보내고 주소는 안 보낸다.
-// 즉 주소는 "데이터의 성질" 이 아니라 "연결의 성질" 이라, 연결을 들고 있는 수집기만 알 수 있다
-// (ADR `#63`). 그래서 여기서 읽어 Kafka 봉투 메모로 적재 처리기까지 옮긴다.
+// 즉 주소는 "데이터의 성질" 이 아니라 "연결의 성질" 이라, 연결을 들고 있는 Collector 만 알 수 있다
+// (ADR `#63`). 그래서 여기서 읽어 Kafka 봉투 메모로 Ingester 까지 옮긴다.
 
 // 가로채기(PeerAddressInterceptor)가 넣고 서비스 구현이 꺼내는 통로.
 // gRPC Context 는 그 호출을 처리하는 동안 따라다니는 값 보관함이다. ThreadLocal 과 비슷하지만
@@ -21,7 +21,7 @@ internal val PEER_ADDRESS: Context.Key<String?> = Context.key("monimo.peer.addre
 // 지금 처리 중인 호출의 상대 주소. 모르면 null
 internal fun currentPeerAddress(): String? = PEER_ADDRESS.get()
 
-// gRPC 가 준 소켓 주소를 명부에 넣을 글자로 바꾼다. 못 바꾸면 null 이고, null 이면 메모를 안 붙인다.
+// gRPC 가 준 소켓 주소를 Agent registry 에 넣을 글자로 바꾼다. 못 바꾸면 null 이고, null 이면 메모를 안 붙인다.
 //
 // SocketAddress 는 추상 타입이다. TCP 면 InetSocketAddress 지만 유닉스 소켓 · 테스트 전송 수단이면
 // 다른 타입이라 주소라고 할 것이 없다. 이름이 안 풀린 주소도 같다. 그때는 null 로 둔다

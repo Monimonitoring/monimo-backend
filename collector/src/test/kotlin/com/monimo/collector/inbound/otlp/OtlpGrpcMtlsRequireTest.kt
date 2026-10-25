@@ -38,7 +38,7 @@ import kotlin.time.Duration.Companion.seconds
 
 // 요구 수준 require (#159, 전환 2단계) : 우리 기관 도장이 찍힌 신분증을 낸 손님만 통과한다.
 // 신분증이 없거나 · 다른 기관 도장이거나 · 기간이 지났으면 악수 단계에서 끊긴다. 통과한 손님의 세 신호는 평문 때와 똑같이
-// raw 토픽에 그대로 들어가고 `#149` 의 주소 메모도 그대로 붙는다 : TLS 를 수집기가 직접 끝내므로 상대 주소가 바뀌지 않는다
+// raw 토픽에 그대로 들어가고 `#149` 의 주소 메모도 그대로 붙는다 : TLS 를 Collector 가 직접 끝내므로 상대 주소가 바뀌지 않는다
 @SpringBootTest(
     properties = [
         "monimo.collector.otlp.grpc.port=0",
@@ -140,7 +140,7 @@ class OtlpGrpcMtlsRequireTest(
 
         When("다른 기관 도장이 찍힌 신분증을 낸 손님이 보내면") {
             val other = TestCerts.other
-            // 수집기 신분증은 우리 기관 것이라 손님 쪽 검사(trust)는 우리 기관으로, 손님이 내는 신분증만 다른 기관 것으로 둔다
+            // Collector 신분증은 우리 기관 것이라 손님 쪽 검사(trust)는 우리 기관으로, 손님이 내는 신분증만 다른 기관 것으로 둔다
             val channel = OtlpTestClient.tls(server.port, ours.ca, other.clientCertificate("shop-order"), other.clientKey("shop-order"))
             val rejected = OtlpTestClient.rejectedWith(channel)
             channel.shutdownNow()

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 탐지가 넣었을 사건 + 발송 작업(FIRING)을 n 개 넣는다. 같은 채널(2) · 같은 서비스(shop-order) → 한 그룹
+# Detector 가 넣었을 사건 + 발송 작업(FIRING)을 n 개 넣는다. 같은 채널(2) · 같은 서비스(shop-order) → 한 그룹
 # 사용: enqueue.sh <tag> <n>   출력: 넣은 outbox id 들
 set -euo pipefail
 TAG=$1; N=$2

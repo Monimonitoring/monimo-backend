@@ -72,7 +72,7 @@ class GroupingTest(
         Long::class.java, UUID.randomUUID(), ruleId, UUID.randomUUID().toString().replace("-", ""), Timestamp.from(G0),
     )!!
 
-    // 탐지가 넣었을 발송 작업 한 줄. 사건을 넘기면 그 사건의 줄(예: RESOLVED)을 만든다
+    // Detector 가 넣었을 발송 작업 한 줄. 사건을 넘기면 그 사건의 줄(예: RESOLVED)을 만든다
     fun outbox(
         channelId: Long,
         rule: String,
