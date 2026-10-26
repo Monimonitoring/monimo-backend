@@ -1,0 +1,14 @@
+# gc_run.sh 가 쇼핑몰 compose 에 얹는 실험용 덮어쓰기. order 하나만 바꾼다 (쇼핑몰 Dockerfile · compose 는 그대로).
+# ENTRYPOINT 가 java 인자를 직접 적어 두어 JAVA_TOOL_OPTIONS 는 에이전트 인자에 "더해진다"(덮지 않는다).
+# 환경변수 OTEL_METRIC_EXPORT_INTERVAL 은 agent.properties(10초)보다 우선한다 → 운영 기본 60초를 재현한다.
+# GC 로그 · OOM 힙 덤프는 호스트 폴더(/gclog)에 남겨 컨테이너를 지워도 남는다. 파일 이름의 %t 는 JVM 시작 시각이라 재시작해도 안 덮인다
+services:
+  order:
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseG1GC -Xms${GC_HEAP_MB:-512}m -Xmx${GC_HEAP_MB:-512}m
+        -Xlog:gc*,safepoint:file=/gclog/gc-%t.log:time,uptime,level,tags
+        -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/gclog
+      OTEL_METRIC_EXPORT_INTERVAL: "${GC_EXPORT_MS:-60000}"
+    volumes:
+      - ${GC_LOG_DIR:?gc_run.sh 로 띄운다}:/gclog
