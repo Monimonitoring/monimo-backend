@@ -26,7 +26,7 @@ class GcTimeService(
 
         return increases.groupBy { Triple(it.line.serviceName, it.line.agentKey, it.minute) }
             .mapNotNull { (key, rows) ->
-                // 시간 줄이 하나도 없는 1분(횟수 줄만 옴)은 0ms 가 아니라 모르는 1분이다. 줄을 안 내야 탐지가 판정 불가로 본다
+                // 시간 줄이 하나도 없는 1분(횟수 줄만 옴)은 0ms 가 아니라 모르는 1분이다. 줄을 안 내야 Detector 가 판정 불가로 본다
                 val times = rows.filter { it.line.metricName == GcTimeRepository.TIME_METRIC }
                 if (times.isEmpty()) return@mapNotNull null
                 GcTimeResponse(

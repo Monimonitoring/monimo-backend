@@ -66,7 +66,7 @@ class GcTimeServiceContractTest : BehaviorSpec({
         }
         When("151초면") {
             val rows = gcTime(young(-10, 1.0), young(141, 1.5))
-            Then("전송이 빠진 것으로 보고 세 1분 모두 비운다 (탐지에서는 판정 불가)") {
+            Then("전송이 빠진 것으로 보고 세 1분 모두 비운다 (Detector 에서는 판정 불가)") {
                 rows shouldBe emptyMap()
             }
         }
@@ -94,7 +94,7 @@ class GcTimeServiceContractTest : BehaviorSpec({
                 young(-10, 1.0), young(50, 1.1),
                 young(-10, 10.0, count), young(50, 12.0, count), young(110, 14.0, count),
             )
-            Then("그 1분을 비운다 → 탐지는 0ms 정상이 아니라 판정 불가로 본다") {
+            Then("그 1분을 비운다 → Detector 는 0ms 정상이 아니라 판정 불가로 본다") {
                 rows.keys shouldBe setOf(t0)
             }
         }

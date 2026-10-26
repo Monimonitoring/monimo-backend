@@ -146,7 +146,7 @@ class GcTimeApiTest(
         }
 
         When("한 1분에 횟수 줄만 있고 시간 줄이 없으면") {
-            Then("그 1분을 0ms 로 내지 않고 비운다 (탐지에서 판정 불가)") {
+            Then("그 1분을 0ms 로 내지 않고 비운다 (Detector 에서 판정 불가)") {
                 val rows = json(get("service_name=gap-count-only&$range"))["data"]
                 rows.map { Instant.parse(it["ts_min"].asText()) } shouldBe listOf(t0)
             }
