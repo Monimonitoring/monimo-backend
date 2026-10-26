@@ -5,6 +5,7 @@ import com.monimo.notifier.channel.SlackWebhookSender
 import com.monimo.notifier.support.FakeSlackServer
 import com.monimo.notifier.support.MutableClock
 import com.monimo.notifier.support.TestInfraConfig
+import com.monimo.notifier.support.inlineLanes
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
 import io.kotest.matchers.shouldBe
@@ -29,6 +30,7 @@ private val T0: Instant = Instant.parse("2026-09-27T00:00:00Z")
 class DeliveryTestConfig {
     @Bean @Primary fun testClock() = MutableClock(T0)
     @Bean(destroyMethod = "close") fun fakeSlack() = FakeSlackServer()
+    @Bean @Primary fun inlineChannelLanes() = inlineLanes()
 }
 
 // 실제 PostgreSQL + 가짜 Slack 수신 서버. 스케줄러는 끄고 pollOnce 를 직접 부른다

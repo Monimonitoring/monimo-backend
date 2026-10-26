@@ -3,6 +3,7 @@ package com.monimo.notifier.delivery
 import com.monimo.notifier.support.FakeSlackServer
 import com.monimo.notifier.support.MutableClock
 import com.monimo.notifier.support.TestInfraConfig
+import com.monimo.notifier.support.inlineLanes
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -25,6 +26,7 @@ private val G0: Instant = Instant.parse("2026-10-07T00:00:00Z")
 class GroupingTestConfig {
     @Bean @Primary fun groupingClock() = MutableClock(G0)
     @Bean(destroyMethod = "close") fun groupingSlack() = FakeSlackServer()
+    @Bean @Primary fun inlineChannelLanes() = inlineLanes()
 }
 
 // 그룹핑 (docs/alert/50-grouping.md). 같은 채널 · 서비스 알림을 group_wait(10초) 기다렸다 한 메시지로. 실제 PG + 가짜 Slack

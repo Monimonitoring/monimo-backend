@@ -32,11 +32,12 @@ class OutboxClaimer(
 
     // ① 선점: 네이티브 FOR UPDATE SKIP LOCKED 로 줄을 잡고 IN_FLIGHT + 임대를 적은 뒤 바로 커밋한다.
     //    커밋하면 행 잠금은 풀리지만, 다른 워커의 조회 조건(PENDING 이거나 임대 만료)에 걸리지 않으므로 가져가지 못한다
+    //    excludedChannels = 아직 보내는 중인 채널 (ChannelLanes). 그 채널 줄은 잡지 않는다
     @Transactional
-    fun claim(): List<Claim> {
+    fun claim(excludedChannels: Collection<Long> = emptyList()): List<Claim> {
         val now = clock.instant()
         outbox.cancelResolvedBeforeSend(now)
-        val rows = outbox.lockDue(now, now.minus(props.groupWait), props.batchSize)
+        val rows = outbox.lockDue(now, now.minus(props.groupWait), props.batchSize, excludedChannels.ifEmpty { NO_CHANNEL })
         // 발화 줄이 FAILED(수신 거부 · 재시도 한도 · 서킷 중 최대 나이 · 어댑터 없음)로 끝났는데 복구가 생긴 경우, 사람은 "터졌다"를
         // 받지 못했을 수 있다. 응답 없음(Unknown)으로 한도에 닿았으면 받았을 수도 있으므로 "못 받았다"가 아니라 "확인 안 됨"이다.
         // 복구를 숨기면 장애가 있었다는 사실 자체가 사라지므로 보내되, 발화 알림의 전달 성공이 확인되지 않았다고 적는다 (D18-보강)
@@ -85,6 +86,9 @@ class OutboxClaimer(
         return true
     }
 }
+
+// alert_channels.id 는 1 부터라 없는 값
+private val NO_CHANNEL = listOf(-1L)
 
 // 작업 한 건을 어떻게 끝낼지. attempted = 실제로 외부를 호출했나 (서킷 OPEN 재예약 · 채널 꺼짐은 false)
 data class Finish(
