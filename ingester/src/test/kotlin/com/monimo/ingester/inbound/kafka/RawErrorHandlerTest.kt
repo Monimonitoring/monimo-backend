@@ -47,7 +47,7 @@ class RawErrorHandlerTest(
             ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to ByteArraySerializer::class.java,
         ),
     )
-    // raw.dlq 를 읽는 쪽. 적재 처리기와 다른 group-id 를 써야 책갈피가 섞이지 않는다
+    // raw.dlq 를 읽는 쪽. Ingester 와 다른 group-id 를 써야 책갈피가 섞이지 않는다
     val dlqReader = KafkaConsumer<String, ByteArray>(
         mapOf(
             ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrap,
@@ -78,7 +78,7 @@ class RawErrorHandlerTest(
     fun header(record: ConsumerRecord<*, *>, key: String): String? = record.headers().lastHeader(key)?.value()?.let { String(it) }
     var awaitDlqSeen: ConsumerRecord<String, ByteArray>? = null // 첫 When 이 받은 DLQ 레코드. 둘째 When 이 되돌려 넣는다
 
-    Given("에러 핸들러가 붙은 적재 처리기") {
+    Given("에러 핸들러가 붙은 Ingester") {
 
         When("키는 traces 인데 값이 protobuf 가 아닌 바이트를 raw 의 파티션 1 에 넣으면") {
             // 0x0A = 1번 필드 · 길이 있는 타입, 0x7F = 길이 127 이라고 선언. 그런데 뒤에 바이트가 없다 → 잘린 메시지 → 파싱 실패.
@@ -86,7 +86,7 @@ class RawErrorHandlerTest(
             // Kafka 가 고르게 해야 들어간다. 처음 구현은 이 경로가 깨져 있었다
             val poison = byteArrayOf(0x0A, 0x7F)
             val before = dlqCounter.count(FailureClass.POISON)
-            // 수집기가 붙이는 주소 메모도 같이 넣는다. 재처리 잡이 주소를 잃지 않는지 보려는 것이다 (`#149`)
+            // Collector 가 붙이는 주소 메모도 같이 넣는다. 재처리 잡이 주소를 잃지 않는지 보려는 것이다 (`#149`)
             val poisonRecord = ProducerRecord(RawSignal.TOPIC, 1, RawSignal.TRACES.key, poison)
             poisonRecord.headers().add(RawHeaders.PEER_ADDRESS, "172.19.0.11".toByteArray())
             producer.send(poisonRecord).get()

@@ -63,7 +63,7 @@ class ServiceHealthApiTest(
 
     val range = "from=$t0&to=${t0.plusSeconds(180)}"
 
-    Given("탐지가 service-health 를 부를 때") {
+    Given("Detector 가 service-health 를 부를 때") {
         When("step 기본값(60)으로 3분을 읽으면") {
             val response = get(range)
             val rows = json(response)["data"]

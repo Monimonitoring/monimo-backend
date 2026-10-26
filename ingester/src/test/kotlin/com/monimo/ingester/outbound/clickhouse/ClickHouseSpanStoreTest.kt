@@ -80,7 +80,7 @@ class ClickHouseSpanStoreTest(
         When("저장하면") {
             store.save(listOf(rowOf(traceId, mapOf(SpanRow.CANARY_KEY to "true"))))
 
-            Then("파수꾼이 쓸 조회(mapContains)로 찾힌다") {
+            Then("Watchdog 이 쓸 조회(mapContains)로 찾힌다") {
                 countWhere("mapContains(attributes, '${SpanRow.CANARY_KEY}') AND trace_id = '$traceId'") shouldBe 1L
             }
         }
@@ -106,7 +106,7 @@ class ClickHouseSpanStoreTest(
         }
     }
 
-    Given("따옴표와 줄바꿈이 든 꼬리표") {
+    Given("따옴표와 줄바꿈이 든 Attribute") {
         val traceId = "d".repeat(32)
 
         When("저장하면") {

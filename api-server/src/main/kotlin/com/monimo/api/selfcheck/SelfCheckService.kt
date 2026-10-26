@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import javax.sql.DataSource
 
-// PG 두드림 + 탐지 · 수집기 낡음 게이지. 파수꾼이 밖에서 "PG 가 죽었다 · 탐지가 멈췄다" 를 볼 유일한 문 (#226, #208 ⑥)
+// PG 두드림 + Detector · Collector 낡음 게이지. Watchdog 이 밖에서 "PG 가 죽었다 · Detector 가 멈췄다" 를 볼 유일한 문 (#226, #208 ⑥)
 @Service
 class SelfCheckService(
     dataSource: DataSource,
@@ -22,11 +22,11 @@ class SelfCheckService(
 ) {
     private val jdbc = JdbcTemplate(dataSource)
 
-    // PG 가 죽으면 연결을 얻는 데 Hikari connectionTimeout(30초)까지 걸린다. 파수꾼이 그만큼 기다리게 하지 않으려고
+    // PG 가 죽으면 연결을 얻는 데 Hikari connectionTimeout(30초)까지 걸린다. Watchdog 이 그만큼 기다리게 하지 않으려고
     // 다른 스레드에서 두드리고 기한만큼만 기다린다. 기한을 넘긴 스레드는 Hikari 가 포기할 때 알아서 끝난다
     private val executor = Executors.newCachedThreadPool { r -> Thread(r, "self-check").apply { isDaemon = true } }
 
-    // 셋을 동시에 : 차례로 하면 PG 기한 + 게이지 기한 둘이 더해져 파수꾼의 호출 기한(10초)을 넘긴다
+    // 셋을 동시에 : 차례로 하면 PG 기한 + 게이지 기한 둘이 더해져 Watchdog 의 호출 기한(10초)을 넘긴다
     fun check(): SelfCheckResponse {
         val detector = CompletableFuture.supplyAsync({ age(props.detectorManagementUrl, DETECTOR_GAUGE, props.detectorMaxAge) }, executor)
         val collector = CompletableFuture.supplyAsync({ age(props.collectorManagementUrl, COLLECTOR_GAUGE, props.collectorMaxAge) }, executor)
@@ -54,7 +54,7 @@ class SelfCheckService(
     }
 
     private companion object {
-        // 탐지 · 수집기가 ADR #54 로 내놓는 "마지막 성공 뒤 흐른 초"
+        // Detector · Collector 가 ADR #54 로 내놓는 "마지막 성공 뒤 흐른 초"
         const val DETECTOR_GAUGE = "monimo.detector.evaluation.age"
         const val COLLECTOR_GAUGE = "monimo.collector.sampling.refresh.age"
     }

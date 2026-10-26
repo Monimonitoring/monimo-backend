@@ -15,7 +15,7 @@ class DetectorApplicationTest(
     jdbcTemplate: JdbcTemplate,
 ) : BehaviorSpec({
 
-    Given("탐지 애플리케이션") {
+    Given("Detector 애플리케이션") {
         When("스프링 컨텍스트를 띄우면") {
             val name = environment.getProperty("spring.application.name")
 

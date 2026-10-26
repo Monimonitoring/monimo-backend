@@ -1,10 +1,10 @@
 package com.monimo.common.log
 
-// 로그 한 줄의 등급 이름을 정하는 규칙 한 곳. 수집기(하한 거르기 #215 · #236)와 적재 처리기(LogRow.level #144)가
+// 로그 한 줄의 등급 이름을 정하는 규칙 한 곳. Collector(Minimum log level 거르기 #215 · #236)와 Ingester(LogRow.level #144)가
 // 같은 표를 본다.
 //
-// 왜 common 인가: 같은 규약을 두 모듈이 각자 메우다 갈렸다. 수집기는 "숫자가 0 이면 모르는 것이니 남긴다",
-//   적재 처리기는 "숫자가 없으면 글자를 본다" 였다. 그래서 「숫자 0 + 글자 DEBUG」가 하한을 빠져나가 DEBUG 로
+// 왜 common 인가: 같은 규약을 두 모듈이 각자 메우다 갈렸다. Collector 는 "숫자가 0 이면 모르는 것이니 남긴다",
+//   Ingester 는 "숫자가 없으면 글자를 본다" 였다. 그래서 「숫자 0 + 글자 DEBUG」가 Minimum log level 을 빠져나가 DEBUG 로
 //   쌓였다(#236). 표를 복사해 두면 한쪽만 고쳐져 다시 갈린다
 //
 // 왜 proto 를 안 받나: `common` 은 이미 `opentelemetry-proto` 를 `api` 로 내보내므로 못 쓰는 것이 아니다.
@@ -18,7 +18,7 @@ object LogSeverity {
     const val UNKNOWN: String = ""
 
     // 아래 두 표(구간표 · 별칭 표)가 이 상수만 쓰므로 값에 오타를 내면 컴파일이 깨진다. 글자로 적어 두면
-    // `"ERR" to "ERRORR"` 같은 오타가 시험도 안 깨고 지나가고, 그 줄은 하한을 빠져나간 뒤 규약 밖 값으로 적힌다
+    // `"ERR" to "ERRORR"` 같은 오타가 시험도 안 깨고 지나가고, 그 줄은 Minimum log level 을 빠져나간 뒤 규약 밖 값으로 적힌다
     private const val TRACE = "TRACE"
     private const val DEBUG = "DEBUG"
     private const val INFO = "INFO"
@@ -30,7 +30,7 @@ object LogSeverity {
     val NAMES: List<String> = listOf(TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
 
     // 이름 → 그 구간의 첫 번호 (TRACE 1 · DEBUG 5 · INFO 9 · WARN 13 · ERROR 17 · FATAL 21).
-    // 하한을 비교할 때 쓴다: 하한은 늘 구간의 첫 번호라 "번호끼리 비교" 와 "구간끼리 비교" 의 결과가 같다
+    // Minimum log level 을 비교할 때 쓴다: Minimum log level 은 늘 구간의 첫 번호라 "번호끼리 비교" 와 "구간끼리 비교" 의 결과가 같다
     val FIRST_NUMBER: Map<String, Int> = NAMES.withIndex().associate { (i, name) -> name to i * 4 + 1 }
 
     // 등급 이름을 정한다. 여섯 중 하나 또는 UNKNOWN 이 나온다.
@@ -54,7 +54,7 @@ object LogSeverity {
         in 13..16 -> WARN
         in 17..20 -> ERROR
         in 21..24 -> FATAL
-        else -> null // 0 = 등급 없음. 규약 밖의 값(음수 · 25 이상)도 여기로 온다
+        else -> null // 0 = severity 없음. 규약 밖의 값(음수 · 25 이상)도 여기로 온다
     }
 
     // 숫자가 없을 때만 쓴다. 우리가 붙이는 OTel Java 에이전트는 늘 숫자를 채우므로, 이 길은 직접 OTLP 를 만들어

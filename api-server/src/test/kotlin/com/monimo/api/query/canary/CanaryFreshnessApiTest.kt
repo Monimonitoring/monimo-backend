@@ -17,7 +17,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import java.time.Instant
 
-// spans 에 카나리 표식이 있는 스팬을 넣고 파수꾼이 부르는 내부 문을 실제 HTTP 로 부른다. ClickHouse 는 Testcontainers
+// spans 에 카나리 표식이 있는 스팬을 넣고 Watchdog 이 부르는 내부 문을 실제 HTTP 로 부른다. ClickHouse 는 Testcontainers
 // 기준을 60초로 줄여 "기준 안 · 밖" 을 둘 다 만든다
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -63,7 +63,7 @@ class CanaryFreshnessApiTest(
 
     fun data(response: ResponseEntity<String>): JsonNode = objectMapper.readTree(response.body)["data"]
 
-    Given("파수꾼이 카나리 신선도를 물을 때") {
+    Given("Watchdog 이 카나리 신선도를 물을 때") {
         When("그 서비스의 최근 카나리가 기준 안이면") {
             val response = get("?service_name=cn-fresh")
             val data = data(response)

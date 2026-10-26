@@ -3,7 +3,7 @@
 - 이슈 `#127` · 「JDBC socketTimeout 10초 · 낡음 게이지」 결정 · 브랜치 `chore/127-jdbc-socket-timeout`
 - `#121`(샘플링 비율 정본을 PG 로) 리뷰에서 나온 후속
 
-- `#121` 이 수집기에 `@Scheduled` 로 PG 를 읽는 주기 작업을 넣으면서 생긴 구멍을 막는다
+- `#121` 이 Collector 에 `@Scheduled` 로 PG 를 읽는 주기 작업을 넣으면서 생긴 구멍을 막는다
 - 가볍게 간다
   - 이 폴더에 `research.md` · `prompts.md` · `tables.md` · `decision.md` 는 없다
 
@@ -21,12 +21,12 @@
 - **멈춘 것이 조용하다**
   - 예외가 안 나므로 `monimo.collector.sampling.refresh{outcome=failure}` 도 WARN 로그도 안 난다
   - "정상이라 조용한 것" 과 구분되지 않는다
-- **수집기만의 일이 아니다**
+- **Collector 만의 일이 아니다**
   - `detector`(15초) · `notifier`(1초)도 `@Scheduled` + 1스레드 + 타임아웃 없음으로 모양이 같다
 
 - 화면 쪽에서 보면 이렇다
   - 비율을 1% 에서 10% 로 올리고 저장하면 PG 에는 10% 가 들어가 **화면에는 제대로 보인다**
-  - 그런데 수집기는 계속 1% 로 돈다
+  - 그런데 Collector 는 계속 1% 로 돈다
   - 화면과 실제가 다른데 화면만 보면 알 수가 없다
 
 ## 알아야 했던 것
@@ -61,17 +61,17 @@
 - **고른 것**
   - `socketTimeout` **10초**를 PG 를 치는 **다섯 모듈 전부**의 `application.yml` `spring.datasource.hikari.data-source-properties` 에 넣는다
     - 다섯 모듈 : `collector` · `ingester` · `detector` · `notifier` · `api-server`
-  - 수집기에 **"마지막 성공 이후 몇 초"** 게이지 `monimo.collector.sampling.refresh.age` 를 더한다
+  - Collector 에 **"마지막 성공 이후 몇 초"** 게이지 `monimo.collector.sampling.refresh.age` 를 더한다
   - 주기 작업이 있는 세 모듈에 `spring.task.scheduling.pool.size: 2` 를 둔다
   - `ingester` 의 수동 스케줄러 빈에 `@Bean(defaultCandidate = false)` 를 붙이고 쓰는 쪽에 `@Qualifier` 를 붙인다
 - **버린 것과 이유**
   - URL 파라미터 : 운영에서 안 걸린다(url 이 env)
   - 서버 쪽 `statement_timeout` : 서버가 끊어도 그 통보가 못 오므로 막히는 경로 자체를 안 막는다
-  - 주기 작업 전용 DataSource 를 따로 두기 : 수집기가 PG 를 치는 곳이 여기뿐이라 얻는 것이 없는데 풀이 둘이 된다
+  - 주기 작업 전용 DataSource 를 따로 두기 : Collector 가 PG 를 치는 곳이 여기뿐이라 얻는 것이 없는데 풀이 둘이 된다
   - `queryTimeout` : 취소 요청이 왕복을 필요로 해서 블랙홀을 못 막는다
   - 범위를 내 모듈 둘로 줄이기 : `detector` · `notifier` 에 같은 구멍을 남긴다
     - 모듈당 한 줄이라 줄여서 아끼는 것이 없다
-  - 값 30초 : 수집기 주기(30초) 한 바퀴를 통째로 먹는다
+  - 값 30초 : Collector 주기(30초) 한 바퀴를 통째로 먹는다
   - 값 5초 : 로컬에서 PG 가 느릴 때 오탐이 난다
 - **임계값은 정하지 않았다**
   - 게이지만 내놓는다
@@ -100,7 +100,7 @@ socketTimeout 10                    pg_sleep(30) 가 10.0초에 끊김
 
 ### 적용값이 실제로 드라이버까지 가나
 
-- 수집기를 로컬로 띄워 Hikari 설정 로그를 봤다
+- Collector 를 로컬로 띄워 Hikari 설정 로그를 봤다
   - `/actuator/configprops` 는 키만 보여 주고 값은 가린다(`socketTimeout: ******`)
 
 ```
@@ -118,7 +118,7 @@ socketTimeout 10                    pg_sleep(30) 가 10.0초에 끊김
 
 ### 게이지가 "조용한 멈춤" 을 보이게 하나
 
-- 수집기를 `ttl=10s` 로 띄우고 `docker pause` 로 PG 를 멈춘 뒤 5초마다 쟀다
+- Collector 를 `ttl=10s` 로 띄우고 `docker pause` 로 PG 를 멈춘 뒤 5초마다 쟀다
 
 ```
 정상       age=0.63   success=1.0  failure=0.0

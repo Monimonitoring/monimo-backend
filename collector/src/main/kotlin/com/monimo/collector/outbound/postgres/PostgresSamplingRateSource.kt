@@ -16,12 +16,12 @@ import java.util.concurrent.atomic.AtomicReference
 
 // SamplingRateSource 의 PostgreSQL 구현(어댑터). application_configs 를 읽기만 한다.
 //
-// 이 모듈에 Entity 를 두지 않는다: 표 주인이 API 서버이고(ADR #36), 수집기는
+// 이 모듈에 Entity 를 두지 않는다: 표 주인이 API server 이고(ADR #36), Collector 는
 // ddl-auto: validate 라 Entity 가 생기면 그 검증까지 걸린다. JdbcTemplate 으로 SQL 한 줄을 친다.
 //
-// **읽기를 OTLP 요청 경로에서 하지 않는다.** 적재 처리기의 PostgresServiceCatalog 는 물어볼 때
+// **읽기를 OTLP 요청 경로에서 하지 않는다.** Ingester 의 PostgresServiceCatalog 는 물어볼 때
 // 낡았으면 그 자리에서 읽는데, 그걸 그대로 베끼면 PG 가 죽었을 때 그 요청이 커넥션 풀 대기만큼
-// 멈춘다 (로컬 실측 : OTLP 요청 하나가 10초). 적재 처리기는 Kafka 컨슈머라 견디지만 수집기는
+// 멈춘다 (로컬 실측 : OTLP 요청 하나가 10초). Ingester 는 Kafka 컨슈머라 견디지만 Collector 는
 // 에이전트가 응답을 기다리고 있고 수집 경로 가용성 목표가 조회보다 높다(99.9% 대 99.5%).
 // 그래서 @Scheduled 가 주기로 읽어 스냅샷만 갈아끼우고, rates() 는 들고 있는 값을 바로 준다.
 // PG 가 죽으면 비율이 낡기만 하고 수집은 한 번도 멈추지 않는다 (ADR #53).
@@ -42,7 +42,7 @@ class PostgresSamplingRateSource(
     private val snapshot = AtomicReference(SamplingRates.unread(properties.ratio))
 
     // 이 설계의 약속이 "PG 가 죽어도 수집은 돌고 비율만 낡는다" 인데, 낡았다는 사실을 로그 한 줄로만
-    // 알 수 있으면 아무도 모른다. 탐지 · 알림이 걸 수 있게 센다 (헬스체크 필터 · 미등록 카운터와 같은 기준)
+    // 알 수 있으면 아무도 모른다. Detector · Notifier 가 걸 수 있게 센다 (헬스체크 필터 · 미등록 카운터와 같은 기준)
     private val refreshed = counter(registry, "success", "샘플링 비율 갱신에 성공한 횟수")
     private val failed = counter(registry, "failure", "샘플링 비율 갱신에 실패한 횟수")
 
@@ -72,7 +72,7 @@ class PostgresSamplingRateSource(
         val current = snapshot.get()
         val fresh = runCatching { load() }.getOrElse { error ->
             failed.increment()
-            log.warn("샘플링 비율 갱신 실패 : 묶음별 {} 유지 ({})", current.bySystem, error.message)
+            log.warn("샘플링 비율 갱신 실패 : System 별 {} 유지 ({})", current.bySystem, error.message)
             return
         }
         snapshot.set(fresh)
@@ -84,9 +84,9 @@ class PostgresSamplingRateSource(
             // 이것을 안 찍으면 운영에서 조용히 기본값으로 돈다 (seed 미실행 · 전부 deleted_at · 엉뚱한 DB)
             log.warn("샘플링 비율 : 감시 중인 서비스가 0개다. 기본값 {} 로 돈다", fresh.fallback)
         } else if (fresh.byService != current.byService) {
-            // 묶음별 선을 먼저 찍는다 : 판정에 실제로 쓰이는 값이고 줄 수가 적다 (ADR #72)
+            // System 별 선을 먼저 찍는다 : 판정에 실제로 쓰이는 값이고 줄 수가 적다 (ADR #72)
             log.info(
-                "샘플링 비율 갱신 : 묶음별 {} · 미등록 {} (서비스별 {})",
+                "샘플링 비율 갱신 : System 별 {} · 미등록 {} (서비스별 {})",
                 fresh.bySystem.toSortedMap(),
                 fresh.fallback,
                 fresh.byService.toSortedMap(),
@@ -97,9 +97,9 @@ class PostgresSamplingRateSource(
     // 제외된(deleted_at) 서비스는 감시 대상이 아니므로 비율에 넣지 않는다.
     // queryForList 로 받는 이유: 줄이 몇 개 안 되고, 이 모듈에 Entity 도 RowMapper 도 두지 않는다.
     //
-    // system 을 같이 읽는다 (ADR #72) : 선을 묶음마다 두므로 이름만으로는 어느 선인지 모른다.
-    // 묶음 이름은 글자 그대로 쓴다 - API 서버가 앞뒤 공백만 자르고 대소문자는 그대로 두므로
-    // (ApplicationService.systemOf) 'Shop' 과 'shop' 은 다른 묶음이다
+    // system 을 같이 읽는다 (ADR #72) : 선을 System 마다 두므로 이름만으로는 어느 선인지 모른다.
+    // System 이름은 글자 그대로 쓴다 - API server 가 앞뒤 공백만 자르고 대소문자는 그대로 두므로
+    // (ApplicationService.systemOf) 'Shop' 과 'shop' 은 다른 System 이다
     private fun load(): SamplingRates =
         SamplingRates.of(
             jdbc.queryForList(SQL).associate { row ->

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
-// URL 통계 탭 · 서버맵 상위 URL (API 명세 #12 · FN-45, VIEWER+)
+// URL 통계 탭 · Service map 상위 URL (API 명세 #12 · FN-45, VIEWER+)
 @RestController
 @RequestMapping("/api/v1/stats/urls")
 class UrlStatController(

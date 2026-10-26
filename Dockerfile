@@ -1,4 +1,4 @@
-# 우리 모듈 다섯(수집기 · 적재 처리기 · API 서버 · 탐지 · 알림)의 이미지를 이 파일 하나로 만든다 (#170, monimo-shop #42 와 같은 방식).
+# 우리 모듈 다섯(Collector · Ingester · API server · Detector · Notifier)의 이미지를 이 파일 하나로 만든다 (#170, monimo-shop #42 와 같은 방식).
 # 레포 루트에서 하나만 빌드할 때 :  docker build --target collector -t monimo/collector .
 # --target 을 빼면 맨 마지막 단계(notifier)가 만들어진다. 늘 --target 을 준다
 # compose · CI 는 서비스마다 target 만 골라 쓴다
@@ -22,7 +22,7 @@ COPY . .
 RUN --mount=type=cache,target=/root/.gradle,sharing=locked \
     ./gradlew ${BOOT_JARS} --no-daemon
 
-# 2단계: OTel Java Agent 내려받기 (B평면 #213). 버전은 otel/AGENT_VERSION 한 곳에서만 정한다 (쇼핑몰과 같은 값).
+# 2단계: OTel Java Agent 내려받기 (Self-monitoring #213). 버전은 otel/AGENT_VERSION 한 곳에서만 정한다 (쇼핑몰과 같은 값).
 # 이 파일만 입력이라 소스가 바뀌어도 다시 받지 않는다
 FROM eclipse-temurin:17-jdk AS agent
 WORKDIR /otel
@@ -48,7 +48,7 @@ ENTRYPOINT ["java", \
 
 # 4단계: 모듈별 이미지. 서비스 이름(OTEL_SERVICE_NAME)은 applications.name · CH service_name 과 같은 글자다. monimo- 접두로 쇼핑몰(shop-)과 가른다
 
-# 수집기. 자기 스팬("받았다")이 자기 입력으로 돌아오므로 트레이스만 끈다 (지표 · 로그는 보낸다)
+# Collector. 자기 스팬("받았다")이 자기 입력으로 돌아오므로 트레이스만 끈다 (지표 · 로그는 보낸다)
 FROM runtime AS collector
 COPY --from=build /workspace/collector/build/libs/*.jar app.jar
 ENV OTEL_SERVICE_NAME=monimo-collector \
@@ -56,7 +56,7 @@ ENV OTEL_SERVICE_NAME=monimo-collector \
 # 8081 업무 HTTP(probe /livez · /readyz 포함) · 18081 관리(/actuator/**, 업무 포트 + 10000) · 4317 OTLP gRPC(에이전트 수신)
 EXPOSE 8081 18081 4317
 
-# 적재 처리기. 자기 스팬("꺼냈다" · "썼다")이 Kafka 를 거쳐 다시 돌아오므로 트레이스만 끈다
+# Ingester. 자기 스팬("꺼냈다" · "썼다")이 Kafka 를 거쳐 다시 돌아오므로 트레이스만 끈다
 FROM runtime AS ingester
 COPY --from=build /workspace/ingester/build/libs/*.jar app.jar
 ENV OTEL_SERVICE_NAME=monimo-ingester \
@@ -64,7 +64,7 @@ ENV OTEL_SERVICE_NAME=monimo-ingester \
 # 8082 업무 HTTP(probe /livez · /readyz 포함) · 18082 관리(/actuator/**, 업무 포트 + 10000)
 EXPOSE 8082 18082
 
-# API 서버
+# API server
 FROM runtime AS api-server
 COPY --from=build /workspace/api-server/build/libs/*.jar app.jar
 ENV OTEL_SERVICE_NAME=monimo-api-server

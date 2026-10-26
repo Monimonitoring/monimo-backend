@@ -13,7 +13,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-// 에이전트 하나를 가리키는 열쇠. 적재 처리기가 agent_id 로 쓰는 값과 같다 (service.name + service.instance.id)
+// 에이전트 하나를 가리키는 열쇠. Ingester 가 agent_id 로 쓰는 값과 같다 (service.name + service.instance.id)
 data class AgentKey(val service: String, val instance: String)
 
 // GET /agent/commands 의 200 본문. Extension 이 이 모양을 읽는다 (monimo-shop agent-extension Command.java)
@@ -31,7 +31,7 @@ data class AgentCommand(
 // 스레드 덤프 명령의 보관소. 세 가지를 쥔다.
 //   waiting  = 지금 붙잡고 있는 에이전트 폴링 (보유 판정의 근거, 합의안 1 : "최근 N초" 가 아니라 "지금 쥐고 있음")
 //   pending  = 폴링 사이 빈틈에 온 명령. 다음 폴링에 바로 준다 (합의안 3)
-//   inflight = 결과를 기다리는 명령. command_id → API 서버(또는 curl)가 기다리는 응답
+//   inflight = 결과를 기다리는 명령. command_id → API server(또는 curl)가 기다리는 응답
 //
 // 요청 스레드를 잡지 않으려고 전부 DeferredResult 로 기다린다. 컨테이너 스레드는 풀리고, 다른 스레드가 setResult 하면 응답이 나간다.
 // DeferredResult 의 타임아웃 기본 응답은 503 이라, "내 에이전트 아님(503)" 과 겹치지 않게 결과를 늘 명시한다 (폴링 204, 덤프 504)
@@ -84,7 +84,7 @@ class CommandHub(
         pending.entries.removeIf { (_, p) -> p.expiresAt.isBefore(clock.instant()) }
     }
 
-    // 덤프 명령을 내린다. 이 수집기가 그 에이전트를 쥐고 있지 않으면 null (팬아웃 받은 쪽이 503 을 낸다)
+    // 덤프 명령을 내린다. 이 Collector 가 그 에이전트를 쥐고 있지 않으면 null (팬아웃 받은 쪽이 503 을 낸다)
     @Synchronized
     fun dispatch(key: AgentKey, timeout: Duration): DeferredResult<ResponseEntity<Any>>? {
         val command = AgentCommand(UUID.randomUUID().toString(), AgentCommand.THREAD_DUMP, props.advertisedUrl, timeout.toMillis())
@@ -106,12 +106,12 @@ class CommandHub(
             pending[key] = Pending(command, clock.instant().plus(timeout))
             return result
         }
-        // 3) 이 수집기에는 없다
+        // 3) 이 Collector 에는 없다
         inflight.remove(command.commandId)
         return null
     }
 
-    // Extension 이 덤프 결과를 보냈다. 기다리는 명령이면 그 응답으로 넘긴다. 모르는 명령(시간 초과 · 다른 수집기)이면 false
+    // Extension 이 덤프 결과를 보냈다. 기다리는 명령이면 그 응답으로 넘긴다. 모르는 명령(시간 초과 · 다른 Collector)이면 false
     fun complete(commandId: String, resultJson: String): Boolean {
         val result = inflight.remove(commandId) ?: return false
         return result.setResult(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(resultJson))

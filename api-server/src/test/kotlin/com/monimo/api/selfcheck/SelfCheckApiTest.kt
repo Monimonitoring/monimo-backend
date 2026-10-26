@@ -80,7 +80,7 @@ class SelfCheckApiTest(
     }
     fun data(response: ResponseEntity<String>): JsonNode = objectMapper.readTree(response.body)["data"]
 
-    Given("PG 가 붙어 있고 탐지 · 수집기 게이지가 작다") {
+    Given("PG 가 붙어 있고 Detector · Collector 게이지가 작다") {
         fakes.detector.value = 12.3
         fakes.collector.value = 8.0
 
@@ -107,7 +107,7 @@ class SelfCheckApiTest(
         }
     }
 
-    Given("탐지 게이지가 180초를 넘고 수집기 게이지는 못 읽는다") {
+    Given("Detector 게이지가 180초를 넘고 Collector 게이지는 못 읽는다") {
         fakes.detector.value = 251.0
         fakes.collector.value = null
 
@@ -115,7 +115,7 @@ class SelfCheckApiTest(
             val response = call()
             val d = data(response)
 
-            Then("HTTP 는 200 그대로, 탐지는 ok=false 에 값, 수집기는 ok=false 에 unreachable") {
+            Then("HTTP 는 200 그대로, Detector 는 ok=false 에 값, Collector 는 ok=false 에 unreachable") {
                 response.statusCode.value() shouldBe 200
                 d["detector"]["ok"].asBoolean() shouldBe false
                 d["detector"]["age_sec"].asDouble() shouldBe 251.0
@@ -138,7 +138,7 @@ class SelfCheckApiTest(
             val d = data(response)
 
             // 실패 모양은 환경마다 다르다 : 로컬은 재시도하다 기한에 걸려 timeout, CI 러너는 풀의 연결이 즉시 닫혀 예외 이름이 온다.
-            // 파수꾼에게 중요한 것은 "기한 안에 200 으로 답하고 ok=false" 뿐이라 둘 다 통과시킨다
+            // Watchdog 에게 중요한 것은 "기한 안에 200 으로 답하고 ok=false" 뿐이라 둘 다 통과시킨다
             Then("기한 안에 200 으로 답하고 postgres 만 ok=false 에 error 가 있고, 게이지 둘은 그대로 ok") {
                 response.statusCode.value() shouldBe 200
                 took shouldBeLessThan 10_000

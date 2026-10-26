@@ -230,7 +230,7 @@ ERROR: Found non-empty schema(s) "default" but no schema history table.
 ### `repair` 가 절반만 된다
 
 - README 에 실패 복구 절차로 "`repair` 를 돌린다" 고 적어 뒀다
-  - 그런데 관통 시험에서 그게 **절반만 사실**인 것이 드러났다
+  - 그런데 E2E 시험에서 그게 **절반만 사실**인 것이 드러났다
 
 ```
 실패 행 지우기      된다   (일부러 터뜨린 V202609300000 행이 사라지고 다음 migrate 정상)

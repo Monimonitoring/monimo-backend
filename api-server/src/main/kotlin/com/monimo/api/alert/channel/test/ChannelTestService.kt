@@ -23,7 +23,7 @@ data class ChannelTestResponse(
     val testedAt: Instant,
 )
 
-// 채널 시험 발송 (API 명세 #13). 저장된 실제 config 를 알림 서비스에 넘겨 한 번 보내 보고, 화면에는 결과만 돌려준다 (비밀값은 싣지 않는다).
+// 채널 시험 발송 (API 명세 #13). 저장된 실제 config 를 Notifier에 넘겨 한 번 보내 보고, 화면에는 결과만 돌려준다 (비밀값은 싣지 않는다).
 // 꺼진 채널도 시험할 수 있다 — 켜기 전에 설정이 맞는지 확인하는 용도. 사건이 없어 notification_history 에는 남기지 않는다
 @Service
 class ChannelTestService(
@@ -42,9 +42,9 @@ class ChannelTestService(
             is ChannelTestOutcome.Tested -> outcome.result to outcome.response
             is ChannelTestOutcome.ChannelUnreachable -> FAILED to "채널 서버가 응답하지 않습니다. ${outcome.reason}".trim()
             is ChannelTestOutcome.NotifierUnavailable -> {
-                // 알림 서비스에 닿지 못했으면 밖으로 나간 메시지가 없다. 간격을 돌려줘 바로 다시 시도할 수 있게 한다
+                // Notifier에 닿지 못했으면 밖으로 나간 메시지가 없다. 간격을 돌려줘 바로 다시 시도할 수 있게 한다
                 lastTested.remove(alertChannelUuid, reservedAt)
-                throw ApiException(ErrorCode.UPSTREAM_UNAVAILABLE, "알림 서비스가 응답하지 않습니다.")
+                throw ApiException(ErrorCode.UPSTREAM_UNAVAILABLE, "Notifier 가 응답하지 않습니다.")
             }
         }
         return ChannelTestResponse(channel.alertChannelUuid, channel.type, result, response, DbTime.now())

@@ -1,5 +1,7 @@
 # `#189` 누적 지표가 계속 오르는 선으로 보인다
 
+> 용어만 glossary(`monimo-backend/docs/design/glossary.md`) 기준으로 바꿈 (`#240`) : 원문 인용도 용어만 바꾸고 문장은 그대로 뒀다
+
 - 이슈 `#189` · 2026-10-14 · 승조(`@SeungJo-02`) · 결정은 「누적 지표는 종류 · 총합 표시 칸으로」 결정
 
 > **발견과 선택지 정리는 조회 파트(이현영)가 했다** : 노션 「누적 지표 그래프 관련 이슈」(2026-10-13)
@@ -9,7 +11,7 @@
 
 ## 1. 무엇을 하려는 것인가
 
-- GC 시간(`jvm.gc.duration.sum`)이 인스펙터에서 계속 오르는 선으로 보인다
+- GC 시간(`jvm.gc.duration.sum`)이 Inspector 에서 계속 오르는 선으로 보인다
 - 보고 싶은 것은 "이 1분 동안 GC 에 얼마 썼나" 다
   - 그런데 들어오는 값이 "켜진 뒤로 쌓인 총합" 이다
   - 표에는 그게 총합이라는 표시가 없어서 조회가 빼기를 걸 수 없다
@@ -19,8 +21,8 @@
 | | 주인 |
 |---|---|
 | `metrics_raw` · 롤업 · ClickHouse 마이그레이션 | 수집 (「PostgreSQL 병행 · 표마다 주인 하나」 결정 표 주인 · `#57` Flyway CH) |
-| 적재 처리기 코드 | 수집 (「집계 워커 폐지」 결정) |
-| 발견한 쪽 | 조회 (인스펙터 GC 그래프) |
+| Ingester 코드 | 수집 (「집계 워커 폐지」 결정) |
+| 발견한 쪽 | 조회 (Inspector GC 그래프) |
 | 빼는 쪽 | 조회 · 알림 (「metrics_raw 는 long 1지표 1행 · 설정은 앱 단위」 결정 : 차이 계산은 조회가) |
 
 ### 이미 밝혀져 있는 것 (노션, 다시 재지 않는다)
@@ -84,7 +86,7 @@
 
 ### 2.5 롤업에도 흘려야 한다
 
-- 인스펙터 15일 이상 구간과 탐지(CPU · HEAP · GC_TIME 규칙)가 `metrics_1m` 을 읽는다(`erd.md`)
+- Inspector 15일 이상 구간과 Detector(CPU · HEAP · GC_TIME 규칙)가 `metrics_1m` 을 읽는다(`erd.md`)
   - 거기서도 총합인지 알아야 `last_v` 끼리 뺄 수 있다
 - AggregatingMergeTree 는 같은 키의 줄을 합칠 때 집계 상태 컬럼만 보장한다
   - 그래서 `SimpleAggregateFunction(max, UInt8)` 로 둔다
@@ -127,12 +129,12 @@
 - 사용자 요약의 `총합(count) + 총횟수(sum)` 가 뒤바뀐 것을 잡았다
   - sum 이 시간 합, count 가 횟수
 - "현재값과 총합을 나눠서 각각 넣는다" 는 이해를 바로잡았다
-  - 값 칸은 하나 그대로, 옆에 꼬리표 칸을 붙이는 것
+  - 값 칸은 하나 그대로, 옆에 Attribute 칸을 붙이는 것
 
 ## 7. 절차
 
 1. 마이그레이션 : `ADD COLUMN` 넷 → MV `MODIFY QUERY` 둘
-2. 적재 처리기 : `MetricType` · `MetricRow` 칸 둘 · `MetricTranslator` 판정 · `ClickHouseMetricStore` 쓰기
+2. Ingester : `MetricType` · `MetricRow` 칸 둘 · `MetricTranslator` 판정 · `ClickHouseMetricStore` 쓰기
 3. 테스트 : 변환 규칙 여덟 모양 · 저장 · 롤업 전파
 4. 문서 : 「누적 지표는 종류 · 총합 표시 칸으로」 결정 · `erd.md` 사본 · `AGENTS.md` §5 §6
 

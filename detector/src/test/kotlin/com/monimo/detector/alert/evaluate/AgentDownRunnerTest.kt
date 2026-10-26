@@ -43,6 +43,7 @@ class AgentDownTestConfig {
 class AgentDownRunnerTest(
     runner: AgentDownRunner,
     evaluationRunner: EvaluationRunner,
+    gcTimeRunner: GcTimeRunner,
     evaluationAge: LastSuccessAge,
     jdbc: JdbcTemplate,
     clock: MutableClock,
@@ -70,7 +71,7 @@ class AgentDownRunnerTest(
     val orderRule = rule(orderApp)
     rule(payApp)
 
-    // 적재 처리기가 하는 등록을 흉내 낸다
+    // Ingester 가 하는 등록을 흉내 낸다
     fun register(appId: Long, key: String) =
         jdbc.update("INSERT INTO agents (application_id, agent_key) VALUES (?, ?) ON CONFLICT (agent_key) DO NOTHING", appId, key)
     listOf("order-a", "order-b").forEach { register(orderApp, it) }
@@ -153,7 +154,7 @@ class AgentDownRunnerTest(
         fake.lastSignal.clear()
         val s = tickAt(8)
 
-        Then("판정 불가 — pay 까지 울리지 않고, 키 상태도 건드리지 않는다 (파수꾼 몫)") {
+        Then("판정 불가 — pay 까지 울리지 않고, 키 상태도 건드리지 않는다 (Watchdog 몫)") {
             s.fired shouldBe 0
             s.statusChanged shouldBe 0
             status("pay-a") shouldBe "UP"
@@ -200,10 +201,10 @@ class AgentDownRunnerTest(
         }
     }
 
-    Given("스케줄러 한 주기(서비스 단위 평가 + AGENT_DOWN)가 끝까지 돈다") {
+    Given("스케줄러 한 주기(서비스 단위 평가 + AGENT_DOWN + GC_TIME)가 끝까지 돈다") {
         Thread.sleep(50)
         val before = evaluationAge.seconds()
-        EvaluationScheduler(evaluationRunner, runner, evaluationAge).tick()
+        EvaluationScheduler(evaluationRunner, runner, gcTimeRunner, evaluationAge).tick()
 
         Then("낡음 게이지가 0 근처로 돌아간다 (ADR #54)") {
             (evaluationAge.seconds() < before) shouldBe true

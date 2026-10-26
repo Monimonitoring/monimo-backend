@@ -10,7 +10,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Instant
 
-// API 서버 내부 문 호출. X-Internal-Token 으로 인증한다 (README · MONIMO_INTERNAL_TOKEN).
+// API server 내부 문 호출. X-Internal-Token 으로 인증한다 (README · MONIMO_INTERNAL_TOKEN).
 // 스스로 재시도하지 않는다 — 다음 평가 주기가 곧 재시도이고, 실패한 주기는 판정 불가로 남긴다
 class HttpServiceHealthClient(
     private val props: EvaluationProperties.Query,
@@ -53,6 +53,6 @@ class HttpServiceHealthClient(
 
     private companion object {
         const val PATH = "/api/v1/internal/service-health"
-        const val STEP_SEC = 60  // 1분 버킷. 창(window_sec) 합산은 탐지가 직접 한다
+        const val STEP_SEC = 60  // 1분 버킷. 창(window_sec) 합산은 Detector 가 직접 한다
     }
 }

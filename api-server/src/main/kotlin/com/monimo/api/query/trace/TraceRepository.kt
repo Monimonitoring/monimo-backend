@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
 
-// trace_id 로 spans 를 평면 조회한다 (bloom_filter 인덱스). Map · Nested 는 JDBC 타입 대신 JSON 글자로 받아 푼다
+// trace_id 로 spans 를 flat 조회한다 (bloom_filter 인덱스). Map · Nested 는 JDBC 타입 대신 JSON 글자로 받아 푼다
 @Repository
 class TraceRepository(
     @Qualifier("clickHouseJdbcTemplate") private val jdbc: NamedParameterJdbcTemplate,

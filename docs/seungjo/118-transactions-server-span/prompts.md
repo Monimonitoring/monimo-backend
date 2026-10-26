@@ -1,5 +1,7 @@
 # 프롬프트 로그 : `#118` transactions 기준 바꾸기
 
+> 용어만 glossary(`monimo-backend/docs/design/glossary.md`) 기준으로 바꿈 (`#240`) : 원문 인용도 용어만 바꾸고 문장은 그대로 뒀다
+
 - 2026-10-07
 - 조사 서브에이전트 2개(opus)를 동시에 돌렸다
   - A = 다른 APM 의 트랜잭션 기준
@@ -37,8 +39,8 @@ APM 제품들이 "트랜잭션" 또는 스캐터 차트의 점을 **무엇 기�
 
 ## 배경 (우리 상황)
 
-- 자체 APM 을 만들고 있다. OTel 에이전트 → 우리 수집기 → Kafka → 적재 처리기 → ClickHouse
-- `spans` 표에 스팬이 평면으로 쌓인다. 거기서 Materialized View 가 `transactions` 표를 채운다
+- 자체 APM 을 만들고 있다. OTel 에이전트 → 우리 Collector → Kafka → Ingester → ClickHouse
+- `spans` 표에 스팬이 평평하게 쌓인다. 거기서 Materialized View 가 `transactions` 표를 채운다
 - 지금 조건: `WHERE parent_span_id = ''` (부모 없는 루트 스팬만 = 고객 요청 하나당 1줄)
 - 스캐터 차트(가로 시각 · 세로 응답시간 · 점 하나 = 요청 하나)가 이 표를 읽는다
 - 문제: 화면이 "서비스를 골라서 본다" 구조인데, 루트만 모으니 **맨 앞 서비스(gateway)에만 점이 있다.** 중간 서비스(order · payment · inventory)는 0건

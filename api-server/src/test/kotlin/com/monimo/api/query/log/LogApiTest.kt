@@ -127,12 +127,12 @@ class LogApiTest(
         }
 
         When("level 을 주면") {
-            Then("쉼표로 여러 등급을 고른다 (대소문자 무관)") {
+            Then("쉼표로 여러 severity 를 고른다 (대소문자 무관)") {
                 ids(get("$order&level=ERROR,WARN")) shouldBe listOf("L3", "L2")
                 ids(get("$order&level=error")) shouldBe listOf("L2")
             }
 
-            Then("모르는 등급은 400 INVALID_REQUEST") {
+            Then("모르는 severity 는 400 INVALID_REQUEST") {
                 json(get("$order&level=LOUD"))["error"]["code"].asText() shouldBe "INVALID_REQUEST"
             }
         }

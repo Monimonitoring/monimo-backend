@@ -32,7 +32,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 
-// 가짜 알림 서비스. 받은 요청(토큰 · 본문)을 남기고, status · body 로 정한 대로 답한다. down 이면 문을 닫는다
+// 가짜 Notifier. 받은 요청(토큰 · 본문)을 남기고, status · body 로 정한 대로 답한다. down 이면 문을 닫는다
 class FakeNotifier : AutoCloseable {
     data class Received(val token: String?, val body: String)
 
@@ -59,13 +59,13 @@ class FakeNotifier : AutoCloseable {
 class ChannelTestTestConfig {
     @Bean(destroyMethod = "close") fun fakeNotifier() = FakeNotifier()
 
-    // 실제 HTTP 클라이언트를 쓰되 주소만 가짜 알림 서비스로 돌린다
+    // 실제 HTTP 클라이언트를 쓰되 주소만 가짜 Notifier로 돌린다
     @Bean @Primary
     fun testChannelTestClient(fake: FakeNotifier, props: NotifierClientProperties, objectMapper: ObjectMapper): ChannelTestClient =
         HttpChannelTestClient(props.copy(baseUrl = fake.baseUrl), "test-internal-token", objectMapper)
 }
 
-// 채널 시험 발송(#13)을 실제 HTTP 로 돈다. 알림 서비스는 가짜, PG 는 Testcontainers
+// 채널 시험 발송(#13)을 실제 HTTP 로 돈다. Notifier는 가짜, PG 는 Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestInfraConfig::class, ChannelTestTestConfig::class)
 @TestPropertySource(properties = ["monimo.notifier.test-cooldown=1h"])
@@ -108,7 +108,7 @@ class ChannelTestApiTest(
         fake.body = body
     }
 
-    Given("알림 서비스가 보내 보고 SUCCESS 를 준다") {
+    Given("Notifier 가 보내 보고 SUCCESS 를 준다") {
         respond(200, """{"data":{"result":"SUCCESS","response":"ok"}}""")
         fake.received.clear()
         val ch = channel("성공")
@@ -125,7 +125,7 @@ class ChannelTestApiTest(
             response.body!! shouldNotContain "SECRETSECRET"
         }
 
-        Then("알림 서비스에는 내부 토큰과 저장된 실제 config(가리지 않은 값)가 간다") {
+        Then("Notifier 에는 내부 토큰과 저장된 실제 config(가리지 않은 값)가 간다") {
             val sent = fake.received.single()
             sent.token shouldBe "test-internal-token"
             sent.body shouldContain secretUrl
@@ -133,7 +133,7 @@ class ChannelTestApiTest(
         }
     }
 
-    Given("공급자가 거절했거나(FAILED) 채널 서버에 닿지 않았다(알림 서비스 503)") {
+    Given("공급자가 거절했거나(FAILED) 채널 서버에 닿지 않았다(Notifier 503)") {
         respond(200, """{"data":{"result":"FAILED","response":"404 channel_not_found"}}""")
         val rejected = test(channel("거절").alertChannelUuid)
         respond(503, """{"error":{"code":"UPSTREAM_UNAVAILABLE","message":"연결 실패"}}""")
@@ -148,7 +148,7 @@ class ChannelTestApiTest(
         }
     }
 
-    Given("알림 서비스 자체가 이상하다") {
+    Given("Notifier 자체가 이상하다") {
         respond(401, """{"error":{"code":"UNAUTHENTICATED","message":"x"}}""")
         val unauthorized = test(channel("토큰 불일치").alertChannelUuid)
         respond(200, "not json")
@@ -161,7 +161,7 @@ class ChannelTestApiTest(
             }
         }
 
-        When("알림 서비스가 살아난 뒤 같은 채널을 바로 다시 누르면") {
+        When("Notifier 가 살아난 뒤 같은 채널을 바로 다시 누르면") {
             val ch = channel("살아남")
             respond(500, """{}""")
             val down = test(ch.alertChannelUuid)
@@ -191,7 +191,7 @@ class ChannelTestApiTest(
         fake.received.clear()
         val second = test(ch.alertChannelUuid)
 
-        Then("두 번째는 429 이고 알림 서비스를 부르지 않는다") {
+        Then("두 번째는 429 이고 Notifier 를 부르지 않는다") {
             first.statusCode.value() shouldBe 200
             second.statusCode.value() shouldBe 429
             fake.received.size shouldBe 0

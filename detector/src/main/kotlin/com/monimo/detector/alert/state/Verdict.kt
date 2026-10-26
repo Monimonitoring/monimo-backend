@@ -20,7 +20,7 @@ enum class AlertOperator {
 }
 
 enum class UnknownReason {
-    QUERY_FAILED,  // API 서버 내부 조회가 실패함
+    QUERY_FAILED,  // API server 내부 조회가 실패함
     NO_DATA,       // 버킷에 표본이 없음 (cnt = 0). 오류율 0% 로 치환하지 않는다
     STALE,         // 버킷이 너무 오래됨. 집계 · 수집 지연을 정상으로 오판하지 않으려는 것
     PIPELINE_SILENT, // 어느 서비스에서도 최근 데이터가 없음. 쇼핑몰보다 우리 수집 · 적재가 멈춘 것을 의심한다 (AGENT_DOWN)

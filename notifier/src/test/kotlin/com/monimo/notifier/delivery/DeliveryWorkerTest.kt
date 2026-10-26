@@ -73,7 +73,7 @@ class DeliveryWorkerTest(
         Long::class.java, "ch-$mode", type, """{"webhook_url":"${fake.url(mode)}"}""", enabled,
     )!!
 
-    // 탐지가 만들었을 사건 1개 + 발송 작업 1개를 직접 넣는다 (모듈 경계상 탐지 코드를 쓰지 않는다)
+    // Detector 가 만들었을 사건 1개 + 발송 작업 1개를 직접 넣는다 (모듈 경계상 Detector 코드를 쓰지 않는다)
     fun outbox(channelId: Long, ruleName: String = "rule", createdAt: Instant = clock.now): Long {
         val now = Timestamp.from(createdAt)
         val eventId = jdbc.queryForObject(

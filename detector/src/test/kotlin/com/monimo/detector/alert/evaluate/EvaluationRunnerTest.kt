@@ -94,7 +94,7 @@ class EvaluationRunnerTest(
             }
         }
 
-        When("같은 시각에 주기를 또 돌면 (재시도 · 다른 탐지 인스턴스)") {
+        When("같은 시각에 주기를 또 돌면 (재시도 · 다른 Detector 인스턴스)") {
             val again = tickAfter(2)
 
             Then("같은 버킷은 무시되고 사건은 그대로 1건이다") {

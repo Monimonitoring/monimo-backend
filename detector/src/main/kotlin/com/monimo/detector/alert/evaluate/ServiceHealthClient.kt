@@ -2,7 +2,7 @@ package com.monimo.detector.alert.evaluate
 
 import java.time.Instant
 
-// API 서버 내부 문 GET /api/v1/internal/service-health 의 1분 버킷 한 줄 (조회 파트 #48 구현 그대로)
+// API server 내부 문 GET /api/v1/internal/service-health 의 1분 버킷 한 줄 (조회 파트 #48 구현 그대로)
 // 요청이 0건인 분은 줄 자체가 없다 — 적재가 안 끝난 1분과 구분하려고 0 으로 채우지 않는다
 data class HealthBucket(
     val start: Instant,

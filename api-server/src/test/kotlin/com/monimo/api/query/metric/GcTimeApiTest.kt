@@ -85,7 +85,7 @@ class GcTimeApiTest(
 
     val range = "from=$t0&to=${t0.plusSeconds(240)}"
 
-    Given("탐지가 GC_TIME 재료를 읽을 때") {
+    Given("Detector 가 GC_TIME 재료를 읽을 때") {
         When("서비스를 주면") {
             val response = get("service_name=gc-order&$range")
             val rows = json(response)["data"]

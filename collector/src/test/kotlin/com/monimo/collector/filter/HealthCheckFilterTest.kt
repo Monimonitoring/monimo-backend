@@ -103,8 +103,8 @@ class HealthCheckFilterTest : BehaviorSpec({
             }
         }
 
-        // 파수꾼이나 게이트웨이가 남의 /actuator/health 를 호출한 기록이다.
-        // 진짜 호출이라 서버맵 화살표에 필요하므로 버리면 안 된다
+        // Watchdog 이나 게이트웨이가 남의 /actuator/health 를 호출한 기록이다.
+        // 진짜 호출이라 Service map 화살표에 필요하므로 버리면 안 된다
         When("url.path 는 같지만 CLIENT 스팬이면") {
             val (filter, _) = filterOf("/actuator/health")
             val result = filter.drop(
@@ -145,7 +145,7 @@ class HealthCheckFilterTest : BehaviorSpec({
         }
 
         // 지금 동작을 못 박는 테스트다. 헬스체크가 DB 쿼리나 HTTP 호출을 하게 되면 자식 스팬이 생기고,
-        // 부모(SERVER)만 버리므로 자식은 부모 없이 남는다(고아 스팬). 트레이스 상세는 그걸
+        // 부모(SERVER)만 버리므로 자식은 부모 없이 남는다(orphan span). 트레이스 상세는 그걸
         // "(누락된 구간)" 아래에 매단다(#50).
         //
         // 로컬 실데이터에서는 아직 안 생긴다. 쇼핑몰 actuator 의 db 지표가 쿼리를 보내는 대신
@@ -166,7 +166,7 @@ class HealthCheckFilterTest : BehaviorSpec({
                 ),
             )
 
-            Then("부모만 버려지고 자식은 남는다 (고아 스팬이 된다)") {
+            Then("부모만 버려지고 자식은 남는다 (orphan span 이 된다)") {
                 result.spanNames() shouldContainExactly listOf("SELECT shop.orders")
             }
         }

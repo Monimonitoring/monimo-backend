@@ -10,7 +10,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
-// application_configs 표. 서비스당 한 줄, 등록과 동시에 만든다 (수집기가 바로 읽는다)
+// application_configs 표. 서비스당 한 줄, 등록과 동시에 만든다 (Collector 가 바로 읽는다)
 @Entity
 @Table(name = "application_configs")
 class ApplicationConfig(

@@ -22,8 +22,8 @@ data class SpanRow(
     val statusCode: String, // UNSET · OK · ERROR
     val httpStatus: Int, // HTTP 응답 코드. HTTP 스팬이 아니면 0
     val peerAddress: String, // 호출 대상 주소 (예: shop-order:8080). 없으면 ''
-    val peerService: String, // 호출 대상 서비스 이름. 에이전트가 안 넣어 주면 '' (서버맵 매핑은 이슈 I)
-    val attributes: Map<String, String>, // 그 밖의 꼬리표. 카나리 표식도 여기 들어간다
+    val peerService: String, // 호출 대상 서비스 이름. 에이전트가 안 넣어 주면 '' (Service map 매핑은 이슈 I)
+    val attributes: Map<String, String>, // 그 밖의 Attribute. 카나리 표식도 여기 들어간다
     // 스팬 안에서 벌어진 사건들. OTel 은 예외를 여기에 name="exception" 으로 넣어 보낸다 (스팬 하나에 여러 개 가능).
     // CH 에서는 Nested 컬럼이라 배열 세 개(events.ts · events.name · events.attributes)로 저장된다.
     // 비어 있으면 빈 목록 — #58 에서 이 필드를 빼먹어 예외가 적재되지 않았다 (#79)
@@ -31,8 +31,8 @@ data class SpanRow(
 ) {
     companion object {
         // 카나리 표식을 attributes 에 남길 때 쓰는 키.
-        // 수집기는 span 의 trace_state 에서 monimon=canary 를 보고 샘플링을 건너뛰는데(ADR #41),
-        // CH spans 에는 trace_state 컬럼이 없다. 그대로 두면 파수꾼이 카나리를 찾을 수단이 사라지므로
+        // Collector 는 span 의 trace_state 에서 monimon=canary 를 보고 샘플링을 건너뛰는데(ADR #41),
+        // CH spans 에는 trace_state 컬럼이 없다. 그대로 두면 Watchdog 이 카나리를 찾을 수단이 사라지므로
         // 적재할 때 이 키로 옮겨 적는다. 조회는 mapContains(attributes, 'monimo.canary') 로 한다
         const val CANARY_KEY = "monimo.canary"
     }

@@ -80,7 +80,7 @@ class EvaluationRunner(
     }
 
     // 켜진 규칙 중 서비스 단위(5XX · 4XX · P95)만. 제외된 서비스는 빠진다.
-    // alert_rules 는 API 서버 표(ADR #39: 탐지는 읽기만), applications 는 서비스 이름 · UUID 를 얻으려고 읽는다
+    // alert_rules 는 API server 표(ADR #39: Detector 는 읽기만), applications 는 서비스 이름 · UUID 를 얻으려고 읽는다
     private fun loadTargets(): List<EvaluationTarget> = jdbc.query(
         """
         SELECT r.id, r.alert_rule_uuid, r.version, r.name, a.name AS service_name, a.application_uuid,
@@ -114,6 +114,7 @@ class EvaluationRunner(
 class EvaluationScheduler(
     private val runner: EvaluationRunner,
     private val agentDown: AgentDownRunner,
+    private val gcTime: GcTimeRunner,
     private val age: LastSuccessAge,
 ) {
     private val log = LoggerFactory.getLogger(EvaluationScheduler::class.java)
@@ -129,7 +130,11 @@ class EvaluationScheduler(
         if (a.fired + a.resolved + a.queryFailures + a.statusChanged > 0) {
             log.info("AGENT_DOWN 규칙={} 반영={} 발화={} 해제={} 조회실패={} 상태변경={}", a.rules, a.applied, a.fired, a.resolved, a.queryFailures, a.statusChanged)
         }
-        // 두 평가가 PG 를 읽고 끝까지 돌았다. API 서버 조회 실패는 각 runOnce 가 판정 불가로 삼키므로 여기까지 오고,
+        val g = gcTime.runOnce()
+        if (g.fired + g.resolved + g.queryFailures > 0) {
+            log.info("GC_TIME 규칙={} 반영={} 발화={} 해제={} 조회실패={} 덤프={} 덤프실패={}", g.rules, g.applied, g.fired, g.resolved, g.queryFailures, g.dumps, g.dumpFailures)
+        }
+        // 세 평가가 PG 를 읽고 끝까지 돌았다. API server 조회 실패는 각 runOnce 가 판정 불가로 삼키므로 여기까지 오고,
         // PG 가 막히거나 실패하면 예외 · 블록으로 여기 오지 못해 게이지가 커진다
         age.markSuccess()
     }

@@ -11,7 +11,7 @@ import org.springframework.core.env.Environment
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.kafka.core.KafkaAdmin
 
-// 포트를 0(아무 빈 포트)으로 덮는다. 설정값 4317 을 그대로 쓰면 로컬에 수집기 컨테이너가 떠 있을 때
+// 포트를 0(아무 빈 포트)으로 덮는다. 설정값 4317 을 그대로 쓰면 로컬에 Collector 컨테이너가 떠 있을 때
 // "Address already in use" 로 항상 깨진다. OtlpGrpcReceiverTest 가 쓰는 것과 같은 방법이다
 @SpringBootTest(properties = ["monimo.collector.otlp.grpc.port=0"])
 @Import(TestInfraConfig::class)
@@ -21,7 +21,7 @@ class CollectorApplicationTest(
     kafkaAdmin: KafkaAdmin,
 ) : BehaviorSpec({
 
-    Given("수집기 애플리케이션") {
+    Given("Collector 애플리케이션") {
         When("스프링 컨텍스트를 띄우면") {
             val name = environment.getProperty("spring.application.name")
 

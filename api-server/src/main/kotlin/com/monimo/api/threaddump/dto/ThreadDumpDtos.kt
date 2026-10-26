@@ -2,7 +2,7 @@ package com.monimo.api.threaddump.dto
 
 import java.util.UUID
 
-// 선택. 없으면 5000. 수집기 상한(30초)에 맞춰 1000~30000 으로 자른다
+// 선택. 없으면 5000. Collector 상한(30초)에 맞춰 1000~30000 으로 자른다
 data class ThreadDumpRequest(
     val timeoutMs: Long? = null,
 )
@@ -29,7 +29,7 @@ data class ThreadDumpSummary(
     val threadCount: Int,
 )
 
-// 탐지가 경보 때 부르는 자동 덤프 요청 (#164). requestedBy 는 없으면 "detector"
+// Detector 가 경보 때 부르는 자동 덤프 요청 (#164). requestedBy 는 없으면 "detector"
 data class AutoThreadDumpRequest(
     val agentUuid: UUID,
     val requestedBy: String? = null,

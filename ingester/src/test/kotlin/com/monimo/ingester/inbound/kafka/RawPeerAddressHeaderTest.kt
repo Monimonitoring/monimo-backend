@@ -8,7 +8,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 
 // 봉투 메모에서 보낸 쪽 주소를 꺼내는 규칙. 컨테이너 없이 레코드 하나로 돈다.
 //
-// 메모가 없는 메시지가 실제로 있다 : 이 기능 전에 수집기가 넣은 메시지, 점검 스크립트(telemetrygen)가
+// 메모가 없는 메시지가 실제로 있다 : 이 기능 전에 Collector 가 넣은 메시지, 점검 스크립트(telemetrygen)가
 // 직접 넣는 메시지가 그렇다. 그때 적재가 깨지지 않고 주소만 빈칸이어야 한다 (ADR `#63`)
 class RawPeerAddressHeaderTest : BehaviorSpec({
 

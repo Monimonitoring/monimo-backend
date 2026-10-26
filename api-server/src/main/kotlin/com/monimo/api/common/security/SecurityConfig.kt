@@ -17,7 +17,7 @@ import org.springframework.security.oauth2.server.resource.web.authentication.Be
 import org.springframework.security.web.SecurityFilterChain
 
 // API 명세 §0-2 권한 4종을 경로로 가른다. 공개 = login · refresh / 내부 = X-Internal-Token / 그 외 /api/v1/** = JWT (VIEWER+)
-// ADMIN 은 각 컨트롤러가 @PreAuthorize("hasRole('ADMIN')") 로 건다. 에이전트(mTLS)는 수집기 몫이라 여기 없다
+// ADMIN 은 각 컨트롤러가 @PreAuthorize("hasRole('ADMIN')") 로 건다. 에이전트(mTLS)는 Collector 몫이라 여기 없다
 @Configuration(proxyBeanMethods = false)
 @EnableMethodSecurity
 @Import(JwtConfig::class)

@@ -18,7 +18,7 @@ class ApiServerApplicationTest(
     @Qualifier("clickHouseJdbcTemplate") clickHouseJdbcTemplate: NamedParameterJdbcTemplate,
 ) : BehaviorSpec({
 
-    Given("API 서버 애플리케이션") {
+    Given("API server 애플리케이션") {
         When("스프링 컨텍스트를 띄우면") {
             val name = environment.getProperty("spring.application.name")
 

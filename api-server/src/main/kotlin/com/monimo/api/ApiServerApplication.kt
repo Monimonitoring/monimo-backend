@@ -3,7 +3,7 @@ package com.monimo.api
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
-// API 서버
+// API server
 @SpringBootApplication
 class ApiServerApplication
 

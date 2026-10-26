@@ -5,10 +5,10 @@ import io.kotest.matchers.shouldBe
 
 // 로그 등급 판정 한 곳(LogSeverity)의 규칙을 못박는 시험 (#236).
 //
-// 이 표를 보는 쪽이 둘이다 : 적재 처리기(LogRow.level, #144)와 수집기의 로그 하한(#215).
+// 이 표를 보는 쪽이 둘이다 : Ingester(LogRow.level, #144)와 Collector 의 Minimum log level(#215).
 // 전에는 각자 판정해서 「숫자 0 + 글자 DEBUG」가 한쪽만 빠져나갔다. 그 갈림이 다시 생기면 여기가 먼저 빨개진다.
 //
-// 적재 처리기 쪽 기대는 LogTranslatorTest 가 proto 를 끼고 다시 본다 : 옮겨도 동작이 안 바뀌었다는 증거다
+// Ingester 쪽 기대는 LogTranslatorTest 가 proto 를 끼고 다시 본다 : 옮겨도 동작이 안 바뀌었다는 증거다
 class LogSeverityTest : BehaviorSpec({
 
     Given("숫자가 규약 안(1~24)인 로그") {
@@ -71,7 +71,7 @@ class LogSeverityTest : BehaviorSpec({
             )
         }
 
-        Then("규약 안의 숫자 24개가 내는 이름은 모두 이 표에 있다 (하한 비교가 그 번호를 쓴다)") {
+        Then("규약 안의 숫자 24개가 내는 이름은 모두 이 표에 있다 (Minimum log level 비교가 그 번호를 쓴다)") {
             (1..24).map { LogSeverity.nameOf(it, "") }.toSet() shouldBe LogSeverity.FIRST_NUMBER.keys
         }
     }

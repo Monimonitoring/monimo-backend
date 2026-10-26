@@ -18,7 +18,7 @@ import java.time.Instant
 // 쿠버네티스가 생기면 **같은 이미지 · 같은 환경변수**를 Job 의 command 로 옮기면 끝이다
 // (#119 가 clickhouse-migrate 에 대해 같은 길을 걸었다).
 //
-// 평소 적재 처리기(local 프로필만)에는 이 빈이 **아예 생기지 않는다.** 코드가 섞이는 것을 프로필로 막는다
+// 평소 Ingester(local 프로필만)에는 이 빈이 **아예 생기지 않는다.** 코드가 섞이는 것을 프로필로 막는다
 @Configuration(proxyBeanMethods = false)
 @Profile(PROFILE)
 @EnableConfigurationProperties(DlqReprocessProperties::class)

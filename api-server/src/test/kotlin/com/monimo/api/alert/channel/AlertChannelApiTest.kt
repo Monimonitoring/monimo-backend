@@ -82,7 +82,7 @@ class AlertChannelApiTest(
                 response.body!! shouldNotContain "SECRETTOKEN"
             }
 
-            Then("DB 에는 원래 주소가 저장된다 (알림 서비스가 읽는 값)") {
+            Then("DB 에는 원래 주소가 저장된다 (Notifier 가 읽는 값)") {
                 val saved = channels.findByAlertChannelUuid(UUID.fromString(data["alert_channel_uuid"].asText())).shouldNotBeNull()
                 saved.config["webhook_url"] shouldBe slackUrl
             }

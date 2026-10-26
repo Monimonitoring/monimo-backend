@@ -38,7 +38,7 @@ import kotlin.time.Duration.Companion.seconds
 
 // 요구 수준 require (#159, 전환 2단계) : 우리 기관 도장이 찍힌 신분증을 낸 손님만 통과한다.
 // 신분증이 없거나 · 다른 기관 도장이거나 · 기간이 지났으면 악수 단계에서 끊긴다. 통과한 손님의 세 신호는 평문 때와 똑같이
-// raw 토픽에 그대로 들어가고 `#149` 의 주소 메모도 그대로 붙는다 : TLS 를 수집기가 직접 끝내므로 상대 주소가 바뀌지 않는다
+// raw 토픽에 그대로 들어가고 `#149` 의 주소 메모도 그대로 붙는다 : TLS 를 Collector 가 직접 끝내므로 상대 주소가 바뀌지 않는다
 @SpringBootTest(
     properties = [
         "monimo.collector.otlp.grpc.port=0",
@@ -82,7 +82,7 @@ class OtlpGrpcMtlsRequireTest(
     fun peerAddressOf(record: ConsumerRecord<String, ByteArray>): String? =
         record.headers().lastHeader(RawHeaders.PEER_ADDRESS)?.value()?.toString(Charsets.UTF_8)
 
-    Given("손님 신분증을 반드시 요구하는 수집기 (require)") {
+    Given("손님 신분증을 반드시 요구하는 Collector (require)") {
 
         When("우리 기관 신분증(shop-order)을 낸 손님이 세 신호를 보내면") {
             val channel = OtlpTestClient.tls(server.port, ours.ca, ours.clientCertificate("shop-order"), ours.clientKey("shop-order"))
@@ -110,7 +110,7 @@ class OtlpGrpcMtlsRequireTest(
                 ExportLogsServiceRequest.parseFrom(received.getValue(RawSignal.LOGS).value()) shouldBe logs
             }
 
-            Then("#149 의 주소 메모가 세 신호에 그대로 붙는다 : TLS 를 켜도 수집기가 보는 상대 주소는 손님 주소다") {
+            Then("#149 의 주소 메모가 세 신호에 그대로 붙는다 : TLS 를 켜도 Collector 가 보는 상대 주소는 손님 주소다") {
                 received.values.forEach { loopback shouldContain peerAddressOf(it) }
             }
 
@@ -140,7 +140,7 @@ class OtlpGrpcMtlsRequireTest(
 
         When("다른 기관 도장이 찍힌 신분증을 낸 손님이 보내면") {
             val other = TestCerts.other
-            // 수집기 신분증은 우리 기관 것이라 손님 쪽 검사(trust)는 우리 기관으로, 손님이 내는 신분증만 다른 기관 것으로 둔다
+            // Collector 신분증은 우리 기관 것이라 손님 쪽 검사(trust)는 우리 기관으로, 손님이 내는 신분증만 다른 기관 것으로 둔다
             val channel = OtlpTestClient.tls(server.port, ours.ca, other.clientCertificate("shop-order"), other.clientKey("shop-order"))
             val rejected = OtlpTestClient.rejectedWith(channel)
             channel.shutdownNow()
@@ -165,7 +165,7 @@ class OtlpGrpcMtlsRequireTest(
             val rejected = OtlpTestClient.rejectedWith(channel)
             channel.shutdownNow()
 
-            Then("끊긴다 : 수집기가 TLS 로 바뀌면 평문 에이전트는 설정을 바꾸기 전까지 못 붙는다") {
+            Then("끊긴다 : Collector 가 TLS 로 바뀌면 평문 에이전트는 설정을 바꾸기 전까지 못 붙는다") {
                 rejected shouldBe Status.Code.UNAVAILABLE
             }
         }

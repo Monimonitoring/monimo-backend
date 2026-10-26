@@ -13,7 +13,7 @@ interface OutboxRowRepository : JpaRepository<OutboxRow, Long> {
     // ADR #42 가드레일 ①: 발송 대기 큐 선점은 JPA 락 어노테이션이 아니라 네이티브 FOR UPDATE SKIP LOCKED.
     // 그룹 단위 선점 (docs/alert/50-grouping.md D16 · D18):
     //   ready  = 생긴 지 group_wait 가 지난 줄(또는 임대가 끝난 줄)이 하나라도 있는 (채널, 서비스) 그룹
-    //   그 그룹의 보낼 수 있는 줄을 늦게 들어온 형제까지 한꺼번에 잡는다. 묶음 상태는 이 줄들 자체라 재시작해도 남는다 (E9)
+    //   그 그룹의 보낼 수 있는 줄을 늦게 들어온 형제까지 한꺼번에 잡는다. 그룹 상태는 이 줄들 자체라 재시작해도 남는다 (E9)
     //   RESOLVED 는 같은 사건 · 채널의 FIRING 이 아직 끝나지 않았으면 잡지 않는다 (E10: 복구가 발화보다 먼저 가지 않게)
     // 그룹이 이어서 나오도록 (채널, 서비스, id) 순으로 정렬한다
     @Query(

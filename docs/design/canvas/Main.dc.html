@@ -18,8 +18,8 @@
 
   <div style="display: flex; flex-direction: column; gap: 8px; border-bottom: 2px solid #1A1815; padding-bottom: 18px">
     <div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 0.14em; color: #8C877E">MONIMONITORING · 설계 범위</div>
-    <h1 style="margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15">3평면 구조</h1>
-    <p style="margin: 4px 0 0; font-size: 16px; line-height: 1.6; color: #4A4640; max-width: 720px">A / B / C 는 <strong>만드는 덩어리 3개</strong>다. 감시할 대상이 있어야 감시 도구를 만들 수 있고, 감시 도구가 있어야 그것을 지킬 파수꾼을 둘 수 있다.</p>
+    <h1 style="margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15">세 구분(Monitored app · APM · Watchdog) 구조</h1>
+    <p style="margin: 4px 0 0; font-size: 16px; line-height: 1.6; color: #4A4640; max-width: 720px">A / B / C 는 <strong>만드는 덩어리 3개</strong>다. 감시할 대상이 있어야 감시 도구를 만들 수 있고, 감시 도구가 있어야 그것을 지킬 Watchdog 을 둘 수 있다.</p>
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 18px">
@@ -51,15 +51,15 @@
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px">
         <div style="font-size: 22px; font-weight: 700; color: #16403D">수집 → 저장 → 조회 → <span style="color: #B5462B">경보 → 알림</span> 파이프라인 본체</div>
-        <div style="font-size: 13.5px; line-height: 1.6; color: #2C4B48; background: #FBEDE8; border-left: 3px solid #B5462B; padding: 8px 12px"><strong>경보 시스템 = 탐지 + 알림 두 서비스.</strong> 규칙을 평가해 발화를 판정하는 쪽(탐지)과, 그걸 사람에게 실제로 전달하는 쪽(알림)을 나눴다. 발화만 하고 전달이 안 되면 실패로 본다.</div>
+        <div style="font-size: 13.5px; line-height: 1.6; color: #2C4B48; background: #FBEDE8; border-left: 3px solid #B5462B; padding: 8px 12px"><strong>경보 시스템 = Detector + Notifier 두 서비스.</strong> 규칙을 평가해 발화를 판정하는 쪽(Detector)과, 그걸 사람에게 실제로 전달하는 쪽(Notifier)을 나눴다. 발화만 하고 전달이 안 되면 실패로 본다.</div>
         <div style="font-size: 15px; line-height: 1.65; color: #2C4B48">심전도 모니터 역할. <strong>이게 우리 제품이고, 힘의 대부분이 여기 들어간다.</strong></div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px">
-          <span style="font-size: 12.5px; padding: 5px 11px; background: #1F5F5B; color: #F2F7F6">수집기 <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">Collector</span></span>
-          <span style="font-size: 12.5px; padding: 5px 11px; background: #1F5F5B; color: #F2F7F6">적재 처리기 <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">Processor</span></span>
+          <span style="font-size: 12.5px; padding: 5px 11px; background: #1F5F5B; color: #F2F7F6">Collector <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">수집</span></span>
+          <span style="font-size: 12.5px; padding: 5px 11px; background: #1F5F5B; color: #F2F7F6">Ingester <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">적재</span></span>
           <span style="font-size: 12.5px; padding: 5px 11px; background: #1F5F5B; color: #F2F7F6">집계 워커 <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">Rollup</span></span>
           <span style="font-size: 12.5px; padding: 5px 11px; background: #1F5F5B; color: #F2F7F6">질의 파사드 <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">Query API</span></span>
-          <span style="font-size: 12.5px; padding: 5px 11px; background: #B5462B; color: #F2F7F6">탐지 <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">Detection</span></span>
-          <span style="font-size: 12.5px; padding: 5px 11px; background: #B5462B; color: #F2F7F6">알림 <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">Notification</span></span>
+          <span style="font-size: 12.5px; padding: 5px 11px; background: #B5462B; color: #F2F7F6">Detector <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">규칙 평가</span></span>
+          <span style="font-size: 12.5px; padding: 5px 11px; background: #B5462B; color: #F2F7F6">Notifier <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">발송</span></span>
           <span style="font-size: 12.5px; padding: 5px 11px; background: #1F5F5B; color: #F2F7F6">화면 <span style="font-family: 'IBM Plex Mono', monospace; opacity: 0.72">Web UI</span></span>
         </div>
         <div style="font-size: 14px; line-height: 1.6; color: #2C4B48; border-top: 1px dashed #A9C6C3; padding-top: 10px; margin-top: 6px"><strong>도그푸딩</strong> — B를 <strong>B 자신에게도</strong> 붙인다. 새로 만들 건 없고 붙이기만 하면 된다.</div>
@@ -73,11 +73,11 @@
     <div style="display: grid; grid-template-columns: 132px minmax(0, 1fr) 176px; gap: 24px; align-items: start; background: #FBEDE8; border: 1px solid #E2B7A6; border-left: 5px solid #B5462B; padding: 24px 26px">
       <div style="display: flex; flex-direction: column; gap: 6px">
         <div style="font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 500; line-height: 1; color: #B5462B">C</div>
-        <div style="font-size: 16px; font-weight: 600; color: #B5462B">파수꾼</div>
+        <div style="font-size: 16px; font-weight: 600; color: #B5462B">Watchdog</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px">
-        <div style="font-size: 19px; font-weight: 600; color: #7A2E1B">스택 바깥에서 "컬렉터 살아 있나 / 수집 지연이 느는지" 만 본다</div>
-        <div style="font-size: 15px; line-height: 1.65; color: #6B3527">간호사 역할. <strong>자기를 감시하는 시스템은 자기의 전면 장애를 감지할 수 없다</strong> — 컬렉터가 죽으면 그걸 알아챌 수단도 함께 죽기 때문이다. 그래서 C는 우리 스택에 하나도 의존하지 않아야 한다.</div>
+        <div style="font-size: 19px; font-weight: 600; color: #7A2E1B">스택 바깥에서 "Collector 살아 있나 / 수집 지연이 느는지" 만 본다</div>
+        <div style="font-size: 15px; line-height: 1.65; color: #6B3527">간호사 역할. <strong>자기를 감시하는 시스템은 자기의 전면 장애를 감지할 수 없다</strong> — Collector 가 죽으면 그걸 알아챌 수단도 함께 죽기 때문이다. 그래서 C는 우리 스택에 하나도 의존하지 않아야 한다.</div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px">
           <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 4px 10px; background: #F4DAD1; color: #7A2E1B">침묵 감시</span>
           <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 4px 10px; background: #F4DAD1; color: #7A2E1B">카나리</span>
