@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
-// 탐지가 GC_TIME 을 판정할 재료를 읽는 내부 문 (API 명세 #51). X-Internal-Token 은 SecurityConfig 가 검사한다
+// Detector 가 GC_TIME 을 판정할 재료를 읽는 내부 문 (API 명세 #51). X-Internal-Token 은 SecurityConfig 가 검사한다
 // 응답에 없는 1분 = 그 파드가 GC 값을 안 보냈거나 재시작으로 뺄 수 없던 1분
 @RestController
 @RequestMapping("/api/v1/internal/metrics/gc-time")

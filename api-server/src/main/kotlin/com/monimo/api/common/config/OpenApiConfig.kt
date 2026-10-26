@@ -15,7 +15,7 @@ class OpenApiConfig {
     @Bean
     fun monimoOpenApi(): OpenAPI = OpenAPI().info(
         Info()
-            .title("모니모니터링 API 서버")
+            .title("모니모니터링 API server")
             .version("v1")
             .description("화면이 쓰는 REST API. 설계 정본은 노션 「API 명세」이고, 이 문서는 구현과 대조하는 용도다."),
     )

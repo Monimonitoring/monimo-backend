@@ -11,7 +11,7 @@ class OtlpReceiveCounter(registry: MeterRegistry) {
 
     private val counters: Map<Signal, Counter> = Signal.entries.associateWith { signal ->
         Counter.builder(METRIC)
-            .description("수집기가 OTLP gRPC 로 받은 건수 (스팬 · 메트릭 · 로그 레코드)")
+            .description("Collector 가 OTLP gRPC 로 받은 건수 (스팬 · 메트릭 · 로그 레코드)")
             .baseUnit("items")
             .tag("signal", signal.tag)
             .register(registry)

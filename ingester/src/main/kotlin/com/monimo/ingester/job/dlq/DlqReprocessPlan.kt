@@ -18,11 +18,11 @@ object DlqReprocessPlan {
     //   x-dlq-attempt         회차를 넘어 **이어져야 하는 유일한 값.** 버리면 횟수가 매번 1 로 돌아가
     //                         영원히 왕복한다 (실측 : 가져가면 attempt=2 · 버리면 attempt=1)
     //   x-dlq-reason          독성인지 보고 건너뛸 단서
-    //   network.peer.address  수집기가 gRPC 연결에서 읽어 붙인 보낸 쪽 주소 (ADR #63). 데이터 안에 없어서
+    //   network.peer.address  Collector 가 gRPC 연결에서 읽어 붙인 보낸 쪽 주소 (ADR #63). 데이터 안에 없어서
     //                         버리면 복원할 데가 없다. 다만 그 메시지로 **처음 등록되는 파드**만 영향을 받는다 :
     //                         이미 등록된 파드는 PostgresAgentRegistry.needsWrite() 가 멀쩡한 주소를 지키게 해 둔다
     //
-    // 버리는 이유 셋 : ① 적재 처리기가 읽지 않는다 ② 다시 실패하면 스프링이 새로 붙여 준다
+    // 버리는 이유 셋 : ① Ingester 가 읽지 않는다 ② 다시 실패하면 스프링이 새로 붙여 준다
     // ③ 멀쩡한 raw 토픽에 스택 추적이 7일 동안 실려 다닌다 (실측 : 값 406바이트에 머리말 6,033바이트,
     //    그중 스택이 5,144바이트. 셋만 가져가면 65바이트가 된다)
     val KEPT_HEADERS: Set<String> = setOf(
@@ -45,7 +45,7 @@ object DlqReprocessPlan {
         else -> Decision.REPLAY
     }
 
-    // 몇 번째인가. 머리말이 없으면 0 이다 (수집기가 넣은 평범한 메시지 · 손으로 넣은 메시지)
+    // 몇 번째인가. 머리말이 없으면 0 이다 (Collector 가 넣은 평범한 메시지 · 손으로 넣은 메시지)
     fun attemptOf(headers: Headers): Int =
         headers.lastHeader(RawErrorHandlerConfig.HEADER_ATTEMPT)?.value()?.let { String(it).toIntOrNull() } ?: 0
 

@@ -1,4 +1,4 @@
-# `#122` 수집기 스레드 덤프 명령 문
+# `#122` Collector 스레드 덤프 명령 문
 
 > 짝 이슈 monimo-shop `#34`(Extension)와 함께 만들었다. 조사 · 질문 · 선택지 · 결정 프롬프트 원문 · 확인한 수치는 한 곳에 둔다 :
 > **monimo-shop [`docs/seungjo/34-thread-dump-extension/`](https://github.com/2026-techeer-project-team-b/monimo-shop/tree/develop/docs/seungjo/34-thread-dump-extension)** (README = 설계 한 장, research = 8단계, prompts = 원문)
@@ -18,9 +18,9 @@
 
 ## 범위 밖
 
-- API 서버 팬아웃
+- API server 팬아웃
   - `agentUuid` → service · instance
-  - 수집기 전부에 보내고 503 이면 1회 재시도
+  - Collector 전부에 보내고 503 이면 1회 재시도
 - 화면
 - CH `thread_dumps` 저장(Q16)
 - mTLS(FN-12)

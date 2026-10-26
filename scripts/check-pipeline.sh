@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 파이프라인 관통 점검: 가짜 발신기(telemetrygen) → 수집기(OTLP gRPC) → Kafka raw → 적재 처리기 → ClickHouse.
-# 수집기가 "받은 건수" 와 적재 처리기가 "푼 건수" 가 같은 만큼 늘었는지 대조하고,
+# 파이프라인 E2E 점검: 가짜 발신기(telemetrygen) → Collector(OTLP gRPC) → Kafka raw → Ingester → ClickHouse.
+# Collector 가 "받은 건수" 와 Ingester 가 "푼 건수" 가 같은 만큼 늘었는지 대조하고,
 # 신호별 ClickHouse 표(spans · metrics_raw · logs)의 줄 수까지 늘었는지 본다.
 # 중간에 하나라도 끊기면 숫자가 어긋나므로, 어디서 막혔는지도 메시지로 드러난다.
 #
@@ -17,17 +17,17 @@ NET=monimo-dev
 # /actuator/metrics 는 관리 포트(업무 포트 + 10)에 있다 (#135). compose 가 호스트에 열어 준다
 COLLECTOR=localhost:${COLLECTOR_MANAGEMENT_PORT:-18081}   # 관리 포트 = 업무 포트 + 10000 (#148)
 INGESTER=localhost:${INGESTER_MANAGEMENT_PORT:-18082}
-WAIT_SECONDS=20   # 적재 처리기가 소비할 때까지 기다리는 최대 시간
+WAIT_SECONDS=20   # Ingester 가 소비할 때까지 기다리는 최대 시간
 
 ok() { echo "✓ $1"; }
 # 막힌 것은 아니지만 사람이 손을 써야 하는 것. 되넣는 잡 깊이가 여기 걸린다 (#195)
 warn() { echo "! $1"; }
 fail() { echo "✗ $1"; exit 1; }
 
-# 수집기의 TLS 상태에 맞춰 보낸다 (#159 · ADR #64). 수집기와 같은 .env 를 읽는다 :
+# Collector 의 TLS 상태에 맞춰 보낸다 (#159 · ADR #64). Collector 와 같은 .env 를 읽는다 :
 #   COLLECTOR_TLS_CLIENT_AUTH 가 none(기본)이면 지금까지처럼 평문(--otlp-insecure),
-#   optional · require 면 ./certs 의 점검용 신분증(clients/check)을 내고 기관 인증서로 수집기 신분증을 검사한다(--mtls).
-# 수집기만 켜고 .env 를 안 바꾸면 여기서 바로 끊긴다. 그것도 점검이다 : 쇼핑몰 에이전트가 겪을 일을 먼저 겪는다
+#   optional · require 면 ./certs 의 점검용 신분증(clients/check)을 내고 기관 인증서로 Collector 신분증을 검사한다(--mtls).
+# Collector 만 켜고 .env 를 안 바꾸면 여기서 바로 끊긴다. 그것도 점검이다 : 쇼핑몰 에이전트가 겪을 일을 먼저 겪는다
 TLS=${COLLECTOR_TLS_CLIENT_AUTH:-none}
 send() {   # $1 = 신호 (traces · metrics · logs). 컨테이너 안에서 collector:4317 로 보낸다 = 쇼핑몰 에이전트가 쓸 주소 그대로
   if [ "$TLS" = "none" ]; then
@@ -56,7 +56,7 @@ counter() {
 received() { counter "$COLLECTOR" monimo.collector.otlp.received "$1"; }
 consumed() { counter "$INGESTER" monimo.ingester.raw.consumed "$1"; }
 
-# 수집기가 중간에서 버린 스팬 수. 수신(버리기 전)과 소비(버린 뒤)를 대조할 때 이만큼 빼야 숫자가 맞는다.
+# Collector 가 중간에서 버린 스팬 수. 수신(버리기 전)과 소비(버린 뒤)를 대조할 때 이만큼 빼야 숫자가 맞는다.
 # 버리는 자리가 둘이다: 헬스체크 거르기(#92)와 트레이스 샘플링(#46).
 # 두 지표에는 signal 태그가 없고 트레이스에만 해당하므로, traces 검사에서만 쓴다.
 # 거르기가 꺼져 있거나(목록이 빔) 샘플링이 1.0 이면 카운터가 없거나 0 이라 조회 실패를 0 으로 본다
@@ -66,7 +66,7 @@ metric_value() {
     | grep -o '"value":[0-9.]*' | head -1 | cut -d: -f2 | cut -d. -f1 || true
 }
 
-# 적재 처리기가 raw.dlq 로 보낸 메시지 수 (ADR #51). reason 태그(poison · transient · unknown)를 합친 총합.
+# Ingester 가 raw.dlq 로 보낸 메시지 수 (ADR #51). reason 태그(poison · transient · unknown)를 합친 총합.
 # DLQ 로 간 것은 소비 카운터에 안 오르므로 수신 ≠ 소비 가 된다. #92 의 "버린 수" 와 달리 여기서 빼서 맞추지 않는다 :
 # 헬스체크는 의도해서 버린 것이지만 DLQ 는 의도하지 않은 실패라, 숫자를 맞추면 실패를 숨기는 꼴이 된다.
 # 대신 숫자가 안 맞을 때 "DLQ 에 N건 들어갔다" 고 원인을 말해 준다
@@ -81,7 +81,11 @@ dropped_total() {
       r=$(metric_value monimo.collector.sampling outcome:dropped);    r=${r:-0}
       echo $((h + r))
       ;;
-    *) echo 0 ;;   # 메트릭 · 로그는 버리는 자리가 없다
+    logs)
+      l=$(metric_value monimo.collector.dropped reason:log_level); l=${l:-0}   # Minimum log level (#215). 가짜 발신기는 INFO 라 평소 0
+      echo "$l"
+      ;;
+    *) echo 0 ;;   # 메트릭은 버리는 자리가 없다
   esac
 }
 
@@ -99,8 +103,8 @@ ch_query() {
 table_of() { case "$1" in traces) echo spans ;; metrics) echo metrics_raw ;; logs) echo logs ;; esac; }
 
 for signal in traces metrics logs; do
-  before_in=$(received "$signal")  || fail "수집기 카운터($signal) 조회 실패: http://$COLLECTOR/actuator/metrics"
-  before_out=$(consumed "$signal") || fail "적재 처리기 카운터($signal) 조회 실패: http://$INGESTER/actuator/metrics"
+  before_in=$(received "$signal")  || fail "Collector 카운터($signal) 조회 실패: http://$COLLECTOR/actuator/metrics"
+  before_out=$(consumed "$signal") || fail "Ingester 카운터($signal) 조회 실패: http://$INGESTER/actuator/metrics"
   before_dropped=$(dropped_total "$signal")
   before_dlq=$(dlq_total); before_dlq=${before_dlq:-0}
   table=$(table_of "$signal")
@@ -109,7 +113,7 @@ for signal in traces metrics logs; do
   fi
 
   send "$signal" > /dev/null 2>&1 \
-    || fail "telemetrygen $signal 전송 실패 (collector:4317, TLS=$TLS). 수집기 로그의 'OTLP gRPC 수신 시작' 줄과 .env 의 COLLECTOR_TLS_CLIENT_AUTH 가 맞는지 보라"
+    || fail "telemetrygen $signal 전송 실패 (collector:4317, TLS=$TLS). Collector 로그의 'OTLP gRPC 수신 시작' 줄과 .env 의 COLLECTOR_TLS_CLIENT_AUTH 가 맞는지 보라"
 
   # 소비는 비동기라 바로 안 보인다. 기댓값(받은 수 - 버린 수)에 도달할 때까지 기다린다.
   #
@@ -128,20 +132,20 @@ for signal in traces metrics logs; do
 
   received_delta=$((cur_in - before_in))
   dropped_delta=$((cur_dropped - before_dropped))
-  [ "$received_delta" -gt 0 ] || fail "$signal 을 보냈지만 수집기가 못 받았다 ($before_in -> $cur_in)"
+  [ "$received_delta" -gt 0 ] || fail "$signal 을 보냈지만 Collector 가 못 받았다 ($before_in -> $cur_in)"
   [ "$sent" -gt 0 ] \
-    || fail "$signal 을 보냈지만 수집기가 전부 버렸다 (받은 수 $received_delta · 버린 수 $dropped_delta). MONIMO_COLLECTOR_HEALTH_CHECK_PATHS 와 MONIMO_COLLECTOR_SAMPLING_RATIO 를 확인하라"
+    || fail "$signal 을 보냈지만 Collector 가 전부 버렸다 (받은 수 $received_delta · 버린 수 $dropped_delta). MONIMO_COLLECTOR_HEALTH_CHECK_PATHS 와 MONIMO_COLLECTOR_SAMPLING_RATIO 를 확인하라"
   if [ "$got" -ne "$sent" ]; then
     cur_dlq=$(dlq_total); cur_dlq=${cur_dlq:-0}
     dlq_delta=$((cur_dlq - before_dlq))
     [ "$dlq_delta" -gt 0 ] \
-      && fail "$signal 중 ${dlq_delta}건이 적재에 실패해 raw.dlq 로 갔다 (수집기가 ${sent}건 넘김 · 적재 처리기는 ${got}건 풂). 숫자를 맞추지 않는다 : DLQ 는 실패다. 적재 처리기 로그의 'raw-N@M → raw.dlq (reason=...)' 줄과 FailureClassifier 의 분류를 확인하라"
-    fail "$signal 이 중간에서 끊겼다: 수집기가 ${sent}건 넘겼는데(받은 수 $received_delta · 버린 수 $dropped_delta) 적재 처리기는 ${got}건만 풀었다 (${WAIT_SECONDS}초 대기). raw.dlq 에도 안 갔다. Kafka 토픽 raw 와 적재 처리기 로그를 확인하라"
+      && fail "$signal 중 ${dlq_delta}건이 적재에 실패해 raw.dlq 로 갔다 (Collector 가 ${sent}건 넘김 · Ingester 는 ${got}건 풂). 숫자를 맞추지 않는다 : DLQ 는 실패다. Ingester 로그의 'raw-N@M → raw.dlq (reason=...)' 줄과 FailureClassifier 의 분류를 확인하라"
+    fail "$signal 이 중간에서 끊겼다: Collector 가 ${sent}건 넘겼는데(받은 수 $received_delta · 버린 수 $dropped_delta) Ingester 는 ${got}건만 풀었다 (${WAIT_SECONDS}초 대기). raw.dlq 에도 안 갔다. Kafka 토픽 raw 와 Ingester 로그를 확인하라"
   fi
 
   # 적재할 표가 없는 신호는 여기서 끝
   if [ -z "$table" ]; then
-    ok "$signal ${sent}건: 수집기 수신 → Kafka raw → 적재 처리기 소비까지 도착 (ClickHouse 적재는 아직 없음)"
+    ok "$signal ${sent}건: Collector 수신 → Kafka raw → Ingester 소비까지 도착 (ClickHouse 적재는 아직 없음)"
     continue
   fi
 
@@ -154,15 +158,15 @@ for signal in traces metrics logs; do
   done
   added=$((after_rows - before_rows))
   [ "$added" -gt 0 ] \
-    && ok "$signal ${sent}건: 수집기 수신 → Kafka raw → 적재 처리기 소비 → ClickHouse $table (+${added}줄)" \
-    || fail "$signal 을 적재 처리기가 풀었지만 ClickHouse $table 에 안 들어갔다 (${before_rows}줄 그대로, ${WAIT_SECONDS}초 대기). 적재 처리기 로그의 insert 오류를 확인하라"
+    && ok "$signal ${sent}건: Collector 수신 → Kafka raw → Ingester 소비 → ClickHouse $table (+${added}줄)" \
+    || fail "$signal 을 Ingester 가 풀었지만 ClickHouse $table 에 안 들어갔다 (${before_rows}줄 그대로, ${WAIT_SECONDS}초 대기). Ingester 로그의 insert 오류를 확인하라"
 done
 
 # ── 중복 대조 (#187)
 #
-# 왜 필요한가 : 적재 처리기가 ClickHouse 에 넣은 뒤 Kafka 오프셋을 커밋하기 전에 죽으면 같은 레코드를
+# 왜 필요한가 : Ingester 가 ClickHouse 에 넣은 뒤 Kafka 오프셋을 커밋하기 전에 죽으면 같은 레코드를
 # 다시 넣는다. 그것은 ClickHouse 쪽 중복 제거 기억이 막는데(db/clickhouse 의 창 설정), **놓치는 경우가 있다** :
-# 같은 레코드라도 적재 처리기가 내는 바이트가 달라지면 기억이 못 알아본다(research.md 2.2 의 peer_service).
+# 같은 레코드라도 Ingester 가 내는 바이트가 달라지면 기억이 못 알아본다(research.md 2.2 의 peer_service).
 # 그래서 "고쳤는데 가끔 그대로" 인 상태를 알아낼 장치가 따로 필요하다.
 #
 # 틀어지는 모양이 둘이라 둘 다 본다 :
@@ -183,13 +187,13 @@ RECENT="start_time >= $FROM_TS"
 # ① spans 자체 : 같은 (trace_id, span_id) 가 두 줄이면 중복이다
 dup=$(ch_query "SELECT count() - uniqExact(trace_id, span_id) FROM monimo.spans WHERE $RECENT") \
   || fail "spans 중복 대조 조회 실패"
-[ "$dup" = "0" ] || fail "spans 에 중복 ${dup}줄 (같은 trace_id·span_id 가 두 번 들어왔다). ClickHouse 중복 제거 기억이 못 걸렀다는 뜻이다 : db/clickhouse 의 non_replicated_deduplication_window 설정과 적재 처리기 재시작 이력을 보라"
+[ "$dup" = "0" ] || fail "spans 에 중복 ${dup}줄 (같은 trace_id·span_id 가 두 번 들어왔다). ClickHouse 중복 제거 기억이 못 걸렀다는 뜻이다 : db/clickhouse 의 non_replicated_deduplication_window 설정과 Ingester 재시작 이력을 보라"
 ok "spans 중복 0줄"
 
-# ② spans(SERVER) ↔ service_health_1m : 탐지가 읽는 집계다. MV 조건(span_kind = 'SERVER')을 그대로 맞춘다
+# ② spans(SERVER) ↔ service_health_1m : Detector 가 읽는 집계다. MV 조건(span_kind = 'SERVER')을 그대로 맞춘다
 src=$(ch_query "SELECT count() FROM monimo.spans WHERE span_kind = 'SERVER' AND $RECENT") || fail "spans SERVER 조회 실패"
 agg=$(ch_query "SELECT countMerge(cnt) FROM monimo.service_health_1m WHERE ts_min >= $FROM_TS") || fail "service_health_1m 조회 실패"
-[ "$src" = "$agg" ] || fail "집계가 원본과 다르다: spans(SERVER) ${src}줄인데 service_health_1m 은 ${agg}건으로 센다. 집계만 중복되면 에러율 · P95 가 틀어진다 (탐지가 이 표를 읽는다)"
+[ "$src" = "$agg" ] || fail "집계가 원본과 다르다: spans(SERVER) ${src}줄인데 service_health_1m 은 ${agg}건으로 센다. 집계만 중복되면 에러율 · P95 가 틀어진다 (Detector 가 이 표를 읽는다)"
 ok "spans(SERVER) ${src} = service_health_1m ${agg}"
 
 # ③ transactions ↔ heatmap_1m : **연쇄 2단**이다 (spans -> transactions -> heatmap_1m).
@@ -202,7 +206,7 @@ ok "transactions ${src} = heatmap_1m ${agg}"
 # 지표(metrics_raw · metrics_1m · metrics_1h)와 로그(logs)는 대조하지 않는다. 이유가 둘 다 있다.
 #
 # ㄱ 거짓 경보가 난다. 처음에 "한 계열(series_hash)의 한 시각에 점은 하나" 로 보고 지표 중복을 세게 만들었는데
-#   바로 걸렸다 : telemetrygen 이 같은 이름 · 같은 꼬리표의 지표 셋을 보내고 metrics_raw.ts 가 **초 단위**라
+#   바로 걸렸다 : telemetrygen 이 같은 이름 · 같은 Attribute 의 지표 셋을 보내고 metrics_raw.ts 가 **초 단위**라
 #   둘이 같은 초에 떨어졌다. 값은 서로 달랐으니(0 과 1) 중복이 아니라 **진짜 점 둘**이다(실측).
 #   값까지 키에 넣어도 안 낫다 : 안 변하는 게이지가 같은 초에 두 번 찍히면 진짜와 구분이 안 된다.
 #   로그도 같은 이유다 : 같은 글자가 같은 시각에 두 번 찍히는 것이 진짜일 수 있다.
@@ -215,7 +219,7 @@ ok "transactions ${src} = heatmap_1m ${agg}"
 
 # raw.dlq 깊이 (#195). **끝 오프셋이 깊이가 아니다** : Kafka 는 읽어도 지우지 않고 그룹의 커밋 위치만 올라간다.
 # 그래서 깊이 = 되넣는 잡 그룹의 lag(끝 오프셋 : 커밋 오프셋)이고, 그 잡을 한 번도 안 돌렸으면
-# 장부가 없어서 lag 이라는 숫자 자체가 안 생긴다. 적재 처리기의 monimo.ingester.dlq 는 깊이가 아니다 :
+# 장부가 없어서 lag 이라는 숫자 자체가 안 생긴다. Ingester 의 monimo.ingester.dlq 는 깊이가 아니다 :
 # 그것은 **그 프로세스가 보낸 수**라 재시작하면 0 으로 돌아간다(실측 : 지표 2 · 토픽 6건).
 #
 # 막혔다고 보지 않고(warn) 알리기만 한다 : 되넣기는 사람이 부르는 잡이라 쌓여 있는 것이 곧 고장은 아니다.
@@ -239,4 +243,4 @@ else
   fi
 fi
 
-echo "파이프라인 관통 정상: 에이전트 → 수집기 → Kafka raw → 적재 처리기 → ClickHouse"
+echo "파이프라인 E2E 정상: 에이전트 → Collector → Kafka raw → Ingester → ClickHouse"

@@ -71,7 +71,7 @@ class AgentDownRunnerTest(
     val orderRule = rule(orderApp)
     rule(payApp)
 
-    // 적재 처리기가 하는 등록을 흉내 낸다
+    // Ingester 가 하는 등록을 흉내 낸다
     fun register(appId: Long, key: String) =
         jdbc.update("INSERT INTO agents (application_id, agent_key) VALUES (?, ?) ON CONFLICT (agent_key) DO NOTHING", appId, key)
     listOf("order-a", "order-b").forEach { register(orderApp, it) }
@@ -154,7 +154,7 @@ class AgentDownRunnerTest(
         fake.lastSignal.clear()
         val s = tickAt(8)
 
-        Then("판정 불가 — pay 까지 울리지 않고, 키 상태도 건드리지 않는다 (파수꾼 몫)") {
+        Then("판정 불가 — pay 까지 울리지 않고, 키 상태도 건드리지 않는다 (Watchdog 몫)") {
             s.fired shouldBe 0
             s.statusChanged shouldBe 0
             status("pay-a") shouldBe "UP"

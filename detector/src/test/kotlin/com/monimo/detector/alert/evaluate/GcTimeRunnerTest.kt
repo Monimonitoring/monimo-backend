@@ -74,7 +74,7 @@ class GcTimeRunnerTest(
     )!!
     jdbc.update("INSERT INTO alert_rule_channels (alert_rule_id, alert_channel_id) VALUES (?, ?)", ruleId, channelId)
 
-    // 적재 처리기가 하는 등록을 흉내 낸다
+    // Ingester 가 하는 등록을 흉내 낸다
     fun register(key: String, status: String = "UNKNOWN") = jdbc.queryForObject(
         "INSERT INTO agents (application_id, agent_key, status) VALUES (?, ?, ?) RETURNING agent_uuid", UUID::class.java, appId, key, status,
     )!!

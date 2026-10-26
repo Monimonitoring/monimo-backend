@@ -2,7 +2,7 @@ package com.monimo.ingester.transform
 
 // 처음 보는 파드를 명단에 올리는 곳. 무엇으로 올리는지는 모른다 (SpanStore · MetricStore 와 같은 역할의 포트).
 //
-// agents 표의 주인은 적재 처리기다 (ADR #39: 등록은 적재 처리기, 생존 상태 갱신은 탐지).
+// agents 표의 주인은 Ingester 다 (ADR #39: 등록은 Ingester, 생존 상태 갱신은 Detector).
 // "명단에 올린다" 는 규칙을 도메인이 들고, "PostgreSQL 로 올린다" 는 방법은 outbound/postgres 가 따른다.
 fun interface AgentRegistry {
 

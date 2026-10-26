@@ -94,7 +94,7 @@ class MetricSeriesApiTest(
     fun lines(data: JsonNode) = data["series"].map { "${it["agent_key"].asText()}/${it["attributes"]["jvm.memory.type"].asText()}" }
     fun at(data: JsonNode, line: Int, point: Int): JsonNode = data["series"][line]["points"][point]
 
-    Given("인스펙터가 지표 그래프를 그릴 때") {
+    Given("Inspector 가 지표 그래프를 그릴 때") {
         When("step 60 (1분 롤업)이면") {
             val response = get("$base&step=60")
             val data = json(response)["data"]

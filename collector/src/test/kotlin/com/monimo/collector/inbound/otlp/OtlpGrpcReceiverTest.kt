@@ -34,7 +34,7 @@ import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-// 연결 약속 검증: OTLP gRPC 로 보낸 스팬 · 메트릭 · 로그를 수집기가 받아 세고, raw 토픽에 protobuf 그대로 넣는다.
+// 연결 약속 검증: OTLP gRPC 로 보낸 스팬 · 메트릭 · 로그를 Collector 가 받아 세고, raw 토픽에 protobuf 그대로 넣는다.
 // 보낸 쪽 주소도 봉투 메모(헤더)로 같이 붙는다 (`#149`, ADR `#63`). 값 바이트는 그대로고 메모만 늘어난다.
 // 포트 0 = 빈 포트 아무거나. 테스트끼리 · 로컬 4317 과 겹치지 않는다.
 // 샘플링 비율 1.0 = 전부 통과. 이 테스트가 보는 것은 "받은 것이 raw 에 그대로 들어가는가" 라서
@@ -46,6 +46,8 @@ import java.util.concurrent.TimeUnit
         // 거르기도 끈다. 지금은 테스트 스팬에 url.path 가 없어 안 걸리지만, 그건 우연이다.
         // 이 테스트가 보는 것은 "받은 바이트가 그대로 Kafka 에 들어가나" 라서 중간에서 빼는 것이 없어야 한다
         "monimo.collector.health-check.paths=",
+        // Minimum log level 은 기본(INFO) 그대로 둔다. 맨 앞 로그 블록의 레코드는 등급 0(미지정)이라 Minimum log level 에 안 걸리고,
+        // 뒤의 두 블록이 Minimum log level 이 수신 경로에 끼어 있는지를 본다
     ],
 )
 @Import(TestInfraConfig::class) // 진짜 PostgreSQL · Kafka 컨테이너를 띄워 붙인다 (Testcontainers)
@@ -55,12 +57,12 @@ class OtlpGrpcReceiverTest(
     environment: Environment, // 설정값 읽기용 (Kafka 주소)
 ) : BehaviorSpec({ // Kotest 스타일. Given · When · Then 이 블록 그대로다
 
-    // 에이전트 역할. 수집기의 gRPC 포트로 연결한다. usePlaintext = 암호화 없이(로컬이라)
+    // 에이전트 역할. Collector 의 gRPC 포트로 연결한다. usePlaintext = 암호화 없이(로컬이라)
     val channel = ManagedChannelBuilder.forAddress("localhost", server.port).usePlaintext().build()
     afterSpec { channel.shutdownNow().awaitTermination(3, TimeUnit.SECONDS) } // 테스트 다 끝나면 연결 닫기
 
-    // raw 토픽을 읽는 시험용 소비자. 적재 처리기가 할 일을 여기서 흉내 낸다
-    // <String, ByteArray> = 키는 글자 · 값은 바이트 (수집기가 넣은 모양과 같아야 한다)
+    // raw 토픽을 읽는 시험용 소비자. Ingester 가 할 일을 여기서 흉내 낸다
+    // <String, ByteArray> = 키는 글자 · 값은 바이트 (Collector 가 넣은 모양과 같아야 한다)
     val consumer = KafkaConsumer<String, ByteArray>(
         mapOf(
             ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to environment.getRequiredProperty("spring.kafka.bootstrap-servers"),
@@ -83,7 +85,21 @@ class OtlpGrpcReceiverTest(
         error("raw 토픽에 ${signal.key} 메시지가 10초 안에 안 옴") // 10초 안에 못 찾으면 테스트 실패
     }
 
-    // 봉투 메모에서 주소를 꺼낸다. 적재 처리기가 하는 것과 같은 방식(마지막 것 · UTF-8)
+    // 반대 확인 : 3초 동안 키가 signal 인 메시지가 안 와야 한다. "안 온다" 는 기다려 봐야만 알 수 있어서
+    // 기다리는 시간은 정상 발행이 끝나고도 남을 만큼(위 receivedFromRaw 가 보통 1초 안에 받는다)으로 잡았다
+    fun nothingFromRaw(signal: RawSignal) {
+        val deadline = System.currentTimeMillis() + 3_000
+        while (System.currentTimeMillis() < deadline) {
+            consumer.poll(Duration.ofMillis(500)).forEach { if (it.key() == signal.key) error("raw 토픽에 ${signal.key} 메시지가 와 있음") }
+        }
+    }
+
+    // 등급 번호 + 이름을 채운 로그 레코드. 번호는 OTLP 규약(DEBUG 5 · INFO 9) 이고, 번호가 0 이거나 규약 밖이면
+    // Minimum log level 판정이 이름 쪽으로 넘어간다 (#236)
+    fun logRecord(severityNumber: Int, severityText: String): LogRecord =
+        LogRecord.newBuilder().setSeverityNumberValue(severityNumber).setSeverityText(severityText).build()
+
+    // 봉투 메모에서 주소를 꺼낸다. Ingester 가 하는 것과 같은 방식(마지막 것 · UTF-8)
     fun peerAddressOf(record: ConsumerRecord<String, ByteArray>): String? =
         record.headers().lastHeader(RawHeaders.PEER_ADDRESS)?.value()?.toString(Charsets.UTF_8)
 
@@ -91,7 +107,7 @@ class OtlpGrpcReceiverTest(
     // 플랫폼과 이름 풀이에 달려 있어 둘 다 받는다. 여기서 보는 것은 "연결에서 읽은 값이 메모로 붙는가" 다
     val loopback = listOf("127.0.0.1", "0:0:0:0:0:0:0:1")
 
-    Given("OTLP gRPC 수신을 켠 수집기") {
+    Given("OTLP gRPC 수신을 켠 Collector") {
         When("스팬 2개를 TraceService.Export 로 보내면") {
             val before = counter.count(OtlpReceiveCounter.Signal.TRACES) // 보내기 전 건수를 먼저 적어 둔다
             // 에이전트가 보낼 데이터를 손으로 만든다. resource → scope → span 3겹 구조 그대로
@@ -167,6 +183,71 @@ class OtlpGrpcReceiverTest(
                 ExportLogsServiceRequest.parseFrom(record.value()) shouldBe request
                 // 메모는 값 바이트를 건드리지 않는다. 위 단언이 그것을 증명하고 아래가 메모를 본다
                 loopback shouldContain peerAddressOf(record)
+            }
+        }
+
+        // 아래 두 블록은 Minimum log level(`#215`, 기본 INFO)이 수신 경로에 실제로 끼어 있는지 본다.
+        // 판정 자체는 LogLevelFilterTest 가 보고, 여기서는 "걸러진 결과가 Kafka 로 가는가" 만 본다
+        When("INFO 미만(DEBUG) 로그 레코드 2개만 보내면") {
+            val before = counter.count(OtlpReceiveCounter.Signal.LOGS)
+            val request = ExportLogsServiceRequest.newBuilder()
+                .addResourceLogs(
+                    ResourceLogs.newBuilder().addScopeLogs(
+                        ScopeLogs.newBuilder()
+                            .addLogRecords(logRecord(5, "DEBUG"))
+                            .addLogRecords(logRecord(5, "DEBUG")),
+                    ),
+                )
+                .build()
+            LogsServiceGrpc.newBlockingStub(channel).export(request) // 예외 없이 돌아오면 응답 OK
+
+            Then("logs 받은 건수는 거르기 전 숫자로 2 늘어난다") {
+                counter.count(OtlpReceiveCounter.Signal.LOGS) - before shouldBe 2.0
+            }
+
+            Then("raw 토픽에는 logs 메시지가 새로 오지 않는다") {
+                nothingFromRaw(RawSignal.LOGS)
+            }
+        }
+
+        When("DEBUG 1개 · INFO 1개를 함께 보내면") {
+            val info = logRecord(9, "INFO")
+            val request = ExportLogsServiceRequest.newBuilder()
+                .addResourceLogs(
+                    ResourceLogs.newBuilder().addScopeLogs(
+                        ScopeLogs.newBuilder()
+                            .addLogRecords(logRecord(5, "DEBUG"))
+                            .addLogRecords(info),
+                    ),
+                )
+                .build()
+            LogsServiceGrpc.newBlockingStub(channel).export(request)
+
+            Then("raw 토픽의 logs 메시지를 풀면 INFO 만 들어 있다") {
+                val record = receivedFromRaw(RawSignal.LOGS)
+                val stored = ExportLogsServiceRequest.parseFrom(record.value())
+                stored.resourceLogsList.flatMap { it.scopeLogsList }.flatMap { it.logRecordsList } shouldBe listOf(info)
+            }
+        }
+
+        // #236 : 번호가 0 이면 Minimum log level 이 번호로는 판정할 수 없다. 글자로 넘어가는 길이 수신 경로에도 끼어 있는지 본다
+        When("번호 0 · 글자 DEBUG 인 레코드와 번호 0 · 글자 INFO 인 레코드를 함께 보내면") {
+            val info = logRecord(0, "INFO")
+            val request = ExportLogsServiceRequest.newBuilder()
+                .addResourceLogs(
+                    ResourceLogs.newBuilder().addScopeLogs(
+                        ScopeLogs.newBuilder()
+                            .addLogRecords(logRecord(0, "DEBUG"))
+                            .addLogRecords(info),
+                    ),
+                )
+                .build()
+            LogsServiceGrpc.newBlockingStub(channel).export(request)
+
+            Then("raw 토픽의 logs 메시지를 풀면 글자가 INFO 인 것만 들어 있다") {
+                val record = receivedFromRaw(RawSignal.LOGS)
+                val stored = ExportLogsServiceRequest.parseFrom(record.value())
+                stored.resourceLogsList.flatMap { it.scopeLogsList }.flatMap { it.logRecordsList } shouldBe listOf(info)
             }
         }
     }

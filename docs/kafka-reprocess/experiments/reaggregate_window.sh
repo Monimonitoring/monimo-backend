@@ -29,7 +29,7 @@ SYNC="SETTINGS mutations_sync = 2"
 
 # 원본에서 중복을 뺀 스팬. 같은 (trace_id, span_id) 가 여러 줄이면 하나만 남긴다.
 # 어느 줄을 남겨도 같다 : 같은 레코드를 다시 처리해 생긴 줄이라 내용이 같다. 다르면 peer_service 뿐이고
-# 그 칸은 집계에 안 쓰인다(서버맵 MV 는 CLIENT 전용이라 이 복구 범위 밖이다).
+# 그 칸은 집계에 안 쓰인다(Service map MV 는 CLIENT 전용이라 이 복구 범위 밖이다).
 #
 # **중복 제거를 LIMIT 1 BY 로 한다.** 처음에 GROUP BY + any() 로 썼다가 두 번 틀렸다(실측) :
 #   ① 종류 걸러내기를 바깥 WHERE 에 뒀더니 ClickHouse 가 그 조건을 안쪽으로 밀어 넣으려다

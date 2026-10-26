@@ -14,7 +14,7 @@ data class AutoDumpResult(
     val dumpUuid: String?,
 )
 
-// API 서버 내부 문 POST /api/v1/internal/thread-dumps (API 명세 4-1, 재범 #164 구현). 덤프를 뜨고 CH thread_dumps 에 저장하는 일은 API 서버가 한다
+// API server 내부 문 POST /api/v1/internal/thread-dumps (API 명세 4-1, 재범 #164 구현). 덤프를 뜨고 CH thread_dumps 에 저장하는 일은 API server가 한다
 fun interface ThreadDumpClient {
     // 실패(연결 없음 · 503 · 504 · 시간 초과)는 예외. 부르는 쪽이 삼켜서 경보에 영향을 주지 않는다
     fun requestAuto(agentUuid: UUID): AutoDumpResult

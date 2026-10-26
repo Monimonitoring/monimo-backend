@@ -15,7 +15,7 @@ import java.time.Instant
 //   ① 평가 상태 줄을 (없으면 만들고) FOR UPDATE 로 잠근다
 //   ② 순수 상태머신에 넣는다
 //   ③ 상태 · 사건 · 발송 의도(outbox)를 같이 저장한다 → 셋 중 하나만 남는 일이 없다
-// 외부 채널 호출은 여기서 하지 않는다. 알림 서비스가 커밋된 outbox 를 따로 가져간다
+// 외부 채널 호출은 여기서 하지 않는다. Notifier가 커밋된 outbox 를 따로 가져간다
 @Service
 class EvaluationRecorder(
     private val states: AlertEvaluationStateRepository,
@@ -112,7 +112,7 @@ class EvaluationRecorder(
         outbox.saveAll(channelIds.map { NotificationOutboxEntity.pending(eventId, OutboxTransition.RESOLVED, it, payload, now) })
     }
 
-    // 규칙-채널 연결은 API 서버 표다. 탐지는 읽기만 한다. 발화 순간 켜져 있는 채널에만 발송 의도를 만든다
+    // 규칙-채널 연결은 API server 표다. Detector 는 읽기만 한다. 발화 순간 켜져 있는 채널에만 발송 의도를 만든다
     @Suppress("UNCHECKED_CAST")
     private fun enabledChannelIds(alertRuleId: Long): List<Long> =
         (

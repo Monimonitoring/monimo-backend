@@ -7,8 +7,8 @@
 ## 한 줄
 
 - OTel 에이전트 2.x 가 CLIENT 스팬에 `peer.service` 를 안 넣고 `server.address` 만 넣는다
-  - 그래서 서버맵이 우리 서비스를 `EXTERNAL` 로 그렸다
-- 적재 처리기가 **`spans` 에 넣기 전에** `peer_service` 를 채운다
+  - 그래서 Service map 이 우리 서비스를 `EXTERNAL` 로 그렸다
+- Ingester 가 **`spans` 에 넣기 전에** `peer_service` 를 채운다
   - 주소의 첫 DNS 라벨을 `applications.name` 과 맞춘다
 
 ## 결과물
@@ -25,5 +25,5 @@
 ## 그때 적어 둔 다른 곳
 
 - 한 일 요약: [`AGENTS.md`](../../../AGENTS.md) §5 수집 파트 `#83`
-- 왜 적재 **전**인가: `#92` 의 [`tables.md`](../92-health-check-filter/tables.md) 「왜 표 주인이 아닌 수집기에서 고쳤나」 가 같은 이유를 설명한다
+- 왜 적재 **전**인가: `#92` 의 [`tables.md`](../92-health-check-filter/tables.md) 「왜 표 주인이 아닌 Collector 에서 고쳤나」 가 같은 이유를 설명한다
 - AI 가 틀린 것: [`harness.md`](../harness.md) 「안 된 것」 표의 `#83` 두 줄(1970년 TTL · telemetrygen 이 SERVER 에도 속성을 붙임)

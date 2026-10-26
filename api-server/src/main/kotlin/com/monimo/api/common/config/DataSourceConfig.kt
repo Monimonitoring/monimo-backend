@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import javax.sql.DataSource
 
-// API 서버는 DB 두 개에 붙는다.
+// API server 는 DB 두 개에 붙는다.
 // - PostgreSQL (기본, @Primary): 설정 · 규칙 · 채널 · 사용자. JPA가 쓴다 (ADR #42)
 // - ClickHouse: 스팬 · 지표 · 로그는 조회만, thread_dumps 는 쓰기도 한다 (ADR #36). clickHouseJdbcTemplate 으로 SQL을 직접 쓴다
 @Configuration(proxyBeanMethods = false)

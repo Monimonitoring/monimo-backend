@@ -29,7 +29,7 @@ class PeerAddressInterceptor(registry: MeterRegistry) : ServerInterceptor {
     // 주소를 못 읽은 호출 수. 미리 등록해 한 번도 없었을 때도 0 으로 보이게 한다 (OtlpReceiveCounter 와 같은 방식).
     // 조용히 빈칸이 되는 일을 알아채려고 둔다 : 안 세면 "주소가 왜 비었는지" 를 물을 자리가 없다
     private val unknown: Counter = Counter.builder(METRIC)
-        .description("수집기가 gRPC 연결에서 상대 주소를 읽지 못한 호출 수")
+        .description("Collector 가 gRPC 연결에서 상대 주소를 읽지 못한 호출 수")
         .baseUnit("calls")
         .register(registry)
 

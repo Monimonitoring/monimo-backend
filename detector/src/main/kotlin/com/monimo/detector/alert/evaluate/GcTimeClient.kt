@@ -9,7 +9,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Instant
 
-// API 서버 내부 문 GET /api/v1/internal/metrics/gc-time 의 한 줄 (API 명세 51번, 조회 #197 구현).
+// API server 내부 문 GET /api/v1/internal/metrics/gc-time 의 한 줄 (API 명세 51번, 조회 #197 구현).
 // 파드 하나의 1분 동안 GC 에 쓴 시간(ms)과 횟수. 켜진 뒤 총합을 빼는 일 · 재시작 · GC 종류 합산은 조회가 끝내서 준다.
 // 행이 없는 1분 = GC 값이 안 왔거나 재시작으로 뺄 수 없던 1분 — 0 으로 채우지 않는다
 data class GcTimeBucket(

@@ -21,16 +21,16 @@
 
 ## 1. 감시 대상 서비스 수
 
-- **A평면(감시 대상) = 쇼핑몰 4종** : `gateway` · `order` · `payment` · `inventory`. 전부 OTel Java Agent 가 붙어 있다 (monimo-shop, ADR `#17` 쇼핑몰 직접 작성 · `#33` 기성 에이전트)
-    - 에이전트가 없는 것 셋 : MySQL · Redis · 결제사 흉내(`pg-stub`, WireMock). 서버맵에 DB · EXTERNAL 노드로만 보인다
+- **Monitored app(감시 대상) = 쇼핑몰 4종** : `gateway` · `order` · `payment` · `inventory`. 전부 OTel Java Agent 가 붙어 있다 (monimo-shop, ADR `#17` 쇼핑몰 직접 작성 · `#33` 기성 에이전트)
+    - 에이전트가 없는 것 셋 : MySQL · Redis · 결제사 흉내(`pg-stub`, WireMock). Service map 에 DB · EXTERNAL 노드로만 보인다
     - 실측 : PG `applications` 4줄 · `agents` 4줄 (2026-10-11). 로컬 파드 이름표는 `shop-<서비스>-local-1`
-- **B평면(자기 감시) = 우리 백엔드 5 서비스** : 수집기 · 적재 처리기 · API 서버 · 탐지 · 알림. 공통 틀(`common/`)은 `java-library` 라 돌아가는 프로세스가 아니어서 에이전트를 붙일 자리가 없다. 같은 에이전트를 붙여 같은 파이프라인으로 흘리는 것이 설계(FR-7)이고 **`#213` 으로 붙였다**(수집기 · 적재 처리기는 되먹임 때문에 트레이스만 끔). `#216` 으로 `applications` 에 `system = monimo` 로 등록해 감시 대상이 9 다
-- **C평면(파수꾼)** 은 감시 대상이 아니라 감시하는 쪽이다. 수에 넣지 않는다
+- **Self-monitoring = 우리 백엔드 5 서비스** : Collector · Ingester · API server · Detector · Notifier. 공통 틀(`common/`)은 `java-library` 라 돌아가는 프로세스가 아니어서 에이전트를 붙일 자리가 없다. 같은 에이전트를 붙여 같은 파이프라인으로 흘리는 것이 설계(FR-7)이고 **`#213` 으로 붙였다**(Collector · Ingester 는 되먹임 때문에 트레이스만 끔). `#216` 으로 `applications` 에 `system = monimo` 로 등록해 감시 대상이 9 다
+- **Watchdog** 은 감시 대상이 아니라 감시하는 쪽이다. 수에 넣지 않는다
 - 1단계 가정 "서버 1,500대 × 지표 100종" 은 **우리 규모가 아니다.** 그 가정은 처리량 NFR 의 상한을 만드는 데 쓴 숫자다(§3)
 
 ## 2. 카디널리티 (시계열 수)
 
-시계열 하나 = (인스턴스, 지표 이름, 꼬리표 조합) 하나. `metrics_raw` 의 `(agent_id, metric_name, series_hash)` 가 그 셋이다.
+시계열 하나 = (인스턴스, 지표 이름, Attribute 조합) 하나. `metrics_raw` 의 `(agent_id, metric_name, series_hash)` 가 그 셋이다.
 
 | 인스턴스 | 시계열 수 | 지표 이름 수 |
 |---|---|---|
@@ -48,8 +48,8 @@
 | **9대 합** | **946** | |
 
 - **왜 지표 이름 수보다 시계열이 많나** : `jvm.memory.used` 하나가 메모리 풀 8개(`G1 Old Gen` 등)로 갈라져 8 시계열이다. `jvm.thread.count` 는 상태별 6개. HTTP · DB 지표는 메서드 · 상태별로 2 ~ 3개
-- **왜 `series_hash` 만 세면 안 되나** : `series_hash` 는 꼬리표만 해시한다(`#64`, 메트릭 · 로그 적재를 넣은 이슈). 히스토그램이 `.count` · `.sum` · `.min` · `.max` 네 이름으로 펴지면 넷이 같은 해시를 갖는다. `series_hash` 만 세면 에이전트별로 센 뒤 더해도 125(**실제의 43%**), 전체로 한 번 세면 40(**14%**)이다. 세는 쪽(조회 · 집계)이 주의할 자리
-- **쇼핑몰은 인스턴스당 평균 73.5, 자기 감시는 130.** 처음에는 "같은 에이전트 설정이니 비슷할 것, 9 인스턴스면 약 660" 으로 어림했는데 실측은 **946** 이다. 시계열 수는 에이전트 설정이 아니라 **그 앱이 쓰는 라이브러리** 가 정한다 : 수집기는 `kafka.producer.*` 86(이름 76, `client-id` · `topic` · `node-id` 로 갈라짐) + `rpc.server.*` 52(gRPC Export 메서드 × 상태 코드), 적재 처리기는 `kafka.consumer.*` 104(이름 80), API 서버는 DB 풀이 둘(PG + ClickHouse)이라 `db.client.*` 34. 탐지 · 알림은 쇼핑몰과 같은 구성이라 74 · 75. 우리 Micrometer 카운터(`monimo.*`)는 에이전트의 Micrometer 다리가 꺼져 있어 안 나간다(중복 없음, `#208` 정할 것). Kafka 지표는 랙 · 발행 실패가 그 안에 있어 켜 둔다(하루 0.4 MB). 자기 감시 실측 : 2026-10-15, 10분 창, 쇼핑몰은 꺼진 채(`#213`)
+- **왜 `series_hash` 만 세면 안 되나** : `series_hash` 는 Attribute 만 해시한다(`#64`, 메트릭 · 로그 적재를 넣은 이슈). 히스토그램이 `.count` · `.sum` · `.min` · `.max` 네 이름으로 펴지면 넷이 같은 해시를 갖는다. `series_hash` 만 세면 에이전트별로 센 뒤 더해도 125(**실제의 43%**), 전체로 한 번 세면 40(**14%**)이다. 세는 쪽(조회 · 집계)이 주의할 자리
+- **쇼핑몰은 인스턴스당 평균 73.5, 자기 감시는 130.** 처음에는 "같은 에이전트 설정이니 비슷할 것, 9 인스턴스면 약 660" 으로 어림했는데 실측은 **946** 이다. 시계열 수는 에이전트 설정이 아니라 **그 앱이 쓰는 라이브러리** 가 정한다 : Collector 는 `kafka.producer.*` 86(이름 76, `client-id` · `topic` · `node-id` 로 갈라짐) + `rpc.server.*` 52(gRPC Export 메서드 × 상태 코드), Ingester 는 `kafka.consumer.*` 104(이름 80), API server 는 DB 풀이 둘(PG + ClickHouse)이라 `db.client.*` 34. Detector · Notifier 는 쇼핑몰과 같은 구성이라 74 · 75. 우리 Micrometer 카운터(`monimo.*`)는 에이전트의 Micrometer 다리가 꺼져 있어 안 나간다(중복 없음, `#208` 정할 것). Kafka 지표는 랙 · 발행 실패가 그 안에 있어 켜 둔다(하루 0.4 MB). 자기 감시 실측 : 2026-10-15, 10분 창, 쇼핑몰은 꺼진 채(`#213`)
 - 1단계가 적은 "시계열 약 15만 개" 는 인스턴스 **약 2,040대**에 해당한다 (150,000 ÷ 73.5). 우리는 그 **0.2%** 다. 이 15만은 1단계가 **15초 전송**을 가정하고 10,000 포인트/초에서 거꾸로 셈한 것이다. 우리가 쓰는 60초 전송으로 같은 포인트/초를 내려면 시계열 **60만 개**, 인스턴스 **약 8,160대**가 필요하다
 - 측정 : 2026-10-11 06:00 KST, k6 부하 3분 창(§3), 실측 SQL 은 `docs/seungjo/146-scope-stage-2/README.md`
 
@@ -96,14 +96,14 @@
 
 - **운영 예상은 하루 수십 MB 다.** 1% 샘플링과 60초 전송이 둘 다 100분의 1 · 6분의 1 로 줄여 준다
 - **로컬 TTL 은 보관 기간이 아니다.** `db/clickhouse` 의 TTL 은 spans 93일 · metrics_raw 105일 · logs 97일 · transactions 93일로, "로컬 N일 + S3 90일" 2단을 S3 없이 한 숫자로 합친 것이다. 100% 로 3분 데모 한 번은 spans 4.5 MB + transactions 0.7 MB = **약 5 MB** 다(61,027 × 73.7 B + 18,014 × 39.0 B). 매일 돌려도 93일에 0.5 GB 다. 위 표의 spans 2.2 GB/일(transactions 까지 2.5 GB)은 **24시간 끊지 않고** 100% 부하를 걸 때의 값이다. 로컬에서 디스크가 찬다면 데모가 아니라 가짜 데이터 seed(한 시간치 23 MB)를 반복 넣었거나 TTL 이 길어서다
-- **PVC 크기 근거** (배포 7 ~ 9단계, monimo-deploy) : ClickHouse 는 운영 예상 0.4 GB 에 NFR 부하 시험 하루 분(약 18 GB)을 더하고 두 배 여유를 둔 37 GB 를 올림한 **50 GB** 를 출발값으로 둔다. 근거는 이 표의 역산이고 운영 실측으로 바꾼다. Kafka `raw` 는 적재 처리기가 멈출 때(ADR `#51` 일시 장애 기다림 10분)만 쌓인다. Kafka 에 드는 것은 ClickHouse 압축 바이트가 아니라 OTLP protobuf 라 압축 전 행 크기(spans 368 B)로 셈한다 : 1% · 60초면 10분치 1 MB 미만, 100% 데모 중이면 분당 약 7.5 MB(339 × 368 B × 60)
+- **PVC 크기 근거** (배포 7 ~ 9단계, monimo-deploy) : ClickHouse 는 운영 예상 0.4 GB 에 NFR 부하 시험 하루 분(약 18 GB)을 더하고 두 배 여유를 둔 37 GB 를 올림한 **50 GB** 를 출발값으로 둔다. 근거는 이 표의 역산이고 운영 실측으로 바꾼다. Kafka `raw` 는 Ingester 가 멈출 때(ADR `#51` 일시 장애 기다림 10분)만 쌓인다. Kafka 에 드는 것은 ClickHouse 압축 바이트가 아니라 OTLP protobuf 라 압축 전 행 크기(spans 368 B)로 셈한다 : 1% · 60초면 10분치 1 MB 미만, 100% 데모 중이면 분당 약 7.5 MB(339 × 368 B × 60)
 - **transactions 가 spans 보다 오래 남는다** : MV 가 스팬 1개마다 0.294행(스팬 3.4개에 1행)을 만들고 93일 보관이라, 1% 운영에서도 spans(65 MB)보다 transactions(313 MB)가 크다. 스캐터 화면이 그 표를 읽으므로 의도된 비대칭이다
 
 ## 5. 동시 사용자
 
 - **10 명** (가정). 팀 4명 + 발표 데모 관객. 사내 플랫폼이라 사용자는 "대상 서비스의 개발자 · 운영자" 이고 지금 그 사람은 우리 넷이다
 - 읽기 패턴은 1단계 그대로 : 평소 한산, 장애 때 폭증. 폭증을 받는 장치는 캐시가 아니라 MV 롤업(`service_health_1m` · `heatmap_1m` 등)이다
-- 실측 불가. 화면이 운영에 올라간 적이 없다. 운영 뒤 API 서버 요청 수로 바꾼다
+- 실측 불가. 화면이 운영에 올라간 적이 없다. 운영 뒤 API server 요청 수로 바꾼다
 
 ## 6. 자체구현/기성 경계표
 
@@ -112,23 +112,23 @@ ADR `#32`(집계 워커 폐지로 자체 구현을 7종으로 정리) · `#33`(�
 | 컴포넌트 | 자체 / 기성 | 기성이면 무엇 | 레포 · 모듈 | 담당 | 상태 (2026-10-11) |
 |---|---|---|---|---|---|
 | 에이전트 | 기성 + Extension 1 | OTel Java Agent 2.31.1 · 스레드 덤프 Extension | monimo-shop `otel/` · `agent-extension/` | 승조 | 있음. Extension 은 Java 8 파일 · 시험 4 |
-| 수집기 | **자체** |  | monimo-backend `collector/` | 승조 | 있음. OTLP gRPC · 샘플링(비율 PG) · 헬스체크 스팬 필터 · Kafka 발행 · 명령 문 · probe |
+| Collector | **자체** |  | monimo-backend `collector/` | 승조 | 있음. OTLP gRPC · 샘플링(비율 PG) · 헬스체크 스팬 필터 · Kafka 발행 · 명령 문 · probe |
 | 메시지 큐 | 기성 | Apache Kafka 3.9 (`raw` · `raw.dlq`) | `compose.yaml` · monimo-deploy `infra/` | 승조 | compose 있음 · K8s 없음 |
-| 적재 처리기 | **자체** |  | monimo-backend `ingester/` | 승조 | 있음. 3신호 적재 · 실패 3단(DLQ) · 에이전트 등록 · 로그 등급 정규화 |
+| Ingester | **자체** |  | monimo-backend `ingester/` | 승조 | 있음. 3신호 적재 · 실패 3단(DLQ) · 에이전트 등록 · 로그 severity 정규화 |
 | 신호 저장소 | 기성 | ClickHouse 26.8 + Flyway | `db/clickhouse/` | 승조 | 있음. 표 11 · MV 7 · 마이그레이션 6 |
 | 상태 저장소 | 기성 | PostgreSQL 17 + Flyway | `db/postgres/` | 승조(틀) · 표 주인별 | 있음. 파트별 폴더 config · alert · ingest |
-| API 서버 | **자체** |  | monimo-backend `api-server/` | Nova(조회) · 재범(인증) | 있음. 조회 7묶음 · 인증 · 경보 API · 스레드 덤프 팬아웃. **카나리 신선도 문 없음**(재범 PR `#125`, 수집기 팬아웃 클라이언트와 함께 진행 중) |
-| 탐지 | **자체** |  | monimo-backend `detector/` | ukong | 있음 |
-| 알림 | **자체** |  | monimo-backend `notifier/` | ukong | 있음. 채널 · 발송 · 채널 시험 |
-| 화면 | **자체** | React 19 + Vite 8 | monimo-web | 4명 공동 | 있음. 기능 폴더 10(서버맵 · 트랜잭션 · 트레이스 · 로그 · 경보 · 인스펙터 · 플랫폼 · 설정 · 에러 · 로그인) |
-| 파수꾼 | **자체** (기성 조합) | AWS Lambda + EventBridge Scheduler + Healthchecks.io, Terraform | monimo-watchdog | 재범 | 코드 있음(Python 3 파일 · 시험) · **일정 꺼짐** · 읽을 API 문이 없어 못 켠다 |
+| API server | **자체** |  | monimo-backend `api-server/` | Nova(조회) · 재범(인증) | 있음. 조회 7세트 · 인증 · 경보 API · 스레드 덤프 팬아웃. **카나리 신선도 문 없음**(재범 PR `#125`, Collector 팬아웃 클라이언트와 함께 진행 중) |
+| Detector | **자체** |  | monimo-backend `detector/` | ukong | 있음 |
+| Notifier | **자체** |  | monimo-backend `notifier/` | ukong | 있음. 채널 · 발송 · 채널 시험 |
+| 화면 | **자체** | React 19 + Vite 8 | monimo-web | 4명 공동 | 있음. 기능 폴더 10(Service map · 트랜잭션 · 트레이스 · 로그 · 경보 · Inspector · 플랫폼 · 설정 · 에러 · 로그인) |
+| Watchdog | **자체** (기성 조합) | AWS Lambda + EventBridge Scheduler + Healthchecks.io, Terraform | monimo-watchdog | 재범 | 코드 있음(Python 3 파일 · 시험) · **일정 꺼짐** · 읽을 API 문이 없어 못 켠다 |
 | 감시 대상 쇼핑몰 | **자체** (골격만) | Kotlin Spring MVC 4 + MySQL · Redis · WireMock | monimo-shop | 승조 | 있음. 본문 873줄 · 장애 주입 7종(`X-Shop-Fault` 헤더 6 + 품절 상품 1) |
 | 배포 | 기성 | Helm · Argo CD · EKS | monimo-deploy | 승조 | **뼈대만**(`apps/` · `charts/` 가 빈 폴더). 배포 7 ~ 9단계 |
 | 부하 · 장애 주입 | 기성 | k6 2.3.0 | monimo-shop `k6/` | 승조 | 있음 |
 | CI | 기성 | GitHub Actions | 다섯 레포 `.github/` | 승조 | 있음 |
 | 에이전트 인증(mTLS) · 인증서 | 미정 | cert-manager 후보 | 없음 | 승조 | **없음**(ADR `#21` 이 mTLS 로 정했지만 미구현, `AGENTS.md` §6) |
 
-- "자체 7종" 은 수집기 · 적재 처리기 · API 서버 · 탐지 · 알림 · 화면 · 파수꾼이다. 쇼핑몰은 제품이 아니라 실습용이라 7종에 안 들어가지만 우리가 짠다
+- "자체 7종" 은 Collector · Ingester · API server · Detector · Notifier · 화면 · Watchdog 이다. 쇼핑몰은 제품이 아니라 실습용이라 7종에 안 들어가지만 우리가 짠다
 - 노션 기술스택 선정서 0-2 표(21행)와 다른 점 : 저쪽은 "무엇을 고를까" 표고 이 표는 "지금 어디까지 있나" 표다. 상태 열이 그 차이다
 
 ## 7. 노션과 어긋나는 곳 (노션 쪽이 낡았다)
@@ -139,11 +139,11 @@ ADR `#32`(집계 워커 폐지로 자체 구현을 7종으로 정리) · `#33`(�
 | 설계범위 §3-3 규모 가정 | "2단계에서 역산 검증" | 이 문서가 그 역산이다. 15만 시계열 = 약 2,040 인스턴스, 우리는 4 | §2 · §3 |
 | 설계범위 §2 A · 기술스택 18 | "1a 는 주문 · 결제 2개만" | 4개 전부 코드가 있고 돌아간다 | monimo-shop |
 | 설계범위 맨 끝 "그 외 미정" | 프로젝트 시작일(T0) · GitHub 레포 생성 시점 미정 | 둘 다 닫혔다 : T0 = 2026-09-22(ADR `#60`), 레포 5개 확정(ADR `#46`, 2026-09-21) | §8 |
-| 기술스택 0-2 15 · 16 파수꾼 | 노란 표시(방향만 정함) | Lambda · EventBridge · Healthchecks.io 코드와 Terraform 이 있다. 켜지 못한 이유는 API 문 하나 | monimo-watchdog |
+| 기술스택 0-2 15 · 16 Watchdog | 노란 표시(방향만 정함) | Lambda · EventBridge · Healthchecks.io 코드와 Terraform 이 있다. 켜지 못한 이유는 API 문 하나 | monimo-watchdog |
 | 설계범위 §4-2 흐름 01 | Processor 가 "1분 집계" | 집계는 ClickHouse MV 가 insert 때 한다. 같은 페이지 흐름 02 는 맞게 적혀 있다 | ADR `#32`(집계 워커 폐지) |
 | 기술스택 §6-1 | Argo CD · Helm · cert-manager 노란 표시 | 셋 다 아직 코드 없음. 상태는 그대로 맞다 | monimo-deploy |
 | 기술스택 0-2 21행 CI | "아직 안 정함" | GitHub Actions 가 다섯 레포에서 돈다(PR 마다 build · smoke). 가장 또렷한 어긋남 | 다섯 레포 `.github/workflows/` |
-| 설계범위 §4-2 흐름 01 수집기 | "수신 · 검증 · 백프레셔 · 해시 1% 샘플링, 비율 정본 PG" | 그 뒤에 둘이 더 붙었다 : 헬스체크 스팬 버림(ADR `#50`) · 서비스별 비율 중 최댓값 하나만 적용(ADR `#53`) | `collector/` |
+| 설계범위 §4-2 흐름 01 Collector | "수신 · 검증 · 백프레셔 · 해시 1% 샘플링, 비율 정본 PG" | 그 뒤에 둘이 더 붙었다 : 헬스체크 스팬 버림(ADR `#50`) · 서비스별 비율 중 최댓값 하나만 적용(ADR `#53`) | `collector/` |
 | 설계범위 §3-3 | "15초 간격 기준 시계열 약 15만 개" | 에이전트 전송 간격은 15초가 아니라 OTel 기본 60초다(로컬만 10초). 같은 10,000 포인트/초면 시계열 60만 개 | §2 · §3 |
 | 기술스택 0-2 14행 화면 | "React 는 방향만, 세부는 4단계에서" | React 19 + Vite 8 로 확정 사용 중. 기능 폴더 10개 | monimo-web `package.json` |
 
@@ -154,7 +154,7 @@ ADR `#32`(집계 워커 폐지로 자체 구현을 7종으로 정리) · `#33`(�
 - **`T0` = 2026-09-22 (KST)** : 조직 `2026-techeer-project-team-b` 의 **첫 머지**. monimo-backend PR `#1`(Gradle 멀티모듈 뼈대 + 버전 목록 + CI)이 `2026-09-21T15:09:13Z` 에 머지됐다. KST 로 **2026-09-22 00:09:13**. UTC 날짜는 09-21 이다. 다른 네 레포의 첫 PR 은 전부 그 13분 뒤
 - **`T0+1M` = 2026-10-22 · `T0+2M` = 2026-11-22**
 - 이 날짜에 걸린 결정 : ADR `#06`(경보 3신호, 되돌림 = `T0+1M` 중간 점검에서 메트릭 규칙조차 미완이면 로그 · 트레이스 경보를 고도화로) · ADR `#09`(화면 자체 구현, 되돌림 = `T0+1M` 에 대시보드 1종도 미완이면 Grafana 임베드) · ADR `#03`(저장 · 질의 기성, 재검토 = `T0+2M`) · 고도화 기술 3개(`T0+2M` 이후) · Q7(이력서 직무, `T0+2M` 전까지)
-- **`T0+1M` 중간 점검은 2026-10-22 다.** 이 문서를 쓰는 날부터 11일 뒤다. 점검 항목 둘(메트릭 규칙 평가 · 대시보드 1종)은 코드가 있다(`detector/alert/evaluate/` · monimo-web 기능 폴더 10). 다만 "있다" 와 "끝났다" 는 다르다. 카나리 신선도 문처럼 관통이 안 된 자리가 남아 있으므로 걸리는지는 **그날 판정한다**
+- **`T0+1M` 중간 점검은 2026-10-22 다.** 이 문서를 쓰는 날부터 11일 뒤다. 점검 항목 둘(메트릭 규칙 평가 · 대시보드 1종)은 코드가 있다(`detector/alert/evaluate/` · monimo-web 기능 폴더 10). 다만 "있다" 와 "끝났다" 는 다르다. 카나리 신선도 문처럼 E2E 가 안 된 자리가 남아 있으므로 걸리는지는 **그날 판정한다**
 - 첫 커밋(09-21 23:46:47 KST)과 첫 머지(09-22 00:09:13 KST, GitHub 머지 시각 기준) 사이는 **약 22분**이고 그 사이에 날짜가 바뀐다. 첫 커밋을 골랐다면 `T0` 가 09-21, `T0+1M` 이 10-21 이 된다. 하루 차이지만 어느 쪽인지 적어 두지 않으면 점검 날이 둘이 된다
 - 왜 첫 머지인가, 왜 첫 커밋 · 설계 착수일 · 팀 배치일이 아닌가는 ADR `#60`
 

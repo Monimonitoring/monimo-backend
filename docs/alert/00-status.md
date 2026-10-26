@@ -29,15 +29,15 @@
 |---|---|---|
 | PG 알림 표 (`alert_rules` 등 7개) | **`db/postgres/alert/` 이관 (#38)**. `agent_id` 두 컬럼 FK 는 `agents` 표와 함께 수집 파트가 붙임(#52) | `db/postgres/alert/V202609281820~1824` |
 | 아웃박스 | **없음 (저장소에서 찾지 못함)** | `*.kt` · `*.sql` 에 outbox 흔적 0건, 원격 브랜치 7개 커밋 메시지에도 없음. 노션 학습 노트에도 "사용자 설명만 확인"으로 적혀 있음 |
-| 탐지 스케줄 평가 | **구현됨 (#56)** — 켜진 서비스 단위 규칙(5XX · 4XX · P95)을 15초마다 평가. 조회는 `service-health`(조회 #48) 1분 버킷, 비율은 sum/sum, p95 는 버킷별. 로컬 compose 에서 ClickHouse → API 서버 → 탐지 → outbox → 알림 → Slack(가짜) 관통 확인 | `detector/.../alert/evaluate/` |
+| Detector 스케줄 평가 | **구현됨 (#56)** — 켜진 서비스 단위 규칙(5XX · 4XX · P95)을 15초마다 평가. 조회는 `service-health`(조회 #48) 1분 버킷, 비율은 sum/sum, p95 는 버킷별. 로컬 compose 에서 ClickHouse → API server → Detector → outbox → Notifier → Slack(가짜) E2E 확인 | `detector/.../alert/evaluate/` |
 | 발송 워커 · 채널 어댑터 | 없음 | `notifier/` 는 `NotifierApplication.kt` 뿐 |
-| API 서버 공통 틀 (봉투 · 에러 · 커서 · limit · X-Request-Id) | 구현됨 (다른 담당) | `api-server/.../common/web/*` · `common/error/*` |
+| API server 공통 틀 (봉투 · 에러 · 커서 · limit · X-Request-Id) | 구현됨 (다른 담당) | `api-server/.../common/web/*` · `common/error/*` |
 | `RULE_CHANNEL_DUPLICATE` 에러 코드 | 구현됨 | `api-server/.../common/error/ErrorCode.kt` |
 | 인증 (JWT · 내부 토큰 · 역할) | 없음 (다른 담당) | `api-server/.../auth/.gitkeep` |
-| API 서버 내부 조회 `service-health` · `agents/active` | 없음 (조회 담당) | `api-server/.../query/` 는 `Rollup.kt` 뿐 |
+| API server 내부 조회 `service-health` · `agents/active` | 없음 (조회 담당) | `api-server/.../query/` 는 `Rollup.kt` 뿐 |
 | **경보 상태머신 순수 로직** | **구현됨 · 테스트 25건 통과** | `detector/.../alert/state/` |
-| 전이 + outbox 원자 저장 (탐지) | **구현됨 (제안 스키마 위) · 실제 PG 테스트 9건 통과** | `detector/.../alert/record/` · `EvaluationRecorderTest` |
-| 발송 워커 · 재시도 · Slack 어댑터 (알림) | **구현됨 (제안 스키마 위) · 실제 PG + 가짜 Slack 11건 통과** | `notifier/.../delivery/` · `notifier/.../channel/` · `DeliveryWorkerTest` |
+| 전이 + outbox 원자 저장 (Detector) | **구현됨 (제안 스키마 위) · 실제 PG 테스트 9건 통과** | `detector/.../alert/record/` · `EvaluationRecorderTest` |
+| 발송 워커 · 재시도 · Slack 어댑터 (Notifier) | **구현됨 (제안 스키마 위) · 실제 PG + 가짜 Slack 11건 통과** | `notifier/.../delivery/` · `notifier/.../channel/` · `DeliveryWorkerTest` |
 | 채널별 서킷브레이커 (E8) | **구현됨 (#60)** — 연속 실패 5번 → OPEN 30초, OPEN 동안은 호출 없이 재예약(시도 수 그대로) | `notifier/.../delivery/ChannelCircuitBreaker.kt` · `docs/alert/30-delivery.md` D9 |
 | 그룹핑 · 실패 자체 알림 · API #13~#17 | 없음 | — |
 
@@ -70,15 +70,15 @@
 | 14 | `GET /api/v1/alert-events` | API / VIEWER+ | 없음 | PG 표 |
 | 15 | `GET /api/v1/alert-events/{alertEventUuid}` | API / VIEWER+ | 없음 | 스냅샷 컬럼 |
 | 16 | `GET /api/v1/alert-events/{alertEventUuid}/notifications` | API / VIEWER+ | 없음 | 이력 행 의미 |
-| 17 | `POST /internal/channels/test` | 알림 / 내부 | 없음 | 내부 토큰, Slack 어댑터 |
+| 17 | `POST /internal/channels/test` | Notifier / 내부 | 없음 | 내부 토큰, Slack 어댑터 |
 
 ## 4. 문서 사이 충돌 (공용 명세는 고치지 않았다)
 
 | # | 충돌 | 위치 | 제안 |
 |---|---|---|---|
-| C1 | FN-27 "탐지가 쓰는 표는 alert_events 뿐" ↔ FN-29 "탐지가 agents.status 를 DOWN 으로 바꾼다" ↔ ERD agents 주인 "적재 처리기 · 탐지" | 기능 명세 · `docs/design/web-v2/erd.md:15` | 평가 상태 · outbox 를 추가하면 탐지 쓰기 표가 더 늘어난다. 한 번에 소유권 ADR 로 정리 (질문 Q-A1) |
+| C1 | FN-27 "Detector 가 쓰는 표는 alert_events 뿐" ↔ FN-29 "Detector 가 agents.status 를 DOWN 으로 바꾼다" ↔ ERD agents 주인 "Ingester · Detector" | 기능 명세 · `docs/design/web-v2/erd.md:15` | 평가 상태 · outbox 를 추가하면 Detector 쓰기 표가 더 늘어난다. 한 번에 소유권 ADR 로 정리 (질문 Q-A1) |
 | C2 | FN-28 연속 N · M ↔ ERD 에 N · M 컬럼 · 평가 카운터 없음 | `erd.md:49-66` | `docs/alert/10-state-machine.md` §4 |
-| C3 | ERD `alert_rules.metric_kind` 설명 "CH `service_health_1m` 을 본다" ↔ API 명세 "탐지는 API 서버 내부 문으로만 읽는다" | `erd.md:59` · `api-spec.md:131` | API 경유를 따른다. ERD 문구만 어긋남 |
+| C3 | ERD `alert_rules.metric_kind` 설명 "CH `service_health_1m` 을 본다" ↔ API 명세 "Detector 는 API server 내부 문으로만 읽는다" | `erd.md:59` · `api-spec.md:131` | API 경유를 따른다. ERD 문구만 어긋남 |
 | C4 | 시험 발송 결과 `SUCCESS/FAILED` ↔ 전송 이력 `SUCCESS/FAIL` | API #13 · #17 ↔ #16 · ERD | 외부 계약은 그대로 두고 표에 따로 기록. 통일 여부는 팀 결정 |
 | C5 | 사건 상세 예시가 서비스 단위 `5XX_RATE` 인데 `agent_uuid` · `agent_key` 가 채워져 있음 | API #14 · #15 예시 | 서비스 단위 규칙이면 null 이 맞다고 보고 확인 요청 |
 | C6 | `notification_history.alert_event_id` NN FK ↔ 시험 발송에는 사건이 없음 | ERD · API #17 | 시험 발송은 notification_history 에 넣지 않는다 |

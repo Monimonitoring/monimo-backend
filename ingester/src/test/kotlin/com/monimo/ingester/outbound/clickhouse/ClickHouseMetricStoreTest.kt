@@ -42,7 +42,7 @@ class ClickHouseMetricStoreTest(
                 countWhere("metrics_raw", "metric_name = '$name'") shouldBe 2L
             }
 
-            Then("값 · 시각(초로 잘림) · 꼬리표 · series_hash(UInt64) 가 그대로 들어간다") {
+            Then("값 · 시각(초로 잘림) · Attribute · series_hash(UInt64) 가 그대로 들어간다") {
                 val row = client.queryAll(
                     "SELECT value, toString(ts), attributes['jvm.memory.pool.name'], toString(series_hash) " +
                         "FROM monimo.metrics_raw WHERE metric_name = '$name' AND value = 300000000 LIMIT 1",
@@ -82,12 +82,12 @@ class ClickHouseMetricStoreTest(
                 got.getLong(2) shouldBe 1L
             }
 
-            Then("롤업 metrics_1m · metrics_1h 에도 총합 표시가 따라간다 : 15일 이상 구간과 탐지가 롤업을 읽는다") {
+            Then("롤업 metrics_1m · metrics_1h 에도 총합 표시가 따라간다 : 15일 이상 구간과 Detector 가 롤업을 읽는다") {
                 countWhere("metrics_1m", "metric_name = '$name' AND is_counter = 1") shouldBe 1L
                 countWhere("metrics_1h", "metric_name = '$name' AND is_counter = 1") shouldBe 1L
             }
 
-            Then("롤업 metrics_1m · metrics_1h 에 꼬리표도 따라간다 : 원본이 105일에 지워져도 갈래를 알 수 있다 (#193)") {
+            Then("롤업 metrics_1m · metrics_1h 에 Attribute 도 따라간다 : 원본이 105일에 지워져도 갈래를 알 수 있다 (#193)") {
                 countWhere("metrics_1m", "metric_name = '$name' AND attributes['jvm.gc.name'] = 'G1 Young Generation'") shouldBe 1L
                 countWhere("metrics_1h", "metric_name = '$name' AND attributes['jvm.gc.name'] = 'G1 Young Generation'") shouldBe 1L
             }

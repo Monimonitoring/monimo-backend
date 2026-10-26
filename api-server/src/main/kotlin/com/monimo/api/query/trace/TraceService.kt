@@ -24,7 +24,7 @@ class TraceService(
     }
 
     private companion object {
-        // W3C trace ID. 적재 처리기가 소문자 16진수로 저장한다
+        // W3C trace ID. Ingester 가 소문자 16진수로 저장한다
         val TRACE_ID = Regex("[0-9a-f]{32}")
     }
 }

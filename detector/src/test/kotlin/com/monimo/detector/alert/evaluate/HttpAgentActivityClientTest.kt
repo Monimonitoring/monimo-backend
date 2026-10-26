@@ -10,7 +10,7 @@ import io.kotest.matchers.string.shouldNotContain
 import java.net.InetSocketAddress
 import java.time.Instant
 
-// agents/active 응답 모양(봉투 · snake_case · 파드당 한 줄)을 흉내 내는 가짜 API 서버. 계약은 현영 답변(2026-10-04)
+// agents/active 응답 모양(봉투 · snake_case · 파드당 한 줄)을 흉내 내는 가짜 API server. 계약은 현영 답변(2026-10-04)
 class HttpAgentActivityClientTest : BehaviorSpec({
 
     var status = 200

@@ -35,7 +35,7 @@ class LogTranslatorTest : BehaviorSpec({
 
     val at = 1_700_000_000_123_456_789L
 
-    Given("INFO 로그 한 줄 — 글자 등급 · 스레드 · trace ID 전부 있음") {
+    Given("INFO 로그 한 줄 — 글자 severity · 스레드 · trace ID 전부 있음") {
         val record = LogRecord.newBuilder()
             .setTimeUnixNano(at)
             .setSeverityText("Info") // OTel Java 는 "INFO", telemetrygen 은 "Info" 로 보낸다
@@ -49,12 +49,12 @@ class LogTranslatorTest : BehaviorSpec({
         When("우리 모델로 옮기면") {
             val row = LogTranslator.toRows(requestOf(record)).single()
 
-            Then("로거는 scope 이름에서, 스레드는 thread.name 꼬리표에서 온다") {
+            Then("로거는 scope 이름에서, 스레드는 thread.name Attribute 에서 온다") {
                 row.logger shouldBe "com.monimo.shop.order.OrderService"
                 row.thread shouldBe "http-nio-8080-exec-3"
             }
 
-            Then("등급은 숫자로 정한다 (글자가 Info 든 INFO 든 같은 값)") {
+            Then("severity 는 숫자로 정한다 (글자가 Info 든 INFO 든 같은 값)") {
                 row.level shouldBe "INFO"
             }
 
@@ -65,13 +65,13 @@ class LogTranslatorTest : BehaviorSpec({
                 row.spanId shouldBe "01".repeat(8)
             }
 
-            Then("꼬리표는 전부 attributes 에 남는다 (thread.name 포함)") {
+            Then("Attribute 는 전부 attributes 에 남는다 (thread.name 포함)") {
                 row.attributes shouldBe mapOf("thread.name" to "http-nio-8080-exec-3", "order.id" to "o-123")
             }
         }
     }
 
-    Given("글자 등급이 없고 숫자 등급만 17 (ERROR 구간 시작)") {
+    Given("글자 severity 가 없고 숫자 severity 만 17 (ERROR 구간 시작)") {
         val record = LogRecord.newBuilder().setTimeUnixNano(at).setSeverityNumber(SeverityNumber.SEVERITY_NUMBER_ERROR)
 
         Then("구간표로 ERROR 가 된다") {
@@ -198,7 +198,7 @@ class LogTranslatorTest : BehaviorSpec({
         }
     }
 
-    Given("앱이 찍은 시각이 없고(0) 수집기가 받은 시각만 있음") {
+    Given("앱이 찍은 시각이 없고(0) Collector 가 받은 시각만 있음") {
         val record = LogRecord.newBuilder().setObservedTimeUnixNano(at).setSeverityNumber(SeverityNumber.SEVERITY_NUMBER_WARN)
 
         Then("받은 시각을 쓴다") {

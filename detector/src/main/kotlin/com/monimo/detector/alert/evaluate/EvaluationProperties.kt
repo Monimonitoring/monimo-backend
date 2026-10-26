@@ -18,13 +18,13 @@ data class EvaluationProperties(
     val agentDown: AgentDown = AgentDown(),
     val threadDump: ThreadDump = ThreadDump(),
 ) {
-    // 파드 단위 경보(GC_TIME, 이후 CPU · HEAP)가 열리는 순간 부르는 자동 스레드 덤프 (API 서버 #164, docs/alert/80-gc-time.md)
+    // 파드 단위 경보(GC_TIME, 이후 CPU · HEAP)가 열리는 순간 부르는 자동 스레드 덤프 (API server #164, docs/alert/80-gc-time.md)
     data class ThreadDump(
         // 끄면 경보는 그대로 돌고 덤프만 안 부른다 (실험 · 장애 때)
         val enabled: Boolean = true,
         val connectTimeout: Duration = Duration.ofSeconds(1),
-        // API 서버가 수집기 쪽 덤프를 5초까지 기다리므로(ThreadDumpService.DEFAULT_TIMEOUT_MS) 그보다 조금 길게.
-        // 여기서 끊어도 API 서버는 끝까지 떠서 저장한다. 발화 순간에만 부르니 주기가 이만큼 밀리는 일은 드물다
+        // API server가 Collector 쪽 덤프를 5초까지 기다리므로(ThreadDumpService.DEFAULT_TIMEOUT_MS) 그보다 조금 길게.
+        // 여기서 끊어도 API server는 끝까지 떠서 저장한다. 발화 순간에만 부르니 주기가 이만큼 밀리는 일은 드물다
         val requestTimeout: Duration = Duration.ofSeconds(8),
     )
 
@@ -36,12 +36,12 @@ data class EvaluationProperties(
         val lookback: Duration = Duration.ofMinutes(3),
         // DOWN 이 된 지 이만큼 지난 키는 감시 대상에서 뺀다. 재시작마다 키가 새로 생겨 옛 키가 쌓이지 않게 (표에서 지우지는 않는다)
         val forgetAfter: Duration = Duration.ofHours(24),
-        // agents.status 를 UP/DOWN 으로 맞출지 (ADR #39: 탐지가 생존 상태 갱신)
+        // agents.status 를 UP/DOWN 으로 맞출지 (ADR #39: Detector 가 생존 상태 갱신)
         val updateStatus: Boolean = true,
     )
 
     data class Query(
-        // API 서버 주소 (내부 문 service-health)
+        // API server 주소 (내부 문 service-health)
         val baseUrl: String = "http://localhost:8080",
         val connectTimeout: Duration = Duration.ofSeconds(1),
         val requestTimeout: Duration = Duration.ofSeconds(3),

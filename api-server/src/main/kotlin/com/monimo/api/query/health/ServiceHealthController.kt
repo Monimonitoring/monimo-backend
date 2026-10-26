@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
-// 탐지가 경보 규칙 재료를 읽는 내부 문 (API 명세 #2 · FN-27 · FN-29). X-Internal-Token 은 SecurityConfig 가 검사한다
+// Detector 가 경보 규칙 재료를 읽는 내부 문 (API 명세 #2 · FN-27 · FN-29). X-Internal-Token 은 SecurityConfig 가 검사한다
 @RestController
 @RequestMapping("/api/v1/internal/service-health")
 class ServiceHealthController(

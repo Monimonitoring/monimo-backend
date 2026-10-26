@@ -11,13 +11,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.SSLPeerUnverifiedException
 import javax.net.ssl.SSLSession
 
-// 지금 붙어 있는 에이전트 (#159 · ADR #64, 7절 묶음 5 "붙어 있는 수를 센다"). 게이지 둘을 낸다.
+// 지금 붙어 있는 에이전트 (#159 · ADR #64, 7절 항목 5 "붙어 있는 수를 센다"). 게이지 둘을 낸다.
 //
 //   monimo.collector.otlp.connections  연결 수. 준비되면 +1, 끊기면 -1
 //   monimo.collector.otlp.agents       주소가 다른 상대의 수 (= 에이전트 수). 같은 주소의 연결이 몇 개든 하나로 센다
 //
 // 둘인 이유 : 에이전트 하나가 연결을 여럿 연다. 신호(트레이스 · 지표 · 로그)마다 따로 열고, 로그는 보낼 로그가
-// 생겨야 연다(실측 : 쇼핑몰 넷이 기동 직후 12, 수집기를 재시작하면 8). 그래서 연결 수로는 "넷이 다 붙었나" 를 바로
+// 생겨야 연다(실측 : 쇼핑몰 넷이 기동 직후 12, Collector 를 재시작하면 8). 그래서 연결 수로는 "넷이 다 붙었나" 를 바로
 // 못 읽고, 주소를 묶은 에이전트 수가 그 질문에 답한다. 쇼핑몰이 넷이면 agents 가 4 여야 하고 3 이면 하나가 못 붙은 것이다.
 //
 // 왜 거절 수가 아니라 붙어 있는 수인가 : 신분증이 없거나 틀린 손님은 TLS 악수 단계에서 끊긴다. 이 필터는

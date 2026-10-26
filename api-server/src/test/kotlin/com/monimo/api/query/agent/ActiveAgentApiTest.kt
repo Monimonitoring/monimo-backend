@@ -16,7 +16,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import java.time.Instant
 
-// spans · metrics_raw 에 줄을 넣고 탐지가 부르는 내부 문을 실제 HTTP 로 부른다. ClickHouse 는 Testcontainers
+// spans · metrics_raw 에 줄을 넣고 Detector 가 부르는 내부 문을 실제 HTTP 로 부른다. ClickHouse 는 Testcontainers
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = ["monimo.internal-token=test-internal-token"],
@@ -73,7 +73,7 @@ class ActiveAgentApiTest(
 
     val range = "from=$t0&to=${t0.plusSeconds(60)}"
 
-    Given("탐지가 agents/active 를 부를 때") {
+    Given("Detector 가 agents/active 를 부를 때") {
         When("service_name 없이 구간만 주면") {
             val response = get(range)
             val rows = json(response)["data"]

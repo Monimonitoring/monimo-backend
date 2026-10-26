@@ -20,7 +20,7 @@
 | 정규화 | 3NF, JOIN으로 조립 | **비정규화 기본**. JOIN은 오른쪽 테이블을 메모리에 다 올림 | `service_name`을 모든 행에 그냥 복사한다. `LowCardinality`가 사전 압축해 줌 |
 | UPDATE/DELETE | 행 단위, 가벼움 | **뮤테이션** = 파트 통째 재작성. 느리고 비동기 | 수정 잦은 데이터(규칙·설정)는 CH에 두지 않는다 (`#20`) |
 | 트랜잭션 | ACID | 사실상 없음 (배치 INSERT 단위 원자성만) | 상태 데이터는 PG |
-| INSERT | 단건 OK | **단건 취약**. 최소 1,000행씩 묶어 넣어야 함 (`#15` 전제조건) | 적재 처리기가 배칭 소유 |
+| INSERT | 단건 OK | **단건 취약**. 최소 1,000행씩 묶어 넣어야 함 (`#15` 전제조건) | Ingester 가 배칭 소유 |
 | 삭제 정책 | 앱이 DELETE | **TTL** 선언으로 자동 삭제 | 보관기간(15일/90일/1년, 로그 7일, 트레이스 3일)이 테이블 DDL에 들어간다 |
 | 집계 | 쿼리 시 계산 | **Materialized View + AggregatingMergeTree**로 INSERT 시점에 미리 집계 | ERD에 "원본 → 집계" 화살표(MV)가 등장한다. RDBMS ERD에는 없는 요소 |
 | 파티션 | 옵션(선언적 파티셔닝) | **PARTITION BY** 필수급. 보통 날짜 단위. TTL·삭제·쿼리 프루닝 단위 | 테이블 헤더에 파티션 키 표기 |
@@ -28,7 +28,7 @@
 
 ### 1-3. 핵심 개념 4개 (이것만 알면 ERD 그릴 수 있다)
 
-1. **MergeTree 계열 엔진** — 파트(파일 묶음)로 INSERT되고 백그라운드에서 병합된다. 변형이 있다.
+1. **MergeTree 계열 엔진** — 파트(파일 모음)로 INSERT되고 백그라운드에서 병합된다. 변형이 있다.
    - `MergeTree`: 원본 저장. 그대로 쌓는다.
    - `SummingMergeTree`: 같은 정렬 키 행을 병합할 때 숫자 컬럼을 **합산**. 카운트 집계용.
    - `AggregatingMergeTree`: `avgState`·`quantileState` 같은 **중간 상태**를 저장해 나중에 병합. 평균·백분위 집계용.
@@ -65,7 +65,7 @@
 
 ## 3. ClickHouse 영역 — 테이블 목록 (Pinpoint 화면 매핑)
 
-### 3-1. 원본 테이블 (MergeTree, 적재 처리기가 배치 INSERT)
+### 3-1. 원본 테이블 (MergeTree, Ingester 가 배치 INSERT)
 
 | 테이블 | 담는 것 | Pinpoint 대응 | ORDER BY (초안) | PARTITION | TTL |
 |---|---|---|---|---|---|
@@ -75,7 +75,7 @@
 | `thread_dumps` | 명령 채널로 요청한 스레드 덤프 결과 (**Q16** — 영속화 여부 미정) | Active Thread Dump | `(agent_id, requested_at)` | `toDate(requested_at)` | 3일 |
 
 **`spans`의 설계 포인트 3개**
-- `parent_service_name` 컬럼을 둔다. 에이전트가 전파 헤더(Pinpoint의 `Pinpoint-pAppName`에 해당)로 받아 채운다. → **서버맵 간선을 부모 스팬과 JOIN 없이** SERVER 스팬 한 행에서 뽑는다. 이게 없으면 서버맵이 CH에서 가장 비싼 self-join이 된다.
+- `parent_service_name` 컬럼을 둔다. 에이전트가 전파 헤더(Pinpoint의 `Pinpoint-pAppName`에 해당)로 받아 채운다. → **Service map 간선을 부모 스팬과 JOIN 없이** SERVER 스팬 한 행에서 뽑는다. 이게 없으면 Service map 이 CH에서 가장 비싼 self-join이 된다.
 - `trace_id`로 콜트리를 여는 조회는 정렬 키 밖이므로 `bloom_filter` 스킵 인덱스를 건다 (`#27` 되돌림 조건 "트레이스 단건 p95 3초"의 1차 튠 수단).
 - 예외·이벤트는 `events Nested(...)`로 같은 행에 넣는다. 별도 테이블로 빼면 JOIN이 생긴다.
 
@@ -83,7 +83,7 @@
 - OTLP 메트릭 모델이 long이다. 변환 없이 적재.
 - 지표를 추가할 때 스키마 변경(ALTER)이 없다.
 - 1분/1시간 롤업 MV가 지표 종류와 무관하게 하나로 끝난다.
-- 반대 근거(wide가 나은 경우): 인스펙터 화면이 한 에이전트의 지표 100개를 한 번에 그리므로 wide면 1행 읽기로 끝난다. 우리 규모(에이전트 수십 대)에서는 long으로도 충분하다고 잠정 판단. **2단계 카디널리티 숫자로 검증.**
+- 반대 근거(wide가 나은 경우): Inspector 화면이 한 에이전트의 지표 100개를 한 번에 그리므로 wide면 1행 읽기로 끝난다. 우리 규모(에이전트 수십 대)에서는 long으로도 충분하다고 잠정 판단. **2단계 카디널리티 숫자로 검증.**
 
 ### 3-2. 집계 테이블 (MV가 자동 생성, 화면 1개 = 테이블 1개)
 
@@ -92,12 +92,12 @@
 | `transactions` | 스캐터 차트(점 하나 = 트랜잭션), 드래그 → 목록 | `spans` WHERE 루트 스팬 | MergeTree | `(service_name, start_time)` | 3일 |
 | `heatmap_1m` | 히트맵(긴 기간) | `transactions` (MV 체인) | SummingMergeTree | `(service_name, ts_min, latency_bucket, is_error)` → `cnt` | 90일 |
 | `url_stats_1m` | URL 통계(호출수·에러수·p50/p95/p99) | `spans` WHERE SERVER | AggregatingMergeTree | `(service_name, ts_min, span_name, agent_id)` | 90일 |
-| `server_map_1m` | 서버맵 간선(호출수·에러·평균지연) | `spans` — SERVER 스팬(부모서비스→나) + CLIENT 스팬(나→DB/외부HTTP) | SummingMergeTree | `(ts_min, caller_service, callee_service, callee_kind)` | 90일 |
-| `metrics_1m` | 인스펙터 15일 이상 구간, 경보 평가 | `metrics_raw` | AggregatingMergeTree | `(service_name, agent_id, metric_name, series_hash, ts_min)` | 90일 |
+| `server_map_1m` | Service map 간선(호출수·에러·평균지연) | `spans` — SERVER 스팬(부모서비스→나) + CLIENT 스팬(나→DB/외부HTTP) | SummingMergeTree | `(ts_min, caller_service, callee_service, callee_kind)` | 90일 |
+| `metrics_1m` | Inspector 15일 이상 구간, 경보 평가 | `metrics_raw` | AggregatingMergeTree | `(service_name, agent_id, metric_name, series_hash, ts_min)` | 90일 |
 | `metrics_1h` | 1년 추세 | `metrics_1m` (MV 체인) | AggregatingMergeTree | 같음, `ts_hour` | 1년 |
-| `service_health_1m` | 경보 탐지기가 주기 조회하는 5xx 비율·p95 (`#30`: 탐지기는 CH 조회) | `spans` WHERE SERVER | AggregatingMergeTree | `(service_name, ts_min)` | 30일 |
+| `service_health_1m` | 경보 Detector 가 주기 조회하는 5xx 비율·p95 (`#30`: Detector 는 CH 조회) | `spans` WHERE SERVER | AggregatingMergeTree | `(service_name, ts_min)` | 30일 |
 
-서버맵 간선 이중 집계 방지: **서비스→서비스 간선은 SERVER 스팬(수신 측)에서만** 세고, CLIENT 스팬은 `db.system` 또는 외부 호스트처럼 **우리 에이전트가 없는 대상**으로 가는 것만 센다.
+Service map 간선 이중 집계 방지: **서비스→서비스 간선은 SERVER 스팬(수신 측)에서만** 세고, CLIENT 스팬은 `db.system` 또는 외부 호스트처럼 **우리 에이전트가 없는 대상**으로 가는 것만 센다.
 
 ### 3-3. DDL 초안 (검증 전, 문법 참고용)
 
@@ -200,7 +200,7 @@ ORDER BY (service_name, toDateTime(ts)) TTL toDateTime(ts) + INTERVAL 7 DAY;
 | 테이블 | 역할 | 주요 컬럼 | 관계 |
 |---|---|---|---|
 | `applications` | 감시 대상 서비스(=`service_name`) | id, name(UNIQUE), display_name, created_at | 1 ─< agents, alert_rules, agent_configs |
-| `agents` | 에이전트 인스턴스 등록·생존 | id, agent_id(UNIQUE), application_id FK, hostname, ip, jvm_version, agent_version, first_seen_at, last_seen_at, status | 수집기가 하트비트마다 `last_seen_at` 갱신 (PG면 가벼움) |
+| `agents` | 에이전트 인스턴스 등록·생존 | id, agent_id(UNIQUE), application_id FK, hostname, ip, jvm_version, agent_version, first_seen_at, last_seen_at, status | Collector 가 하트비트마다 `last_seen_at` 갱신 (PG면 가벼움) |
 | `agent_configs` | 핵심기능 5 — 재배포 없는 설정 | id, application_id FK, agent_id NULL(전체/개별), sampling_rate, log_level, version, updated_by, updated_at | 변경 시 Redis 채널로 푸시 (`#29`) |
 | `alert_rules` | 핵심기능 2 — 경보 규칙 | id, application_id FK, metric_kind(5xx_rate/p95/cpu/heap…), operator, threshold, window_sec, severity, enabled | >─< alert_channels |
 | `alert_channels` | 알림 채널 | id, type(email/sms/webhook/pagerduty), config(jsonb), enabled | |
@@ -240,7 +240,7 @@ erDiagram
 3. **CH 상자**: 헤더에 4줄 고정 — `ENGINE` / `ORDER BY` / `PARTITION BY` / `TTL`. 컬럼 목록에서 정렬 키 컬럼에 🔑 표시(PK 대신). 스킵 인덱스는 컬럼 옆 `[bf]`·`[tokenbf]` 태그.
 4. **CH 화살표 종류는 둘**: 굵은 실선 화살표 = MV(원본→집계, "자동 파생"), 점선 = 논리 참조(`trace_id`, `service_name`). FK 실선은 CH 영역에 절대 그리지 않는다.
 5. **영역 사이 선**: `applications.name ⇢ *.service_name`, `agents.agent_id ⇢ *.agent_id` 점선 2개만.
-6. 각 CH 테이블 상자에 **"어느 화면이 읽는가"** 를 꼬리표로 붙인다(스캐터·히트맵·URL통계·서버맵·인스펙터·경보). 화면 없는 테이블은 만들지 않는다.
+6. 각 CH 테이블 상자에 **"어느 화면이 읽는가"** 를 Attribute 로 붙인다(스캐터·히트맵·URL통계·Service map·Inspector·경보). 화면 없는 테이블은 만들지 않는다.
 7. 도구: dbdiagram.io(DBML `Note` 로 헤더 4줄), 또는 기존 Figma 파일 `1dH26CE91tZIpMiW1mbC8t` 에 새 페이지. Mermaid `erDiagram`은 CH 헤더 표기가 안 되어 PG 영역만 적합.
 
 ## 5-1. 예시 — `spans` 상자 하나를 그려 보면
@@ -248,7 +248,7 @@ erDiagram
 PG 상자와 달리 **헤더 4줄이 곧 설계**다. 컬럼 목록에서 🔑는 ORDER BY 순서(1·2·3·4)를 뜻하고 PK가 아니다.
 
 ```
-┌─ 콜트리 · 스캐터 원본 · 서버맵 원본 ──────────────── spans ─┐   ← 꼬리표: 읽는 화면
+┌─ 콜트리 · 스캐터 원본 · Service map 원본 ──────────────── spans ─┐   ← Attribute: 읽는 화면
 │ ENGINE       MergeTree                                        │
 │ ORDER BY     (service_name, span_name, toDateTime(start_time))
 │ PARTITION BY toDate(start_time)                               │
@@ -294,7 +294,7 @@ Table spans [headercolor: #2f6f9f] {
   trace_id            String                   [note: 'ORDER BY 4 · INDEX bloom_filter']
   span_id             String
   parent_span_id      String                   [note: "'' = 루트 스팬"]
-  parent_service_name "LowCardinality(String)" [note: '에이전트 전파 헤더 → 서버맵 JOIN 제거']
+  parent_service_name "LowCardinality(String)" [note: '에이전트 전파 헤더 → Service map JOIN 제거']
   span_kind           Enum8                    [note: 'INTERNAL/SERVER/CLIENT/PRODUCER/CONSUMER']
   span_name           "LowCardinality(String)" [note: 'ORDER BY 2 · GET /api/orders/{id}']
   duration_ns         UInt64                   [note: 'INDEX minmax']
@@ -310,7 +310,7 @@ Table spans [headercolor: #2f6f9f] {
   ORDER BY     (service_name, span_name, toDateTime(start_time))
   PARTITION BY toDate(start_time)
   TTL          3 DAY (ttl_only_drop_parts=1)
-  읽는 화면    콜트리 / (MV→) 스캐터·URL통계·서버맵·경보
+  읽는 화면    콜트리 / (MV→) 스캐터·URL통계·Service map·경보
   MV 파생      transactions, url_stats_1m, server_map_1m, service_health_1m
   '''
 }

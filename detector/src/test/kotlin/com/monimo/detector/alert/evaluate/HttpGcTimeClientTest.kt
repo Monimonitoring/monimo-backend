@@ -11,7 +11,7 @@ import java.math.BigDecimal
 import java.net.InetSocketAddress
 import java.time.Instant
 
-// gc-time 응답 모양(봉투 · snake_case · 파드 × 1분 한 줄)을 흉내 내는 가짜 API 서버. 계약은 조회 #197 PR 본문의 응답 그대로
+// gc-time 응답 모양(봉투 · snake_case · 파드 × 1분 한 줄)을 흉내 내는 가짜 API server. 계약은 조회 #197 PR 본문의 응답 그대로
 class HttpGcTimeClientTest : BehaviorSpec({
 
     var status = 200

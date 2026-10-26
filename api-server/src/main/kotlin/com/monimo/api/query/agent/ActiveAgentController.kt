@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
-// 탐지가 AGENT_DOWN 을 판정할 재료를 읽는 내부 문 (API 명세 #40 · FN-29). X-Internal-Token 은 SecurityConfig 가 검사한다
+// Detector 가 AGENT_DOWN 을 판정할 재료를 읽는 내부 문 (API 명세 #40 · FN-29). X-Internal-Token 은 SecurityConfig 가 검사한다
 // 응답에 없는 파드 = 구간 안에 데이터를 하나도 보내지 않은 파드
 @RestController
 @RequestMapping("/api/v1/internal/agents/active")

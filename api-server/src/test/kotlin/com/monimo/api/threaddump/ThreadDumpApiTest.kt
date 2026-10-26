@@ -35,13 +35,13 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import javax.sql.DataSource
 
-// 가짜 수집기 한 대. POST /internal/thread-dump 에 정해 둔 상태 코드 · 본문으로 답하고, 받은 요청을 기록한다
+// 가짜 Collector 한 대. POST /internal/thread-dump 에 정해 둔 상태 코드 · 본문으로 답하고, 받은 요청을 기록한다
 class FakeCollector : AutoCloseable {
     data class Received(val token: String?, val body: String)
 
     val received = ConcurrentLinkedQueue<Received>()
     @Volatile var status = 503
-    @Volatile var body = """{"code":"AGENT_NOT_REACHABLE","message":"이 수집기에 연결된 에이전트가 아닙니다."}"""
+    @Volatile var body = """{"code":"AGENT_NOT_REACHABLE","message":"이 Collector 에 연결된 에이전트가 아닙니다."}"""
 
     private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
         createContext("/internal/thread-dump") { ex ->
@@ -72,13 +72,13 @@ class FakeCollectors : AutoCloseable {
 class ThreadDumpTestConfig {
     @Bean(destroyMethod = "close") fun fakeCollectors() = FakeCollectors()
 
-    // 실제 HTTP 클라이언트를 쓰되 주소만 가짜 수집기 2대로 돌린다
+    // 실제 HTTP 클라이언트를 쓰되 주소만 가짜 Collector 2대로 돌린다
     @Bean @Primary
     fun testCollectorClient(fakes: FakeCollectors, props: CollectorClientProperties, token: InternalTokenProperties): CollectorClient =
         HttpCollectorClient(props.copy(urls = listOf(fakes.a.baseUrl, fakes.b.baseUrl)), token.internalToken)
 }
 
-// 스레드 덤프 3개 문 + 자동 덤프 내부 문을 실제 HTTP 로 돈다. 수집기는 가짜 2대, PG · ClickHouse 는 Testcontainers. 서비스 이름 접두 td-
+// 스레드 덤프 3개 문 + 자동 덤프 내부 문을 실제 HTTP 로 돈다. Collector 는 가짜 2대, PG · ClickHouse 는 Testcontainers. 서비스 이름 접두 td-
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = ["monimo.internal-token=test-internal-token"],
@@ -161,7 +161,7 @@ class ThreadDumpApiTest(
     lateinit var firstDumpUuid: String
 
     Given("덤프 요청 (15번)") {
-        When("수집기 한 대만 에이전트를 쥐고 있으면") {
+        When("Collector 한 대만 에이전트를 쥐고 있으면") {
             fakes.reset()
             fakes.b.status = 200
             fakes.b.body = extensionResult(42)
@@ -190,7 +190,7 @@ class ThreadDumpApiTest(
             }
         }
 
-        When("모든 수집기가 503 이면") {
+        When("모든 Collector 가 503 이면") {
             fakes.reset()
             val response = request(admin)
 
@@ -201,7 +201,7 @@ class ThreadDumpApiTest(
             }
         }
 
-        When("에이전트를 쥔 수집기가 504 를 주면") {
+        When("에이전트를 쥔 Collector 가 504 를 주면") {
             fakes.reset()
             fakes.a.status = 504
             fakes.a.body = """{"code":"THREAD_DUMP_TIMEOUT","message":"늦음"}"""
@@ -218,7 +218,7 @@ class ThreadDumpApiTest(
             fakes.reset()
             val response = request(admin, uuid = UUID.randomUUID())
 
-            Then("404 이고 수집기를 부르지 않는다") {
+            Then("404 이고 Collector 를 부르지 않는다") {
                 response.statusCode.value() shouldBe 404
                 fakes.receivedCount shouldBe 0
             }
@@ -297,7 +297,7 @@ class ThreadDumpApiTest(
             val response = autoRequest()
             val data = json(response)["data"]
 
-            Then("200 skipped 이고 수집기를 부르지 않는다") {
+            Then("200 skipped 이고 Collector 를 부르지 않는다") {
                 response.statusCode.value() shouldBe 200
                 data["skipped"].asBoolean() shouldBe true
                 data["dump_uuid"].isNull shouldBe true

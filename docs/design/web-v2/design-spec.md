@@ -29,7 +29,7 @@
 | warn | #B2680A / soft #FBEFD9 | 경고·지연·WARNING |
 | crit | #C8362F / soft #FADDDB | 위험·실패·CRITICAL·5xx |
 | muted-status | #6B7684 / soft #E9ECF0 | INACTIVE·비활성 |
-| 서비스 팔레트 6 | #3452D6 #0F8B8D #B25E1F #7A3FBF #C0397A #4E7A1F | 서버맵 노드·트레이스 스팬 바 서비스별 색 (같은 채도·명도) |
+| 서비스 팔레트 6 | #3452D6 #0F8B8D #B25E1F #7A3FBF #C0397A #4E7A1F | Service map 노드·트레이스 스팬 바 서비스별 색 (같은 채도·명도) |
 
 ## 기하
 - 아트보드: 데스크톱 **1440 × 960** (내용이 더 길면 h를 1100까지 늘려도 됨, 잘림 금지). 루트 div는 `width:1440px;height:<h>px;box-sizing:border-box;display:flex;` 고정.
@@ -52,7 +52,7 @@
 - **상태 점**: 8px 원 ok/warn/crit/muted.
 
 ## 앱 셸 (로그인 제외 모든 화면 공통 — `_shell-reference.html` 그대로 복사해 본문만 교체)
-- 사이드바(224, #151A22): 상단 워드마크 `MONIMO` (IBM Plex Mono 16/600 #fff) + 아래 11px `Pinpoint형 APM` (#C9D1DC). 메뉴 8개 순서: 서버맵 · 트랜잭션 · 인스펙터 · 에러 · 로그 · 경보 · 설정 · 플랫폼 상태. 활성 항목: bg rgba(255,255,255,.10), 글자 #fff, 좌측 3px accent 바(#7B8FF0). 하단: 파수꾼 상태 미니 카드(카나리 신선도) — "카나리 12초 전 · 정상" 형식, 상태 점.
+- 사이드바(224, #151A22): 상단 워드마크 `MONIMO` (IBM Plex Mono 16/600 #fff) + 아래 11px `Pinpoint형 APM` (#C9D1DC). 메뉴 8개 순서: Service map · 트랜잭션 · Inspector · 에러 · 로그 · 경보 · 설정 · 플랫폼 상태. 활성 항목: bg rgba(255,255,255,.10), 글자 #fff, 좌측 3px accent 바(#7B8FF0). 하단: Watchdog 상태 미니 카드(카나리 신선도) — "카나리 12초 전 · 정상" 형식, 상태 점.
 - 상단바(56, #fff, border-bottom): 좌측 페이지 제목(20/600) + 부제(12 ink-3). 우측 컨트롤 그룹: 서비스 선택 select(값 예: `shop-order`), 시간 범위 세그먼트(5m·15m·**1h**·6h·24h·사용자 지정), 새로고침 버튼(아이콘+"30s"), 사용자 칩(이름 `김승조` + 역할 배지 `ADMIN`).
 - 본문: `flex:1; background:#F3F5F8; padding:24px; overflow:hidden; display:flex; flex-direction:column; gap:16px`.
 

@@ -13,7 +13,7 @@ import java.math.RoundingMode
 import java.time.Instant
 import java.util.UUID
 
-// 샘플링 설정 조회 · 수정. 수집기가 30초 캐시로 읽는 값이라 재배포 없이 바꾼다 (ADR #37)
+// 샘플링 설정 조회 · 수정. Collector 가 30초 캐시로 읽는 값이라 재배포 없이 바꾼다 (ADR #37)
 @Service
 class ApplicationConfigService(
     private val applications: ApplicationRepository,

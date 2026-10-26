@@ -15,7 +15,7 @@ import java.util.UUID
 
 enum class ChannelType { SLACK, EMAIL, WEBHOOK, PAGERDUTY }
 
-// alert_channels 표. 주인: API 서버. config 는 알림 서비스가 발송할 때 그대로 읽는다 (비밀값 평문, 암호화는 후속)
+// alert_channels 표. 주인: API server. config 는 Notifier가 발송할 때 그대로 읽는다 (비밀값 평문, 암호화는 후속)
 @Entity
 @Table(name = "alert_channels")
 class AlertChannel(

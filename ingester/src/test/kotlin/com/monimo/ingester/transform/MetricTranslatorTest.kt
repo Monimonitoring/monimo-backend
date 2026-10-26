@@ -85,7 +85,7 @@ class MetricTranslatorTest : BehaviorSpec({
         }
     }
 
-    Given("같은 꼬리표를 순서만 다르게 넣은 두 Map") {
+    Given("같은 Attribute 를 순서만 다르게 넣은 두 Map") {
         val a = mapOf("jvm.memory.type" to "heap", "jvm.memory.pool.name" to "G1 Old Gen")
         val b = linkedMapOf("jvm.memory.pool.name" to "G1 Old Gen", "jvm.memory.type" to "heap")
 
@@ -93,7 +93,7 @@ class MetricTranslatorTest : BehaviorSpec({
             MetricRow.seriesHashOf(a) shouldBe MetricRow.seriesHashOf(b)
         }
 
-        Then("꼬리표가 없으면 빈 글자의 해시로, 항상 같은 값이다") {
+        Then("Attribute 가 없으면 빈 글자의 해시로, 항상 같은 값이다") {
             MetricRow.seriesHashOf(emptyMap()) shouldBe MetricRow.seriesHashOf(emptyMap())
         }
     }
@@ -188,7 +188,7 @@ class MetricTranslatorTest : BehaviorSpec({
                 )
             }
 
-            Then("4줄은 같은 갈래라 꼬리표와 series_hash 가 같다") {
+            Then("4줄은 같은 갈래라 Attribute 와 series_hash 가 같다") {
                 rows.map { it.seriesHash }.toSet() shouldHaveSize 1
                 rows[0].attributes shouldBe mapOf("jvm.gc.name" to "G1 Young Generation")
             }

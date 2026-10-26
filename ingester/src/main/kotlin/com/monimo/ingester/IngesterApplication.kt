@@ -3,7 +3,7 @@ package com.monimo.ingester
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
-// 적재 처리기
+// Ingester
 @SpringBootApplication
 class IngesterApplication
 

@@ -9,7 +9,7 @@ import io.kotest.matchers.string.shouldContain
 import java.net.InetSocketAddress
 import java.util.UUID
 
-// 자동 스레드 덤프 문(#164) 응답 모양을 흉내 내는 가짜 API 서버. 쿨다운 안이면 200 + skipped (에러가 아니다)
+// 자동 스레드 덤프 문(#164) 응답 모양을 흉내 내는 가짜 API server. 쿨다운 안이면 200 + skipped (에러가 아니다)
 class HttpThreadDumpClientTest : BehaviorSpec({
 
     var status = 200

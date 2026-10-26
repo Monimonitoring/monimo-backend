@@ -13,7 +13,7 @@ import java.util.Properties
 
 // raw.dlq 를 앞에서부터 읽어 raw 로 다시 보낸다 (#195, ADR 참조).
 //
-// 왜 raw 로 되넣나 : 적재 처리기에 새 코드가 필요 없다. 키가 그대로라 같은 파티션에 들어가고
+// 왜 raw 로 되넣나 : Ingester 에 새 코드가 필요 없다. 키가 그대로라 같은 파티션에 들어가고
 // 지금 돌고 있는 ingester 그룹이 평소처럼 집어 간다. ADR #34 가 정한 모양이기도 하다.
 //
 // **되넣기는 원본에 없는 것만 되살린다.** 원본에 줄이 있고 집계에만 구멍이 있는 경우
@@ -25,7 +25,7 @@ import java.util.Properties
 //   docs/kafka-reprocess/experiments/reaggregate_window.sh 가 그 1분 구간을 다시 만든다.
 // 그래서 이 잡은 끝날 때 **되넣은 구간**을 찍어 준다. 사람이 그 구간을 대조할 수 있게.
 //
-// 빈으로 만드는 곳은 DlqReprocessConfig 다 : dlq-reprocess 프로필에서만 생긴다. 평소 적재 처리기에는 없다.
+// 빈으로 만드는 곳은 DlqReprocessConfig 다 : dlq-reprocess 프로필에서만 생긴다. 평소 Ingester 에는 없다.
 class DlqReprocessJob(
     consumerFactory: ConsumerFactory<*, *>,
     template: KafkaTemplate<*, *>,

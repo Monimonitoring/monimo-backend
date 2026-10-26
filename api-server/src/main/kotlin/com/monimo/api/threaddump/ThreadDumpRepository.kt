@@ -18,7 +18,7 @@ data class ThreadDumpRow(
     val dump: String?,
 )
 
-// thread_dumps 는 API 서버가 쓰고 읽는 유일한 CH 표다 (ADR #36 · Q16). 적재 처리기를 거치지 않는다
+// thread_dumps 는 API server 가 쓰고 읽는 유일한 CH 표다 (ADR #36 · Q16). Ingester 를 거치지 않는다
 @Repository
 class ThreadDumpRepository(
     @Qualifier("clickHouseJdbcTemplate") private val jdbc: NamedParameterJdbcTemplate,

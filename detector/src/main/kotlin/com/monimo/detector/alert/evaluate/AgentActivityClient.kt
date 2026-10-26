@@ -8,7 +8,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Instant
 
-// API 서버 내부 문 GET /api/v1/internal/agents/active 의 한 줄 (API 명세 40번, 조회 파트 구현).
+// API server 내부 문 GET /api/v1/internal/agents/active 의 한 줄 (API 명세 40번, 조회 파트 구현).
 // 파드 키마다 한 줄, last_signal_at = spans · metrics_raw 중 더 최근 시각. agent_key 는 agents.agent_key 와 같은 글자
 data class AgentSignal(
     val serviceName: String,

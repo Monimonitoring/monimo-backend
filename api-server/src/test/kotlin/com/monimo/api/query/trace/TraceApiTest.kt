@@ -104,7 +104,7 @@ class TraceApiTest(
                 root["http_status"].asInt() shouldBe 500
             }
 
-            Then("예외 이벤트와 꼬리표가 실린다") {
+            Then("예외 이벤트와 Attribute 가 실린다") {
                 val payment = root["children"][0]["children"][0]
                 payment["events"][0]["name"].asText() shouldBe "exception"
                 payment["events"][0]["attributes"]["exception.type"].asText() shouldBe "java.net.SocketTimeoutException"

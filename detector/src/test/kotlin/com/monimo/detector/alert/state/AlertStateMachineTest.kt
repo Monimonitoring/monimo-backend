@@ -170,7 +170,7 @@ class AlertStateMachineTest : BehaviorSpec({
             machine.apply(s, Evaluation(1, Verdict.Violating(b, BigDecimal.ONE))).state
         }
 
-        When("이미 반영한 버킷을 다시 평가하면 (재시도 · 다른 탐지 인스턴스)") {
+        When("이미 반영한 버킷을 다시 평가하면 (재시도 · 다른 Detector 인스턴스)") {
             val outcome = machine.apply(afterB2, Evaluation(1, Verdict.Violating(b2, BigDecimal.ONE)))
 
             Then("DUPLICATE_BUCKET 으로 무시하고 연속 횟수를 올리지 않는다") {

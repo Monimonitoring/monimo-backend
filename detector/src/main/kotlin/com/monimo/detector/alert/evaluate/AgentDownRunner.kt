@@ -36,7 +36,7 @@ class AgentDownRunner(
 ) {
     data class Summary(val rules: Int, val applied: Int, val fired: Int, val resolved: Int, val queryFailures: Int, val statusChanged: Int)
 
-    // 감시 대상 키 한 줄 (agents 표, 적재 처리기가 등록)
+    // 감시 대상 키 한 줄 (agents 표, Ingester 가 등록)
     private data class Agent(val id: Long, val applicationId: Long, val agentKey: String, val status: String)
 
     fun runOnce(): Summary {
@@ -55,7 +55,7 @@ class AgentDownRunner(
         // 정해진 시간 안에 데이터를 보낸 키만 "살아 있다"
         val alive = signals?.filter { !it.lastSignalAt.isBefore(now.minus(cfg.silence)) }
         // 어느 서비스에서도 최근 데이터가 없으면 쇼핑몰이 아니라 우리 수집 · 적재가 멈춘 것을 의심한다.
-        // 이때 전부 DOWN 으로 바꾸거나 울리면 파이프라인 장애가 "서비스 전부 죽음" 경보 폭주가 된다 (그건 파수꾼 몫)
+        // 이때 전부 DOWN 으로 바꾸거나 울리면 파이프라인 장애가 "서비스 전부 죽음" 경보 폭주가 된다 (그건 Watchdog 몫)
         val pipelineSilent = alive != null && alive.isEmpty()
 
         val statusChanged = if (cfg.updateStatus && alive != null && !pipelineSilent) syncStatus(agents, alive, now) else 0
@@ -108,7 +108,7 @@ class AgentDownRunner(
         Timestamp.from(now.minus(props.agentDown.forgetAfter)),
     )
 
-    // 살아 있는 키는 UP, 나머지는 DOWN. 바뀐 줄만 쓴다 (agents 는 적재 처리기가 등록하고 탐지가 생존 상태를 갱신 — ADR #39)
+    // 살아 있는 키는 UP, 나머지는 DOWN. 바뀐 줄만 쓴다 (agents 는 Ingester 가 등록하고 Detector 가 생존 상태를 갱신 — ADR #39)
     private fun syncStatus(agents: List<Agent>, alive: List<AgentSignal>, now: Instant): Int {
         val aliveKeys = alive.mapTo(HashSet()) { it.agentKey }
         val changes = agents.mapNotNull { a ->

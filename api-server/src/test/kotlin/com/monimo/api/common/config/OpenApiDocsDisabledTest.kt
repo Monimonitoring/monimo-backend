@@ -12,7 +12,7 @@ import org.springframework.http.HttpStatus
 @Import(TestInfraConfig::class)
 class OpenApiDocsDisabledTest(rest: TestRestTemplate) : BehaviorSpec({
 
-    Given("기본 설정의 API 서버 (프로필 없음 = 운영과 같은 기본값)") {
+    Given("기본 설정의 API server (프로필 없음 = 운영과 같은 기본값)") {
         When("REST 명세 주소를 부르면") {
             val response = rest.getForEntity("/v3/api-docs", String::class.java)
 

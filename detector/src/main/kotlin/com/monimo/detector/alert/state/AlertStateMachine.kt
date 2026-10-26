@@ -30,7 +30,7 @@ sealed interface Transition {
 }
 
 enum class IgnoreReason {
-    DUPLICATE_BUCKET,     // 이미 반영한 버킷 (재시도 · 다른 탐지 인스턴스가 먼저 처리)
+    DUPLICATE_BUCKET,     // 이미 반영한 버킷 (재시도 · 다른 Detector 인스턴스가 먼저 처리)
     OUT_OF_ORDER_BUCKET,  // 이미 반영한 버킷보다 과거 (늦게 도착한 평가)
     STALE_RULE_VERSION,   // 지금보다 낮은 규칙 판으로 계산한 평가
 }
@@ -46,7 +46,7 @@ sealed interface Outcome {
 }
 
 // 경보 상태머신. DB · 시계 · 난수에 기대지 않는 순수 함수라서 입력 순서만으로 결과가 정해진다.
-// 동시성(두 탐지가 같은 fingerprint 를 동시에 처리)은 여기서 막지 않는다. 호출자가 상태 행을 잠근 뒤 이 함수를 부르고,
+// 동시성(두 Detector 가 같은 fingerprint 를 동시에 처리)은 여기서 막지 않는다. 호출자가 상태 행을 잠근 뒤 이 함수를 부르고,
 // 이 함수는 같은 버킷 재처리를 Ignored 로 돌려 "두 번째 처리자"를 무해하게 만든다.
 class AlertStateMachine(
     private val policy: AlertPolicy,

@@ -16,7 +16,7 @@ data class DlqReprocessProperties(
     val targetTopic: String = RawSignal.TOPIC,
 
     // **ingester 가 아니어야 한다.** 같은 이름을 쓰면 잡이 뜰 때와 끝날 때 각각 그룹 리밸런스가 나서
-    // 적재 처리기의 raw 소비가 멈춘다 (실측 211밀리초 · 229밀리초). 파티션이 섞이지는 않는다 :
+    // Ingester 의 raw 소비가 멈춘다 (실측 211밀리초 · 229밀리초). 파티션이 섞이지는 않는다 :
     // 할당은 구독한 토픽만 따라간다. 그래도 멈추는 것은 공짜가 아니라 별 이름을 쓴다
     val groupId: String = "dlq-reprocess",
 

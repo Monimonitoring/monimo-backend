@@ -98,7 +98,7 @@ class ServerMapApiTest(
         set<JsonNode>("edges", objectMapper.valueToTree(data["edges"].filter { it["caller_service"].asText().startsWith("map-") }))
     }
 
-    Given("화면이 서버맵을 열 때") {
+    Given("화면이 Service map 을 열 때") {
         When("시간 범위만 주면") {
             val response = get(range)
             val data = own(json(response)["data"])

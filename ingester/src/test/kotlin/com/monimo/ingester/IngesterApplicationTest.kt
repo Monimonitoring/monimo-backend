@@ -21,7 +21,7 @@ class IngesterApplicationTest(
     clickHouseClient: Client,
 ) : BehaviorSpec({
 
-    Given("적재 처리기 애플리케이션") {
+    Given("Ingester 애플리케이션") {
         When("스프링 컨텍스트를 띄우면") {
             val name = environment.getProperty("spring.application.name")
 

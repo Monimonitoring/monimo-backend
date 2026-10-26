@@ -12,10 +12,10 @@ import org.springframework.context.annotation.Import
 import org.springframework.core.env.Environment
 import org.testcontainers.containers.PostgreSQLContainer
 
-// 헬스체크 probe (#135 · ADR #58). 탐지 · 알림의 같은 이름 시험과 다른 점이 둘이다 :
+// 헬스체크 probe (#135 · ADR #58). Detector · Notifier 의 같은 이름 시험과 다른 점이 둘이다 :
 // 업무 포트에도 /livez · /readyz 를 열고(쿠버네티스는 이쪽을 쏜다), readiness 가 저장소(db)를 안 본다.
 // RANDOM_PORT 라 업무 · 관리 포트가 둘 다 빈 포트로 바뀐다 (운영 8081 · 18081 과 부딪치지 않는다).
-// gRPC 포트도 0 으로 덮는다 : 4317 그대로면 로컬에 수집기 컨테이너가 떠 있을 때 "Address already in use" 로 깨진다 (CollectorApplicationTest 와 같다).
+// gRPC 포트도 0 으로 덮는다 : 4317 그대로면 로컬에 Collector 컨테이너가 떠 있을 때 "Address already in use" 로 깨진다 (CollectorApplicationTest 와 같다).
 // Hikari 연결 대기를 3초로 줄인 것은 마지막 Given 에서 PG 를 멈춘 뒤 전체 /actuator/health 가 DOWN 으로 답할 때까지 기다리는 시간이다.
 // 운영 기본값은 30초이고, 그것이 readiness 에 db 를 넣으면 쿠버네티스(1초 만에 끊음)가 원인을 못 보는 이유다
 @SpringBootTest(
@@ -35,7 +35,7 @@ class HealthProbeTest(
     val rest = TestRestTemplate()
     fun get(url: String) = rest.getForEntity(url, String::class.java)
 
-    Given("수집기가 떠 있고 PostgreSQL 에 붙어 있다") {
+    Given("Collector 가 떠 있고 PostgreSQL 에 붙어 있다") {
         When("업무 포트의 /livez · /readyz 를 부르면") {
             val livez = get("$business/livez")
             val readyz = get("$business/readyz")
@@ -82,7 +82,7 @@ class HealthProbeTest(
                 liveness.isMember("db") shouldBe false
             }
 
-            Then("readiness 그룹에도 db 가 없다 (규약과 다른 선택이라 고정한다. 탐지 · 알림은 넣었다)") {
+            Then("readiness 그룹에도 db 가 없다 (규약과 다른 선택이라 고정한다. Detector · Notifier 는 넣었다)") {
                 readiness.isMember("db") shouldBe false
             }
         }
@@ -98,7 +98,7 @@ class HealthProbeTest(
             val livez = get("$business/livez")
             val readyz = get("$business/readyz")
 
-            Then("전체는 503 (db DOWN) 인데 probe 둘은 200 그대로다 : 저장소가 죽어도 수집기는 빠지지도 재시작되지도 않는다") {
+            Then("전체는 503 (db DOWN) 인데 probe 둘은 200 그대로다 : 저장소가 죽어도 Collector 는 빠지지도 재시작되지도 않는다") {
                 whole.statusCode.value() shouldBe 503
                 livez.statusCode.value() shouldBe 200
                 readyz.statusCode.value() shouldBe 200

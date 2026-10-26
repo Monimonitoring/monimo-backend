@@ -28,17 +28,22 @@ monimo:
     refresh-ttl: 14d
     # refresh 쿠키의 Secure 속성. HTTPS 가 아닌 로컬에서만 끈다
     cookie-secure: true
-  # 내부 문 4개(/api/v1/internal/**)의 X-Internal-Token 값. 비우면 내부 문이 전부 닫힌다
+  # 내부 문 5개(/api/v1/internal/**)의 X-Internal-Token 값. 비우면 내부 문이 전부 닫힌다
   internal-token: ${MONIMO_INTERNAL_TOKEN:}
-  # 채널 시험 발송(#13)이 부르는 알림 서비스. X-Internal-Token 은 위 값을 그대로 보낸다
+  # 채널 시험 발송(#13)이 부르는 Notifier. X-Internal-Token 은 위 값을 그대로 보낸다
   notifier:
     base-url: ${MONIMO_NOTIFIER_URL:http://localhost:8084}
-  # 카나리 신선도 기준(초). 가장 최근 카나리가 이보다 오래됐으면 canary/freshness 가 fresh=false 로 답하고 파수꾼이 알린다
+  # 카나리 신선도 기준(초). 가장 최근 카나리가 이보다 오래됐으면 canary/freshness 가 fresh=false 로 답하고 Watchdog 이 알린다
   canary:
     threshold-sec: ${MONIMO_CANARY_THRESHOLD_SEC:180}
-  # 스레드 덤프 팬아웃(#124)이 부르는 수집기 전부. 쉼표로 나눈다. 1a 는 한 대, K8s 는 헤드리스 Service 의 파드 주소들 (배포 파트와 맞춘다)
+  # 스레드 덤프 팬아웃(#124)이 부르는 Collector 전부. 쉼표로 나눈다. 1a 는 한 대, K8s 는 헤드리스 Service 의 파드 주소들 (배포 파트와 맞춘다)
   collector:
     urls: ${MONIMO_COLLECTOR_URLS:http://localhost:8081}
+  # 자기 점검 문(#226)이 읽는 Detector · Collector 의 관리 포트(업무 포트 + 10000, ADR #61). 낡음 게이지(ADR #54)가 거기 있다.
+  # Watchdog 이 밖에서 "PG 가 죽었다 · Detector 가 멈췄다" 를 볼 유일한 길이라 compose · K8s 는 모듈 이름으로 넣는다
+  self-check:
+    detector-management-url: ${MONIMO_DETECTOR_MANAGEMENT_URL:http://localhost:18083}
+    collector-management-url: ${MONIMO_COLLECTOR_MANAGEMENT_URL:http://localhost:18081}
 
 # 관리 포트 (#162). /actuator/** 전부 여기로 옮겨 밖(인그레스)으로 안 나간다. 번호는 업무 포트 + 10000 (ADR #61)
 management:
@@ -49,7 +54,7 @@ management:
       probes:
         enabled: true                 # /actuator/health/liveness · /actuator/health/readiness (헬스체크 규약)
         # 업무 포트(8080)에도 /livez · /readyz 를 연다. 쿠버네티스는 이쪽을 쏜다.
-        # 관리 포트만 보면 업무 포트가 막혀도 "정상" 이 나온다 (두 포트가 일꾼 · 연결 묶음을 따로 가진다)
+        # 관리 포트만 보면 업무 포트가 막혀도 "정상" 이 나온다 (두 포트가 일꾼 · 연결 풀을 따로 가진다)
         add-additional-paths: true
       # readiness 에 저장소(db)를 넣지 않는다 (ADR #58). 저장소가 하나라 흔들리면 파드가 전부 동시에 빠지고,
       # probe 는 1초에 끊는데 Hikari 연결 대기는 30초라 쿠버네티스는 원인을 못 본다. 저장소 장애는 저장소 쪽 경보로 본다.

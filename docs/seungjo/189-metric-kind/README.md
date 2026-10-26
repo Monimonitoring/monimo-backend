@@ -15,9 +15,9 @@
 |---|---|
 | `metrics_raw` 새 칸 | `metric_type LowCardinality(String)` (OTel 종류 그대로) · `is_counter UInt8` (1 = 켜진 뒤로 줄지 않는 총합) |
 | 롤업 `metrics_1m` · `metrics_1h` | `is_counter SimpleAggregateFunction(max, UInt8)`, MV `MODIFY QUERY` 로 흘린다 |
-| 정하는 쪽 | 적재 처리기 `MetricTranslator` (OTel 의 종류 · temporality · is_monotonic + 접미) |
-| 빼는 쪽 | 조회 API · 탐지 (같은 파드 · 같은 시계열 안에서 앞 값 빼기, 음수면 재시작이라 건너뛰기) |
-| 안 한 것 | 적재에서 차이 계산(C) · 조회가 이름 목록 보유(B) · 옛 줄 채우기 · 가짜 데이터 변경 · 조회 · 탐지 코드 |
+| 정하는 쪽 | Ingester `MetricTranslator` (OTel 의 종류 · temporality · is_monotonic + 접미) |
+| 빼는 쪽 | 조회 API · Detector (같은 파드 · 같은 시계열 안에서 앞 값 빼기, 음수면 재시작이라 건너뛰기) |
+| 안 한 것 | 적재에서 차이 계산(C) · 조회가 이름 목록 보유(B) · 옛 줄 채우기 · 가짜 데이터 변경 · 조회 · Detector 코드 |
 
 ## 흐름을 시점으로 갈라 본다
 
@@ -32,11 +32,11 @@
 
 ```
 에이전트     : 15 ~ 60초마다 "켜진 뒤 총합 1,240ms · 총횟수 37" 을 보낸다 (OTel Java SDK 기본 = cumulative)
-적재 처리기  : 검사 ① 미리 가진 것  = 없음 (상태 없음. 직전 값을 기억하지 않는다)
+Ingester  : 검사 ① 미리 가진 것  = 없음 (상태 없음. 직전 값을 기억하지 않는다)
               검사 ② 방금 받은 것  = 이 메트릭의 종류(dataCase) · temporality · is_monotonic · 접미(.count / .min)
               ②만 보고 줄마다 metric_type · is_counter 를 적는다. value 는 받은 총합 그대로
 ClickHouse   : metrics_raw 에 넣고, MV 가 is_counter 를 max 로 접어 1분 · 1시간 롤업에 옮겨 적는다
-조회 · 탐지  : is_counter = 1 인 시계열만 시간순으로 읽으며 앞 값을 빼서 "이 1분에 40ms" 를 만든다
+조회 · Detector : is_counter = 1 인 시계열만 시간순으로 읽으며 앞 값을 빼서 "이 1분에 40ms" 를 만든다
 ```
 
 ## `is_counter` 를 정하는 규칙
@@ -92,7 +92,7 @@ ClickHouse   : metrics_raw 에 넣고, MV 가 is_counter 를 max 로 접어 1분
   - 차이만 저장했으면 그 구간은 영영 사라진다
 - 재시작하면 총합이 0 으로 떨어져서 티가 난다
   - 차이로만 저장하면 알 방법이 없다
-- 적재 처리기가 파드별 직전 값을 기억해야 한다
+- Ingester 가 파드별 직전 값을 기억해야 한다
   - 그런데 `raw` 가 파티션 3개라 최대 3대까지 뜨고 그 기억이 갈라진다
   - 「metrics_raw 는 long 1지표 1행 · 설정은 앱 단위」 결정 이 조회 몫으로 둔 이유 그대로다
 
@@ -101,10 +101,10 @@ ClickHouse   : metrics_raw 에 넣고, MV 가 is_counter 를 max 로 접어 1분
 | 무엇이 틀리면 | 어떻게 되나 | 어떻게 알아채나 |
 |---|---|---|
 | 적재가 `is_counter` 를 잘못 1 로 적는다 (예 : UpDownCounter) | 조회가 현재값을 빼서 그래프가 0 근처 · 음수에서 흔들린다 | `MetricTranslatorTest` 가 여덟 모양을 고정. 화면에서는 힙 그래프가 평평해지면 의심 |
-| 잘못 0 으로 적는다 | 지금과 같은 증상(계속 오르는 선) | 인스펙터에서 우상향 직선 |
+| 잘못 0 으로 적는다 | 지금과 같은 증상(계속 오르는 선) | Inspector 에서 우상향 직선 |
 | MV `MODIFY QUERY` 가 안 먹었다 (옛 정의 유지) | 롤업의 `is_counter` 가 전부 0. 15일 이상 구간만 틀어진다 | `SELECT max(is_counter) FROM monimo.metrics_1m WHERE metric_name LIKE '%.sum'` 이 0 이면 안 먹은 것 |
 | 옛 줄(이전에 들어온 것) | `is_counter = 0` 이라 그대로 그려진다. 새 줄과 경계에서 한 번 튄다 | 마이그레이션 시각 전후. 보관 105일이 지나면 사라진다 |
-| 파드 재시작 | 총합이 0 부터 다시 시작. 빼면 음수 | 읽는 쪽이 음수를 건너뛴다 (조회 · 탐지 몫) |
+| 파드 재시작 | 총합이 0 부터 다시 시작. 빼면 음수 | 읽는 쪽이 음수를 건너뛴다 (조회 · Detector 몫) |
 
 ## 어떻게 확인했나
 
@@ -119,14 +119,14 @@ ClickHouse   : metrics_raw 에 넣고, MV 가 is_counter 를 max 로 접어 1분
 
 - 새 파일 : `db/clickhouse/V202610140450__add_metrics_metric_type.sql` · `ingester/.../transform/MetricType.kt` · 이 폴더
 - 수정 : `MetricRow.kt`(칸 둘) · `MetricTranslator.kt`(종류 · 총합 판정) · `ClickHouseMetricStore.kt`(칸 둘 쓰기) · 테스트 둘 · `docs/design/01-decisions.md`(「누적 지표는 종류 · 총합 표시 칸으로」 결정) · `docs/design/web-v2/erd.md`(사본) · `AGENTS.md` §5 §6
-- 안 바꾼 것 : 수집기 · Kafka(바이트를 풀지 않고 넘기므로 칸은 처음부터 있었다) · 가짜 데이터(기본값 0 = 한 값으로 넣는 지금 뜻과 같다) · 조회 API · 탐지 · 화면
+- 안 바꾼 것 : Collector · Kafka(바이트를 풀지 않고 넘기므로 칸은 처음부터 있었다) · 가짜 데이터(기본값 0 = 한 값으로 넣는 지금 뜻과 같다) · 조회 API · Detector · 화면
 
 ## 조회 · 경보가 이어서 할 것
 
 - 조회 : `GET /metrics/series` 가 `is_counter = 1` 인 시계열은 같은 `agent_id` · `series_hash` 안에서 시간순으로 앞 값을 빼서 준다
   - 음수면 그 점은 건너뛴다
   - 롤업 구간은 `last_v` 끼리 뺀다
-- 탐지 : GC_TIME 규칙이 `jvm.gc.duration.sum` 을 뺀 값에 건다
+- Detector : GC_TIME 규칙이 `jvm.gc.duration.sum` 을 뺀 값에 건다
   - 음수면 재시작이라 그 주기는 평가하지 않는다
 - 노션 「정해야 할 것」 3번(경보가 직접 뺄지 · 조회 API 가 뺀 값을 줄지)은 아직 열려 있다
   - 「누적 지표는 종류 · 총합 표시 칸으로」 결정 되돌림 ③

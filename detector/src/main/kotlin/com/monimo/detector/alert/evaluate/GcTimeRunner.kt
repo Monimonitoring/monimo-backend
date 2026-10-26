@@ -42,7 +42,7 @@ class GcTimeRunner(
         val dumpFailures: Int,
     )
 
-    // 감시 대상 파드 한 줄 (agents 표, 적재 처리기가 등록 · 탐지가 status 갱신)
+    // 감시 대상 파드 한 줄 (agents 표, Ingester 가 등록 · Detector 가 status 갱신)
     private data class Pod(val id: Long, val uuid: UUID, val applicationId: Long, val agentKey: String, val status: String)
 
     fun runOnce(): Summary {

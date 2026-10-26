@@ -35,7 +35,7 @@ class Application(
     @Column(name = "deleted_at")
     var deletedAt: Instant? = null,
 
-    // 속한 시스템. 수집기가 같은 값끼리 샘플링 비율의 최댓값을 묶는다 (#205 · #206)
+    // 속한 시스템. Collector 가 같은 값끼리 샘플링 비율의 최댓값을 묶는다 (#205 · #206)
     @Column(nullable = false, length = 50)
     var system: String = DEFAULT_SYSTEM,
 ) {
