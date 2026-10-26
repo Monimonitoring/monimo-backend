@@ -72,6 +72,9 @@ class GcTimeApiTest(
     listOf(-1L, 59, 121, 179, 239).forEach { steady(it, "gap-steady") }
     // 간격이 150초를 넘으면 전송이 빠진 것 : t0+59s 다음이 t0+239s(180초 뒤)
     listOf(-1L, 59, 239).forEach { steady(it, "gap-missing") }
+    // 횟수 줄만 온 1분 : 시간 줄은 t0+59s 에서 끊기고 횟수 줄은 t0+119s 까지 온다
+    listOf(-1L, 59).forEach { steady(it, "gap-count-only") }
+    listOf(-1L, 59, 119).forEach { total(it, 10.0 + it, count, 32, agent = "pod-g", service = "gap-count-only") }
 
     fun get(query: String, token: String? = "test-internal-token"): ResponseEntity<String> {
         val headers = HttpHeaders().apply { token?.let { set("X-Internal-Token", it) } }
@@ -138,6 +141,13 @@ class GcTimeApiTest(
         When("두 점이 150초보다 멀면") {
             Then("전송이 빠진 것이라 그 사이 1분들과 뒤 점의 1분을 짐작하지 않고 비운다") {
                 val rows = json(get("service_name=gap-missing&$range"))["data"]
+                rows.map { Instant.parse(it["ts_min"].asText()) } shouldBe listOf(t0)
+            }
+        }
+
+        When("한 1분에 횟수 줄만 있고 시간 줄이 없으면") {
+            Then("그 1분을 0ms 로 내지 않고 비운다 (탐지에서 판정 불가)") {
+                val rows = json(get("service_name=gap-count-only&$range"))["data"]
                 rows.map { Instant.parse(it["ts_min"].asText()) } shouldBe listOf(t0)
             }
         }

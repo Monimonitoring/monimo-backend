@@ -25,12 +25,15 @@ class GcTimeService(
             .filter { !it.minute.isBefore(range.from) && it.minute.isBefore(range.to) }
 
         return increases.groupBy { Triple(it.line.serviceName, it.line.agentKey, it.minute) }
-            .map { (key, rows) ->
+            .mapNotNull { (key, rows) ->
+                // 시간 줄이 하나도 없는 1분(횟수 줄만 옴)은 0ms 가 아니라 모르는 1분이다. 줄을 안 내야 탐지가 판정 불가로 본다
+                val times = rows.filter { it.line.metricName == GcTimeRepository.TIME_METRIC }
+                if (times.isEmpty()) return@mapNotNull null
                 GcTimeResponse(
                     serviceName = key.first,
                     agentKey = key.second,
                     tsMin = key.third,
-                    gcTimeMs = toMillis(rows.filter { it.line.metricName == GcTimeRepository.TIME_METRIC }.sumOf { it.increase }),
+                    gcTimeMs = toMillis(times.sumOf { it.increase }),
                     gcCount = rows.filter { it.line.metricName == GcTimeRepository.COUNT_METRIC }.sumOf { it.increase }.roundToLong(),
                 )
             }
