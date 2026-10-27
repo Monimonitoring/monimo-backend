@@ -10,6 +10,7 @@ import com.monimo.api.config.ApplicationRepository
 import com.monimo.api.support.TestInfraConfig
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.doubles.plusOrMinus
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
@@ -88,6 +89,23 @@ class MetricSeriesApiTest(
     metric(180, 0.5, hash = 11, name = gc, counter = 1)
     metric(0, 3.0, agent = "pod-c", hash = 11, name = gc, counter = 1)
     metric(60, 3.25, agent = "pod-c", hash = 11, name = gc, counter = 1)
+
+    // 1분 롤업에 바로 넣는다. MV 가 1시간 롤업까지 채운다. attributes 는 ClickHouse 식 그대로
+    fun rollup(offsetSec: Long, value: Double, hash: Int, attributes: String) {
+        val sec = t0.plusSeconds(offsetSec).epochSecond
+        clickHouse.jdbcTemplate.update(
+            """
+            INSERT INTO metrics_1m (service_name, agent_id, metric_name, series_hash, ts_min, is_counter, attributes, avg_v, min_v, max_v, last_v)
+            SELECT 'mt-order', 'pod-a', 'jvm.memory.committed', $hash, toDateTime($sec, 'UTC'), 0, $attributes,
+                   avgState(toFloat64($value)), minState(toFloat64($value)), maxState(toFloat64($value)), argMaxState(toFloat64($value), toDateTime($sec, 'UTC'))
+            """.trimIndent(),
+        )
+    }
+
+    // 원본이 지워진 줄(롤업에만 Attribute), #193 전에 쌓인 줄(롤업 Attribute 는 비고 원본에만, 원본은 범위 밖)
+    rollup(0, 800.0, hash = 21, attributes = "map('jvm.memory.type', 'heap', 'jvm.memory.pool.name', 'G1 Old Gen')")
+    rollup(0, 50.0, hash = 22, attributes = "CAST(map(), 'Map(String, String)')")
+    metric(-7200, 40.0, hash = 22, type = "non_heap", name = "jvm.memory.committed")
 
     val base = "service_name=mt-order&metric_name=jvm.memory.used&from=$t0&to=${t0.plusSeconds(3600)}"
 
@@ -210,6 +228,25 @@ class MetricSeriesApiTest(
                 val data = json(get("$base&step=60"))["data"]
                 data["series"].all { !it["is_counter"].asBoolean() } shouldBe true
                 at(data, 0, 1)["last_v"].asDouble() shouldBe 700.0
+            }
+        }
+
+        When("롤업을 읽을 때 Attribute 는") {
+            val committed = "service_name=mt-order&metric_name=jvm.memory.committed&from=$t0&to=${t0.plusSeconds(3600)}"
+            fun attributesOf(data: JsonNode): List<Map<String, String>> =
+                data["series"].map { line -> line["attributes"].properties().associate { (key, value) -> key to value.asText() } }
+
+            Then("원본이 없어도 롤업에 있는 Attribute 를 붙인다 (1분 · 1시간)") {
+                listOf(60, 3600).forEach { step ->
+                    val data = json(get("$committed&step=$step"))["data"]
+                    attributesOf(data) shouldContain mapOf("jvm.memory.type" to "heap", "jvm.memory.pool.name" to "G1 Old Gen")
+                }
+            }
+
+            Then("롤업 Attribute 가 빈 줄은 원본에서 찾는다") {
+                val data = json(get("$committed&step=60"))["data"]
+                data["series"].size() shouldBe 2
+                attributesOf(data) shouldContain mapOf("jvm.memory.type" to "non_heap")
             }
         }
 
