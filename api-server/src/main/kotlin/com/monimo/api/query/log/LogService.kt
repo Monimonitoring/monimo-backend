@@ -9,6 +9,7 @@ import com.monimo.api.query.log.dto.LogCursor
 import com.monimo.api.query.log.dto.LogResponse
 import com.monimo.api.query.log.dto.LogSearch
 import com.monimo.api.query.support.NanoTime
+import com.monimo.common.log.LogSeverity
 import org.springframework.stereotype.Service
 import java.time.Duration
 import java.time.Instant
@@ -55,7 +56,7 @@ class LogService(
         // logs 표 TTL (db/clickhouse). 표를 바꾸면 같이 고친다
         val RETENTION: Duration = Duration.ofDays(97)
 
-        // 적재가 OTel severity_number 기준으로 고정한 여섯 이름 (ADR #59)
-        val LEVELS = setOf("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL")
+        // 적재가 쓰는 등급 이름 그대로. 표는 common LogSeverity 한 곳에 있다 (ADR #59, #237)
+        val LEVELS: Set<String> = LogSeverity.NAMES.toSet()
     }
 }
