@@ -1,0 +1,26 @@
+{
+  "name": "alert-outbox",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "plugin.name": "pgoutput",
+    "database.hostname": "pg",
+    "database.port": "5432",
+    "database.user": "monimo",
+    "database.password": "monimo",
+    "database.dbname": "cdc",
+    "topic.prefix": "cdc",
+    "table.include.list": "public.alert_event_outbox",
+    "slot.name": "alert_outbox",
+    "publication.name": "alert_outbox",
+    "publication.autocreate.mode": "filtered",
+    "snapshot.mode": "no_data",
+    "tombstones.on.delete": "false",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.route.topic.replacement": "alert.events.cdc",
+    "transforms.outbox.table.expand.json.payload": "true",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false"
+  }
+}

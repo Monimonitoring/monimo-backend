@@ -11,6 +11,11 @@
 | `gc_analyze.py <폴더>` | 옛 계산(develop) · 새 계산(`#239`) · API · GC 로그를 1분마다 나란히, 원본 점 사이 GC 로그 대조, 대표 로그 줄, k6, 경보 타임라인(판정 버킷 끝 기준 +초) → `<폴더>/analysis.md` |
 | `gc_replay.py <폴더> [기준ms]` | 쌓인 GC 원본 전체를 옛 · 새 계산으로 다시 만들고 같은 입력에 N=1 · N=3 상태머신을 돌린다 (최종 조회 재평가) |
 | `gc_figure.py <폴더> <기준ms> <제목>` | 모은 폴더 하나를 1분 GC · 요청 p95 · 경보 시각 한 장으로 |
+| `outbox_poll.sh [N] [IDLE_SECS]` | 발송 경로(DB 폴링 outbox)의 지연 · 유휴 DB 비용 · 몰림 (`100-outbox-polling.md`). compose 의 Notifier 컨테이너를 잠시 멈추고 develop jar 를 설정별로 띄운다(폴링 1초 · 그룹 대기 10초 / 0초 / 폴링 0.2초) |
+| `outbox_poll_explain.sh <파일> [끝난 줄 수]...` | 선점 쿼리 `lockDue` 를 끝난 줄을 쌓은 채 `EXPLAIN ANALYZE`, 넣은 줄은 ROLLBACK |
+| `outbox_poll_analyze.py <폴더>` | 생김 → 수신 · 수신 → 완료 지연, 유휴 PG 트랜잭션 · 읽은 줄 · Notifier CPU, 몰림 → `<폴더>/summary.md` |
+| `cdc/` (`compose.yml` · `schema.sql` · `connector.json` · `producer.py` · `relay_poll.py` · `consumer.py`) | 경보 사건 발행 CDC 격리 환경 (`101-outbox-cdc.md`). 프로젝트 `monimo-cdc`, 포트 25432 · 29092 · 28083. 팀 compose 는 안 건드린다 |
+| `cdc/cdc_run.sh` · `cdc/cdc_analyze.py` | E1 롤백 · E2 커밋 직후 종료 · E3 Connect 강제 종료 → 복구(누락 · 중복 · WAL) · E4 소비자 종료, CDC · 폴링 릴레이 전달 지연 · 유휴 DB 비용 → `summary.md`. `PY` = kafka-python · psycopg 가 있는 python |
 
 결과와 블로그 근거 정리는 `gc-results/README.md`.
 
