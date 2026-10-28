@@ -12,7 +12,11 @@
 | `gc_replay.py <폴더> [기준ms]` | 쌓인 GC 원본 전체를 옛 · 새 계산으로 다시 만들고 같은 입력에 N=1 · N=3 상태머신을 돌린다 (최종 조회 재평가) |
 | `gc_figure.py <폴더> <기준ms> <제목>` | 모은 폴더 하나를 1분 GC · 요청 p95 · 경보 시각 한 장으로 |
 
-결과와 블로그 근거 정리는 `gc-results/README.md`.
+| `overhead_gc.sh <off\|on\|dump> <이름> [RATE] [SECS]` | 에이전트 · 스레드 덤프가 order JVM 의 GC · 요청 지연에 주는 비용 한 회차. 쇼핑몰 `perf/overhead/`(#36 · #51 CPU · 메모리) 출발선에 `overhead_gc_override.yml`(G1 · 힙 고정 · GC · safepoint 로그)을 얹고, dump 는 측정 중 30초마다 Collector 에 덤프를 직접 요청한다 |
+| `overhead_gc_suite.sh [REPS] [RATE] [SECS]` | 세 변형을 순서를 돌려 가며 REPS 번 → `overhead_gc_analyze.py` |
+| `overhead_gc_analyze.py <폴더>` | 변형별 GC 횟수 · 합 · 최대 · 할당 속도, 요청 p50 · p95 · p99, 덤프 창(off · on 은 같은 자리 창) p95, Safepoint "ThreadDump" 정지, 주문당 CPU → `<폴더>/summary.md` |
+
+결과와 블로그 근거 정리는 `gc-results/README.md`, 에이전트 · 덤프 비용은 `gc-results/2026-10-28-overhead/` · `../90-overhead-gc.md`.
 
 GC 실험 전제: Detector · API server 가 GC_TIME 평가(`#223`) · 간격 보정(`#239`)을 담은 이미지, 쇼핑몰 `~/monimo-shop`(`SHOP` 로 바꿈), GC_TIME 규칙 id 7(`RULE_ID`). API 응답이 어느 계산인지는 `gc_analyze.py` 가 맞춰 보여 준다.
 
