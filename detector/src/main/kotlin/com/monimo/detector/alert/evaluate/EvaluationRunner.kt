@@ -115,6 +115,7 @@ class EvaluationScheduler(
     private val runner: EvaluationRunner,
     private val agentDown: AgentDownRunner,
     private val gcTime: GcTimeRunner,
+    private val cpuHeap: CpuHeapRunner,
     private val age: LastSuccessAge,
 ) {
     private val log = LoggerFactory.getLogger(EvaluationScheduler::class.java)
@@ -134,7 +135,11 @@ class EvaluationScheduler(
         if (g.fired + g.resolved + g.queryFailures > 0) {
             log.info("GC_TIME 규칙={} 반영={} 발화={} 해제={} 조회실패={} 덤프={} 덤프실패={}", g.rules, g.applied, g.fired, g.resolved, g.queryFailures, g.dumps, g.dumpFailures)
         }
-        // 세 평가가 PG 를 읽고 끝까지 돌았다. API server 조회 실패는 각 runOnce 가 판정 불가로 삼키므로 여기까지 오고,
+        val c = cpuHeap.runOnce()
+        if (c.fired + c.resolved + c.queryFailures > 0) {
+            log.info("CPU·HEAP 규칙={} 반영={} 발화={} 해제={} 조회실패={} 덤프={} 덤프실패={}", c.rules, c.applied, c.fired, c.resolved, c.queryFailures, c.dumps, c.dumpFailures)
+        }
+        // 네 평가가 PG 를 읽고 끝까지 돌았다. API server 조회 실패는 각 runOnce 가 판정 불가로 삼키므로 여기까지 오고,
         // PG 가 막히거나 실패하면 예외 · 블록으로 여기 오지 못해 게이지가 커진다
         age.markSuccess()
     }

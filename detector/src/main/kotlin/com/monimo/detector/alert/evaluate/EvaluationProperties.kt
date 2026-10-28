@@ -18,7 +18,7 @@ data class EvaluationProperties(
     val agentDown: AgentDown = AgentDown(),
     val threadDump: ThreadDump = ThreadDump(),
 ) {
-    // 파드 단위 경보(GC_TIME, 이후 CPU · HEAP)가 열리는 순간 부르는 자동 스레드 덤프 (API server #164, docs/alert/80-gc-time.md)
+    // 파드 단위 경보(GC_TIME · CPU · HEAP)가 열리는 순간 부르는 자동 스레드 덤프 (API server #164, docs/alert/80-gc-time.md)
     data class ThreadDump(
         // 끄면 경보는 그대로 돌고 덤프만 안 부른다 (실험 · 장애 때)
         val enabled: Boolean = true,

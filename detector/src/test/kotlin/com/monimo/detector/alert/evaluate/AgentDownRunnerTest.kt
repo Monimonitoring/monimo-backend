@@ -44,6 +44,7 @@ class AgentDownRunnerTest(
     runner: AgentDownRunner,
     evaluationRunner: EvaluationRunner,
     gcTimeRunner: GcTimeRunner,
+    cpuHeapRunner: CpuHeapRunner,
     evaluationAge: LastSuccessAge,
     jdbc: JdbcTemplate,
     clock: MutableClock,
@@ -201,10 +202,10 @@ class AgentDownRunnerTest(
         }
     }
 
-    Given("스케줄러 한 주기(서비스 단위 평가 + AGENT_DOWN + GC_TIME)가 끝까지 돈다") {
+    Given("스케줄러 한 주기(서비스 단위 평가 + AGENT_DOWN + GC_TIME + CPU · HEAP)가 끝까지 돈다") {
         Thread.sleep(50)
         val before = evaluationAge.seconds()
-        EvaluationScheduler(evaluationRunner, runner, gcTimeRunner, evaluationAge).tick()
+        EvaluationScheduler(evaluationRunner, runner, gcTimeRunner, cpuHeapRunner, evaluationAge).tick()
 
         Then("낡음 게이지가 0 근처로 돌아간다 (ADR #54)") {
             (evaluationAge.seconds() < before) shouldBe true
