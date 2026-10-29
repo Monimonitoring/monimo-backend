@@ -44,6 +44,7 @@ monimo:
   self-check:
     detector-management-url: ${MONIMO_DETECTOR_MANAGEMENT_URL:http://localhost:18083}
     collector-management-url: ${MONIMO_COLLECTOR_MANAGEMENT_URL:http://localhost:18081}
+    notifier-management-url: ${MONIMO_NOTIFIER_MANAGEMENT_URL:http://localhost:18084}
 
 # 관리 포트 (#162). /actuator/** 전부 여기로 옮겨 밖(인그레스)으로 안 나간다. 번호는 업무 포트 + 10000 (ADR #61)
 management:
