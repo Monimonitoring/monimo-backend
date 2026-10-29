@@ -74,13 +74,15 @@ def main(root):
         first3.setdefault(e, t)
     cnt3 = Counter(e for e, _, _ in c3)
     kill, start, running = int(m["E3_KILL_MS"]), int(m["E3_START_MS"]), int(m["E3_RUNNING_MS"])
-    backlog = [e for e, t in commit3.items() if t < start]
+    # 멈춘 동안(kill ~ start) 커밋된 것만. kill 전에 커밋돼 이미 받은 것은 넣지 않는다
+    backlog = [e for e, t in commit3.items() if kill <= t < start]
     caught = max(first3[e] for e in backlog if e in first3)
+    prod_end = max(commit3.values())
     missing = [e for e in commit3 if e not in first3]
     dup_events = [e for e in commit3 if cnt3[e] > 1]
     lat_before = [first3[e] - t for e, t in commit3.items() if t < kill - 1000 and e in first3]
     say(f"- 넣은 이벤트 {len(commit3)} · 받은 이벤트 {len(first3)} · **누락 {len(missing)}** · 두 번 이상 받은 이벤트 **{len(dup_events)}** (받은 횟수 합 {sum(cnt3.values())})")
-    say(f"- kill → start {start - kill:,}ms · start → 커넥터 RUNNING {running - start:,}ms · start → 멈춘 동안 쌓인 {len(backlog)}건을 다 받음 {caught - start:,}ms")
+    say(f"- kill → start {start - kill:,}ms · start → 커넥터 RUNNING {running - start:,}ms · start → 멈춘 동안 쌓인 {len(backlog)}건을 다 받음 {caught - start:,}ms · 생산 끝 kill 뒤 {(prod_end - kill) / 1000:.0f}초")
     say(f"- 멈추기 전 지연(커밋 → 받음) 중앙값 {statistics.median(lat_before):,.0f}ms · p95 {pct(lat_before, .95):,.0f}ms")
     wal = []
     for l in (root / "e3-wal.tsv").read_text().splitlines():
@@ -92,8 +94,14 @@ def main(root):
         before = [w[1] for w in wal if w[0] < kill]
         say(f"- 슬롯이 붙잡은 WAL(restart_lsn → 현재) : 멈추기 전 최대 {max(before) / 1024:,.0f}KB · 멈춘 동안 최대 **{peak[1] / 2**20:,.1f}MB** "
             f"(kill 뒤 {(peak[0] - kill) / 1000:.0f}초) · pg_wal 폴더 최대 {max(w[2] for w in wal) / 2**20:,.0f}MB")
+        # 증가율은 kill 순간 이미 붙잡혀 있던 양을 빼고 계산한다
+        at_kill = before[-1] if before else 0
+        grown = peak[1] - at_kill
         dur = (peak[0] - kill) / 1000
-        say(f"- kill 부터 최대까지 {dur:.0f}초 동안 초당 약 {peak[1] / dur / 1024:,.0f}KB (초당 20건 = 사건 + 이벤트 INSERT 각 20)")
+        load = (min(prod_end, peak[0]) - kill) / 1000
+        say(f"- kill 순간 {at_kill / 1024:,.0f}KB → 최대 {peak[1] / 2**20:,.1f}MB, 늘어난 양 {grown / 2**20:,.1f}MB : "
+            f"kill 부터 최대까지 {dur:.0f}초로 나누면 초당 약 {grown / dur / 1024:,.0f}KB, 생산이 이어진 {load:.0f}초로 나누면 약 {grown / load / 1024:,.0f}KB "
+            f"(초당 20건 = 사건 + 이벤트 INSERT 각 20)")
 
     say()
     say("## P 전달 지연 (커밋 → 소비자가 받음, ms) · 유휴 DB 비용")
