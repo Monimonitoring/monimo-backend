@@ -19,7 +19,8 @@ data class SelfCheckProperties(
     // 발송 큐(notification_outbox)에 PENDING · IN_FLIGHT 로 이보다 오래 남은 줄이 있으면 Slack 으로 안 나가는 것 (#267).
     // 정상이면 몇 초 안에 SENT 가 되고, 웹훅이 틀리거나 서킷이 열리면 재시도하며 여기 남는다
     val outboxMaxPending: Duration = Duration.ofSeconds(180),
-    // 최근 이 시간 안에 FAILED 가 된 줄 수를 같이 돌려준다 (재시도를 다 쓴 것)
-    val outboxFailedWindow: Duration = Duration.ofMinutes(10),
+    // 최근 이 시간 안에 FAILED 가 된 줄 수를 같이 돌려준다 (재시도를 다 쓴 것). FAILED 는 그 상태로 영원히 남는 끝난 사건이라
+    // 창을 길게 두면 Watchdog 이 매 주기(60초) 같은 줄을 창이 닫힐 때까지 보낸다. 두 주기 반이면 한 주기를 놓쳐도 잡고 두세 번에 그친다
+    val outboxFailedWindow: Duration = Duration.ofSeconds(150),
     val gaugeTimeout: Duration = Duration.ofSeconds(2),
 )

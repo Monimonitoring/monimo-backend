@@ -25,7 +25,7 @@ data class AgeCheck(
 )
 
 // 발송 큐 적체 (#267). oldest_pending_sec 는 PENDING · IN_FLIGHT 중 가장 오래된 줄의 나이, 큐가 비면 null.
-// failed_recent 는 최근 창(기본 10분) 안에 FAILED 가 된 줄 수. ok 는 적체가 max_sec 를 안 넘고 최근 FAILED 가 0 인 것
+// failed_recent 는 최근 창(기본 150초 = 카나리 두 주기 반) 안에 FAILED 가 된 줄 수. ok 는 적체가 max_sec 를 안 넘고 최근 FAILED 가 0 인 것
 data class OutboxCheck(
     val ok: Boolean,
     val oldestPendingSec: Long?,
