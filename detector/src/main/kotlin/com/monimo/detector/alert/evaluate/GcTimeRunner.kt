@@ -22,12 +22,12 @@ import java.util.UUID
 //
 // 값 = 그 1분의 gc_time_ms. 켜진 뒤 총합을 빼는 일 · 재시작 · GC 종류 합산은 조회(#197)가 끝내서 주므로 여기서는 비교만 한다.
 // window_sec 은 쓰지 않는다: P95 처럼 1분 버킷마다 판정하고 "N분 연속" 은 상태머신이 센다 (전역 N)
-// 경보가 열리는 순간 그 파드의 스레드 덤프를 한 번 부른다. 덤프는 기록 트랜잭션 밖이고, 실패해도 경보에 영향이 없다
+// 경보가 열리는 순간 그 파드의 스레드 덤프를 한 번 맡긴다. 덤프는 기록 트랜잭션 밖 · 평가 스레드 밖이고, 실패해도 경보에 영향이 없다
 @Component
 class GcTimeRunner(
     private val jdbc: JdbcTemplate,
     private val client: GcTimeClient,
-    private val dumps: ThreadDumpClient,
+    private val dumps: AutoDumpLauncher,
     private val recorder: EvaluationRecorder,
     private val props: EvaluationProperties,
     private val clock: Clock,
@@ -38,8 +38,10 @@ class GcTimeRunner(
         val fired: Int,
         val resolved: Int,
         val queryFailures: Int,
+        // 덤프 스레드에 맡긴 수. 덤프가 성공했는지는 덤프 스레드의 로그에 남는다
         val dumps: Int,
-        val dumpFailures: Int,
+        // 대기열이 차서 못 맡긴 수
+        val dumpsDropped: Int,
     )
 
     // 감시 대상 파드 한 줄 (agents 표, Ingester 가 등록 · Detector 가 status 갱신)
@@ -65,7 +67,7 @@ class GcTimeRunner(
         var fired = 0
         var resolved = 0
         var dumped = 0
-        var dumpFailures = 0
+        var dumpsDropped = 0
         rules.forEach { (rule, applicationId) ->
             val condition = Condition(rule.operator, rule.threshold, props.maxStaleness)
             // DOWN 파드는 판정하지 않는다: 재시작마다 키가 새로 생겨 끊긴 키가 쌓이고, 그 키들은 영영 NO_DATA 다.
@@ -92,7 +94,7 @@ class GcTimeRunner(
                         when (outcome.transition) {
                             is Transition.Fired -> {
                                 fired++
-                                if (dump(pod)) dumped++ else dumpFailures++
+                                if (dump(pod)) dumped++ else dumpsDropped++
                             }
                             is Transition.Resolved -> resolved++
                             null -> Unit
@@ -101,20 +103,13 @@ class GcTimeRunner(
                 }
             }
         }
-        return Summary(rules.size, applied, fired, resolved, if (buckets == null) 1 else 0, dumped, dumpFailures)
+        return Summary(rules.size, applied, fired, resolved, if (buckets == null) 1 else 0, dumped, dumpsDropped)
     }
 
-    // 사건 · 발송 의도는 이미 커밋됐다. 여기서 무엇이 터져도 경보는 그대로 나간다
+    // 사건 · 발송 의도는 이미 커밋됐다. 덤프는 맡기기만 하므로 여기서 기다리지 않는다
     private fun dump(pod: Pod): Boolean {
         if (!props.threadDump.enabled) return true
-        return try {
-            val result = dumps.requestAuto(pod.uuid)
-            log.info("GC_TIME 발화 → 스레드 덤프 agent={} skipped={} dump={}", pod.agentKey, result.skipped, result.dumpUuid)
-            true
-        } catch (e: Exception) {
-            log.warn("GC_TIME 발화 → 스레드 덤프 실패 agent={} : {}", pod.agentKey, e.message)
-            false
-        }
+        return dumps.launch(GC_TIME, pod.uuid, pod.agentKey)
     }
 
     // 규칙을 건 서비스의 파드. 응답에만 있고 표에 아직 없는 파드(방금 뜸)는 다음 주기에 등록된 뒤 판정한다 —

@@ -15,7 +15,7 @@ CPU · HEAP · GC 는 셋 다 **경보가 열리는 순간 그 파드의 스레�
 
 ## 2. 판정 — GC_TIME 과 같은 것 · 다른 것
 
-같은 것: 규칙은 서비스에 · 사건은 파드마다(`AlertTarget.Agent`), `window_sec` 안 씀(1분 버킷마다), 전역 N=3 · M=2, 조회 실패는 최근 버킷 하나만 QUERY_FAILED, DOWN 파드 · `agents` 에 아직 없는 파드는 판정 안 함, 발화 직후 자동 덤프 한 번(기록 트랜잭션 밖, 실패해도 경보는 나감).
+같은 것: 규칙은 서비스에 · 사건은 파드마다(`AlertTarget.Agent`), `window_sec` 안 씀(1분 버킷마다), 전역 N=3 · M=2, 조회 실패는 최근 버킷 하나만 QUERY_FAILED, DOWN 파드 · `agents` 에 아직 없는 파드는 판정 안 함, 발화 직후 자동 덤프 한 번(기록 트랜잭션 밖 · 평가 스레드 밖(`#248` `AutoDumpLauncher`), 실패해도 경보는 나감).
 
 | 항목 | 정한 것 | 이유 |
 |---|---|---|
@@ -47,6 +47,6 @@ Notifier 는 안 바꿨다. 파드 단위 규칙의 `(파드 …)` 문구는 `#2
 
 ## 4. 확인한 것 · 안 한 것
 
-- 테스트 : `CpuHeapRunnerTest` 9건(실제 PG + 가짜 조회 · 덤프), `HttpCpuHeapClientTest` 3건(계약 · null · 500). Detector 전체 102건 통과
+- 테스트 : `CpuHeapRunnerTest` 9건(실제 PG + 가짜 조회 · 덤프), `HttpCpuHeapClientTest` 3건(계약 · null · 500). Detector 전체 108건 통과(`#248` 과 합친 뒤)
 - **실측 E2E 는 아직이다.** 쇼핑몰 → 수집 → `cpu-heap` → Detector → Slack · 덤프를 한 번 관통시켜야 한다
-- `GcTimeRunner` 와 코드가 거의 같다. 열려 있는 `#249`(덤프를 평가 스레드 밖으로)가 `GcTimeRunner` 를 고치고 있어서, 하나로 합치는 정리는 `#249` 머지 뒤로 미뤘다. `#249` 가 먼저 들어가면 이쪽 `dump()` 도 같은 방식으로 바꾼다
+- `GcTimeRunner` 와 코드가 거의 같다. `#249`(덤프를 평가 스레드 밖으로)를 먼저 합쳐 `dump()` 는 둘 다 `AutoDumpLauncher` 에 맡기게 맞췄다. 두 러너를 하나로 합치는 정리는 따로 한다

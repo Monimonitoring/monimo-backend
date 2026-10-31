@@ -54,7 +54,19 @@ class EvaluationConfig {
         props: EvaluationProperties,
         @Value("\${monimo.internal-token:}") internalToken: String,
         objectMapper: ObjectMapper,
-    ): ThreadDumpClient = HttpThreadDumpClient(props.query.baseUrl, props.threadDump, internalToken, objectMapper)
+    ): ThreadDumpClient {
+        // 한도가 API server 최악보다 짧으면 API server 는 덤프를 저장했는데 여기서는 실패로 남는다 → 기동할 때 막는다
+        val dump = props.threadDump
+        require(dump.requestTimeout > dump.upstreamWorst) {
+            "thread-dump.request-timeout(${dump.requestTimeout})은 API server 최악 upstream-worst(${dump.upstreamWorst}) 보다 길어야 합니다"
+        }
+        return HttpThreadDumpClient(props.query.baseUrl, dump, internalToken, objectMapper)
+    }
+
+    // 발화 순간의 덤프를 평가 스레드 밖에서 부른다. 종료 때 close 로 덤프 스레드를 멈춘다
+    @Bean
+    fun autoDumpLauncher(props: EvaluationProperties, client: ThreadDumpClient) =
+        AutoDumpLauncher(client, AutoDumpLauncher.executor(props.threadDump.threads, props.threadDump.queueCapacity))
 }
 
 // 스케줄러는 따로 켜고 끈다. 테스트는 enabled=false 로 두고 runOnce 를 직접 부른다

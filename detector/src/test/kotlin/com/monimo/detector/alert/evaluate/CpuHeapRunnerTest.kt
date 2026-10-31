@@ -36,6 +36,7 @@ class CpuHeapTestConfig {
     @Bean @Primary fun testClock() = MutableClock(C0)
     @Bean @Primary fun fakeCpuHeap() = FakeCpuHeap()
     @Bean @Primary fun fakeThreadDump() = FakeThreadDump()
+    @Bean @Primary fun directAutoDumpLauncher(dumps: FakeThreadDump) = AutoDumpLauncher(dumps, DirectExecutorService())
 }
 
 // 실제 PG + 가짜 cpu-heap · 가짜 덤프 문. 한 서비스에 CPU · HEAP 규칙을 하나씩 걸고 판정 · 사건은 파드마다 (docs/alert/110-cpu-heap.md). N=3 · M=2
@@ -155,9 +156,10 @@ class CpuHeapRunnerTest(
         When("세 주기를 돌면") {
             val summaries = (5L..7L).map { tickAfter(it) }
 
-            Then("덤프 실패와 상관없이 A 의 HEAP 사건 · 알림은 나간다") {
+            Then("덤프 실패와 상관없이 A 의 HEAP 사건 · 알림은 나간다 (실패는 덤프 스레드 로그에만 남는다)") {
                 summaries.last().fired shouldBe 1
-                summaries.last().dumpFailures shouldBe 1
+                summaries.last().dumps shouldBe 1
+                summaries.last().dumpsDropped shouldBe 0
                 events(heapRule, "ch-a", "FIRING") shouldBe 1
             }
 
