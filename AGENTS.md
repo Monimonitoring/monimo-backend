@@ -162,6 +162,7 @@ CI 는 `build`(테스트 포함) · 이미지 빌드 2개 · `dev-infra`(compose
 - **`#124`** 스레드 덤프 3개 문(요청 · 목록 · 상세). 요청은 `MONIMO_COLLECTOR_URLS` 전부에 팬아웃해 200 한 대만 쓰고 전부 503 이면 1회 재시도. CH `thread_dumps` 는 API server 가 쓴다
 - **`#162`** 헬스체크 probe. 관리 포트 18080(업무 포트 + 10000), 업무 포트에 `/livez` · `/readyz`, readiness 는 저장소를 안 본다(ADR `#58` · `#61`)
 - **`#164`** 자동 덤프 내부 문 `POST /internal/thread-dumps {agent_uuid}`. `#124` 와 같은 팬아웃 · 저장, 파드당 5분 쿨다운(안이면 `skipped`). 호출 쪽은 Detector 몫
+- **`#267`** 자기 점검 문에 Notifier 둘. `#226` 은 PG · Detector · Collector 만 봐서 Notifier 는 죽어도 아는 곳이 없었다(카나리 길에 없고, Self-monitoring 의 AGENT_DOWN 은 보내는 것도 Notifier). `notifier` 는 낡음 게이지 `monimo.notifier.delivery.poll.age`(큐 읽기 멈춤), `outbox` 는 `notification_outbox` 의 PENDING · IN_FLIGHT 중 가장 오래된 줄 나이 + 최근 150초 FAILED 수(Slack 으로 안 나감 : 웹훅 틀림 · 5xx · 서킷 OPEN. FAILED 는 끝난 사건이라 창이 길면 Watchdog 이 매 주기 같은 줄을 보낸다 — 두 주기 반이면 두세 번에 그친다). 둘 중 하나라도 걸리면 ok=false — 웹훅이 틀리면 재시도 5번이 75초 안에 끝나 FAILED 가 되므로 나이만으로는 못 잡는다(로컬 실측). 게이지만으로는 "안 나감" 을 못 잡는다 — 큐 읽기는 성공하니 값이 작다. 표는 알림 파트 것이라 읽기만 한다(SELECT 하나, PG 기한 5초 안). env `MONIMO_NOTIFIER_MANAGEMENT_URL`. Watchdog 쪽은 monimo-watchdog `#24`
 
 ### 조회 파트 (Nova)
 
