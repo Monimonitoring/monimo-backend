@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.Duration
 
-// 발송 워커 한 바퀴: 선점(트랜잭션) → 채널 호출(트랜잭션 밖) → 결과 기록(트랜잭션)
+// 발송 워커 한 바퀴: 선점(트랜잭션) → 채널별 레인에 맡김 → 레인에서 채널 호출(트랜잭션 밖) → 결과 기록(트랜잭션)
 @Component
 class DeliveryWorker(
     private val claimer: OutboxClaimer,
@@ -20,19 +20,26 @@ class DeliveryWorker(
     private val props: DeliveryProperties,
     private val clock: Clock,
     private val pollAge: LastSuccessAge,
+    private val lanes: ChannelLanes,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val senderByType: Map<ChannelType, NotificationSender> = senders.associateBy { it.type }
 
-    // 이번 바퀴에 끝낸 작업 수. 0 이면 할 일이 없었다
+    // 이번 바퀴에 선점해 레인에 맡긴 작업 수. 0 이면 할 일이 없었다(또는 바쁜 레인이 상한이라 쉬었다)
     fun pollOnce(): Int {
-        val claims = claimer.claim()
+        if (!lanes.hasRoom()) return 0
+        val claims = claimer.claim(lanes.busyChannels())
         // 발송 대기 큐를 PG 에서 읽는 데 성공했다 (0건이어도 성공). 막히거나 실패하면 여기 오지 못해 게이지가 커진다
         pollAge.markSuccess()
-        // 그룹(채널, 서비스)마다 한 번 보낸다 (docs/alert/50-grouping.md D17). 너무 크면 maxGroupSize 로 나눈다
-        claims.groupBy { it.groupKey }.values
-            .flatMap { it.chunked(props.maxGroupSize) }
-            .forEach { process(it) }
+        // 채널마다 그 채널의 레인에서 보낸다 (#250). 레인 안에서는 그룹(채널, 서비스)마다 한 번씩 차례로 (docs/alert/50-grouping.md D17).
+        // 선점 순서가 (채널, 서비스, id) 라 groupBy 는 그 순서를 지킨다. 그룹이 너무 크면 maxGroupSize 로 나눈다
+        claims.groupBy { it.alertChannelId }.forEach { (channelId, rows) ->
+            lanes.submit(channelId) {
+                rows.groupBy { it.groupKey }.values
+                    .flatMap { it.chunked(props.maxGroupSize) }
+                    .forEach { process(it) }
+            }
+        }
         return claims.size
     }
 

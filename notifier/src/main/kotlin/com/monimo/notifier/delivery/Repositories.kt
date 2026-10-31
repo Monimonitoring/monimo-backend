@@ -15,6 +15,7 @@ interface OutboxRowRepository : JpaRepository<OutboxRow, Long> {
     //   ready  = 생긴 지 group_wait 가 지난 줄(또는 임대가 끝난 줄)이 하나라도 있는 (채널, 서비스) 그룹
     //   그 그룹의 보낼 수 있는 줄을 늦게 들어온 형제까지 한꺼번에 잡는다. 그룹 상태는 이 줄들 자체라 재시작해도 남는다 (E9)
     //   RESOLVED 는 같은 사건 · 채널의 FIRING 이 아직 끝나지 않았으면 잡지 않는다 (E10: 복구가 발화보다 먼저 가지 않게)
+    //   excluded = 이 인스턴스에서 아직 보내는 중인 채널(ChannelLanes). 그 채널 줄은 레인이 끝난 뒤 다음 선점에서 잡는다 (#250)
     // 그룹이 이어서 나오도록 (채널, 서비스, id) 순으로 정렬한다
     @Query(
         nativeQuery = true,
@@ -28,6 +29,7 @@ interface OutboxRowRepository : JpaRepository<OutboxRow, Long> {
             SELECT o.* FROM notification_outbox o
             JOIN ready r ON r.alert_channel_id = o.alert_channel_id AND r.svc = COALESCE(o.payload->>'service_name', '')
             WHERE ((o.status = 'PENDING' AND o.next_attempt_at <= :now) OR (o.status = 'IN_FLIGHT' AND o.lease_until < :now))
+              AND o.alert_channel_id NOT IN (:excluded)
               AND NOT (o.transition = 'RESOLVED' AND EXISTS (
                   SELECT 1 FROM notification_outbox f
                   WHERE f.alert_event_id = o.alert_event_id AND f.alert_channel_id = o.alert_channel_id
@@ -37,7 +39,13 @@ interface OutboxRowRepository : JpaRepository<OutboxRow, Long> {
             FOR UPDATE OF o SKIP LOCKED
         """,
     )
-    fun lockDue(@Param("now") now: Instant, @Param("groupBefore") groupBefore: Instant, @Param("limit") limit: Int): List<OutboxRow>
+    fun lockDue(
+        @Param("now") now: Instant,
+        @Param("groupBefore") groupBefore: Instant,
+        @Param("limit") limit: Int,
+        // 비어 있으면 IN () 이 문법 오류라 부르는 쪽(OutboxClaimer)이 없는 id 하나를 넣는다
+        @Param("excluded") excluded: Collection<Long>,
+    ): List<OutboxRow>
 
     // 복구 줄의 짝인 발화 줄이 FAILED 로 끝났는지. FAILED 는 "못 보냈다"와 "보냈는지 모른 채(Unknown) 한도에 닿았다"를 함께 담으므로
     // 복구 알림에는 "전달 성공이 확인되지 않았다"고만 적는다 (D18-보강)

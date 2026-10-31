@@ -18,4 +18,6 @@ data class DeliveryProperties(
     // 그룹핑 (docs/alert/50-grouping.md). 같은 채널 · 서비스 알림을 이만큼 기다렸다 한 메시지로. NFR 60초 안에 들도록 10초 (G1)
     val groupWait: Duration = Duration.ofSeconds(10),
     val maxGroupSize: Int = 20,               // 한 메시지에 넣을 최대 건수. 넘치면 다음 메시지로
+    // 동시에 보내는 중인 채널이 이만큼이면 새로 선점하지 않는다 (#250 채널별 레인). 느린 채널이 많아도 스레드 · DB 연결이 끝없이 늘지 않게
+    val maxBusyChannels: Int = 8,
 )
