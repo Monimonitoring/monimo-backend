@@ -1,0 +1,12 @@
+# overhead_gc.sh 가 쇼핑몰 compose 에 얹는 덮어쓰기. order 하나에 GC 로그와 고정 힙을 건다 (붙임 · 뗌 · 덤프 세 변형 공통).
+# 뗌(no-agent.yml)은 entrypoint 를 `java -jar` 로 바꾸지만 JAVA_TOOL_OPTIONS 는 JVM 이 따로 읽으므로 세 변형이 같은 GC 설정을 쓴다.
+# safepoint 태그를 켜야 스레드 덤프의 정지(Safepoint "ThreadDump")가 로그에 남는다.
+# 전송 간격은 건드리지 않는다 (agent.properties 10초) — 쇼핑몰 #36 · #51 측정과 같은 출발선
+services:
+  order:
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseG1GC -Xms${OH_HEAP_MB:-256}m -Xmx${OH_HEAP_MB:-256}m
+        -Xlog:gc*,safepoint:file=/gclog/gc-%t.log:time,uptime,level,tags
+    volumes:
+      - ${OH_GC_DIR:?overhead_gc.sh 로 띄운다}:/gclog
