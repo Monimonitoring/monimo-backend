@@ -43,6 +43,13 @@ class EvaluationConfig {
     ): GcTimeClient = HttpGcTimeClient(props.query, internalToken, objectMapper)
 
     @Bean
+    fun cpuHeapClient(
+        props: EvaluationProperties,
+        @Value("\${monimo.internal-token:}") internalToken: String,
+        objectMapper: ObjectMapper,
+    ): CpuHeapClient = HttpCpuHeapClient(props.query, internalToken, objectMapper)
+
+    @Bean
     fun threadDumpClient(
         props: EvaluationProperties,
         @Value("\${monimo.internal-token:}") internalToken: String,
@@ -68,6 +75,11 @@ class EvaluationConfig {
 @ConditionalOnProperty(prefix = "monimo.alert.schedule", name = ["enabled"], havingValue = "true", matchIfMissing = true)
 class EvaluationSchedulingConfig {
     @Bean
-    fun evaluationScheduler(runner: EvaluationRunner, agentDown: AgentDownRunner, gcTime: GcTimeRunner, age: LastSuccessAge) =
-        EvaluationScheduler(runner, agentDown, gcTime, age)
+    fun evaluationScheduler(
+        runner: EvaluationRunner,
+        agentDown: AgentDownRunner,
+        gcTime: GcTimeRunner,
+        cpuHeap: CpuHeapRunner,
+        age: LastSuccessAge,
+    ) = EvaluationScheduler(runner, agentDown, gcTime, cpuHeap, age)
 }
