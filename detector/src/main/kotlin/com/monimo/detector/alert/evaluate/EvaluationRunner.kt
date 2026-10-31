@@ -132,7 +132,7 @@ class EvaluationScheduler(
         }
         val g = gcTime.runOnce()
         if (g.fired + g.resolved + g.queryFailures > 0) {
-            log.info("GC_TIME 규칙={} 반영={} 발화={} 해제={} 조회실패={} 덤프={} 덤프실패={}", g.rules, g.applied, g.fired, g.resolved, g.queryFailures, g.dumps, g.dumpFailures)
+            log.info("GC_TIME 규칙={} 반영={} 발화={} 해제={} 조회실패={} 덤프맡김={} 덤프건너뜀={}", g.rules, g.applied, g.fired, g.resolved, g.queryFailures, g.dumps, g.dumpsDropped)
         }
         // 세 평가가 PG 를 읽고 끝까지 돌았다. API server 조회 실패는 각 runOnce 가 판정 불가로 삼키므로 여기까지 오고,
         // PG 가 막히거나 실패하면 예외 · 블록으로 여기 오지 못해 게이지가 커진다
