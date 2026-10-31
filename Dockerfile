@@ -64,10 +64,23 @@ ENV OTEL_SERVICE_NAME=monimo-ingester \
 # 8082 업무 HTTP(probe /livez · /readyz 포함) · 18082 관리(/actuator/**, 업무 포트 + 10000)
 EXPOSE 8082 18082
 
-# API server
+# API server. 겹친 CLIENT 스팬을 하나로 접는다 (#259 문제 4) :
+# ClickHouse 는 8123 에서 HTTP 로 말하고 clickhouse-jdbc 는 clickhouse-http-client 를 거쳐 httpclient5 를 쓴다.
+# 둘 다 계측 모듈이 있어서 조회 한 번에 CLIENT 스팬이 둘 생긴다 : 부모 "SELECT monimo"(db.system=clickhouse → DB) ·
+# 자식 "POST"(db.* 없음 → EXTERNAL). Service map 이 같은 호출을 두 번 세고 가짜 EXTERNAL 노드까지 만든다
+# (실측 2026-10-28 : POST 110,816건 = ClickHouse 쪽 DB 스팬 전부의 합 108,368 + 1,171 + 1,171 + 106 과 정확히 같다).
+#
+# span-kind 는 겉 스팬과 같은 종류의 안쪽 스팬을 만들지 않는다. DB 스팬 안의 HTTP 스팬이 사라진다.
+# 기본값 semconv 는 종류를 더 잘게(DB_CLIENT · HTTP_CLIENT) 보기 때문에 둘을 다른 것으로 치고 둘 다 남긴다.
+# 겉에 있는 CLIENT 는 그대로 남으므로 api-server 가 진짜로 부르는 Collector · 알림 · Detector 간선은 안 사라진다
+# (그래서 그 계측 모듈을 끄는 안은 버렸다 : 그 간선까지 같이 사라진다).
+# 전용 포트(9000)로 바꾸는 안도 버렸다 : clickhouse-java 0.10.0 은 HTTP 만 지원한다(실측, PR 본문).
+# 잃는 것 : ClickHouse 호출의 HTTP 응답 코드와 url.full. 걸린 시간은 부모 DB 스팬이 그대로 갖고 있다.
+# 되돌림 : 다른 자리에서 안쪽 CLIENT 스팬이 필요해지면 이 줄을 지우고 집계에서 거르는 쪽으로 간다
 FROM runtime AS api-server
 COPY --from=build /workspace/api-server/build/libs/*.jar app.jar
-ENV OTEL_SERVICE_NAME=monimo-api-server
+ENV OTEL_SERVICE_NAME=monimo-api-server \
+    OTEL_INSTRUMENTATION_EXPERIMENTAL_SPAN_SUPPRESSION_STRATEGY=span-kind
 # 8080 업무 HTTP(probe /livez · /readyz 포함) · 18080 관리
 EXPOSE 8080 18080
 

@@ -33,7 +33,7 @@ class MetricService(
         monitoredServices.require(serviceName)
 
         val rows = metricRepository.findPoints(serviceName, metricName, agentKey, range, step, rollup)
-        val attributes = metricRepository.findAttributes(serviceName, metricName, rows.map { it.seriesKey }.toSet())
+        val attributes = metricRepository.findAttributes(serviceName, metricName, rows.map { it.seriesKey }.toSet(), range, rollup)
         // 조회가 파드 → 속성 조합 → 시각 순으로 줘서 groupBy 가 그 순서를 지킨다
         val grouped = rows.groupBy { it.agentKey to it.seriesKey }
         val prev = if (grouped.values.any { line -> line.any { it.counter } }) {
