@@ -396,6 +396,14 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-monimo}
       # 평가가 읽는 API server 내부 문
       MONIMO_API_SERVER_URL: http://api-server:8080
+      # Service map 에서 detector → api-server 를 "우리 서비스" 로 잇는다 (#259 문제 3). 에이전트는 상대 서비스 이름(peer.service)을
+      # 비워 보내고, Ingester 의 PeerServiceResolver 는 주소의 첫 글자가 등록된 서비스 이름과 정확히 같을 때만 채운다 :
+      # 부르는 주소는 api-server 인데 등록된 이름은 monimo-api-server 라 글자가 달라 못 맞추고 EXTERNAL 로 따로 그려졌다
+      # (실측 2026-10-28 : monimo-detector → api-server:8080 이 EXTERNAL 31,458건).
+      # 호스트 이름이 환경마다 달라 agent.properties 가 아니라 여기 둔다 (쇼핑몰 docker-compose.dev.yml 과 같은 방법).
+      # 컨테이너 이름이나 서비스 이름을 바꾸는 안은 버렸다 : 주소를 쓰는 곳과 쌓인 기록이 전부 바뀐다.
+      # PeerServiceResolver 를 느슨하게 고치는 안도 버렸다 : 그 코드가 "부분 일치 · 별칭은 안 한다" 를 일부러 거부한다
+      OTEL_INSTRUMENTATION_COMMON_PEER_SERVICE_MAPPING: "api-server=monimo-api-server"
       MONIMO_INTERNAL_TOKEN: ${MONIMO_INTERNAL_TOKEN:-local-internal-token}
       # 에이전트 이름표(service.instance.id, #30)
       OTEL_RESOURCE_ATTRIBUTES: "service.instance.id=monimo-detector-local-1,deployment.environment.name=local"

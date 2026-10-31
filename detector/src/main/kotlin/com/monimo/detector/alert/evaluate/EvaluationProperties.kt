@@ -23,9 +23,17 @@ data class EvaluationProperties(
         // 끄면 경보는 그대로 돌고 덤프만 안 부른다 (실험 · 장애 때)
         val enabled: Boolean = true,
         val connectTimeout: Duration = Duration.ofSeconds(1),
-        // API server가 Collector 쪽 덤프를 5초까지 기다리므로(ThreadDumpService.DEFAULT_TIMEOUT_MS) 그보다 조금 길게.
-        // 여기서 끊어도 API server는 끝까지 떠서 저장한다. 발화 순간에만 부르니 주기가 이만큼 밀리는 일은 드물다
-        val requestTimeout: Duration = Duration.ofSeconds(8),
+        // API server 가 덤프를 끝내는 데 걸릴 수 있는 최악. Collector 호출 한 번이 덤프 5초(ThreadDumpService.DEFAULT_TIMEOUT_MS)
+        // + 여유 2초(monimo.collector.response-margin) = 7초이고, 답이 없으면 한 번 더 부른다 → 14초.
+        // API server 상수를 옮겨 적은 값이라 그쪽이 바뀌면 같이 고친다 (AGENTS §6)
+        val upstreamWorst: Duration = Duration.ofSeconds(14),
+        // upstreamWorst 보다 길어야 한다(기동 때 검사). 짧으면 API server 는 저장했는데 여기서는 실패로 남는다.
+        // 덤프 스레드에서 부르므로 길어도 평가 주기는 밀리지 않는다 (AutoDumpLauncher)
+        val requestTimeout: Duration = Duration.ofSeconds(16),
+        // 덤프 스레드 수. 1 이면 같은 때 발화한 파드들의 덤프가 차례로 떠서 뒤 파드는 그만큼 늦게 뜬다
+        val threads: Int = 1,
+        // 덤프 스레드가 바쁠 때 기다리는 칸. 차면 그 덤프만 건너뛴다
+        val queueCapacity: Int = 16,
     )
 
     // AGENT_DOWN (FN-29 · docs/alert/40-agent-down.md)

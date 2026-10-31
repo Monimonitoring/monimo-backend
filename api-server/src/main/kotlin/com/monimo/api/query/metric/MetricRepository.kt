@@ -87,9 +87,34 @@ class MetricRepository(
         }.toMap()
     }
 
-    // 롤업 표에는 attributes 가 없고 series_hash 만 있다. 속성은 원본 표에서 같은 해시로 찾는다.
+    // 줄마다 Attribute. 롤업은 #193 부터 attributes 를 들고 있어 거기서 먼저 찾고, 빈 줄(#193 전에 쌓인 것)만 원본에서 찾는다
+    fun findAttributes(serviceName: String, metricName: String, seriesKeys: Set<String>, range: TimeRange, rollup: Rollup): Map<String, Map<String, String>> {
+        if (seriesKeys.isEmpty()) return emptyMap()
+        val fromRollup = if (rollup == Rollup.RAW) emptyMap() else findRollupAttributes(serviceName, metricName, seriesKeys, range, sourceOf(rollup))
+        return fromRollup + findRawAttributes(serviceName, metricName, seriesKeys - fromRollup.keys)
+    }
+
+    private fun findRollupAttributes(serviceName: String, metricName: String, seriesKeys: Set<String>, range: TimeRange, source: Source): Map<String, Map<String, String>> {
+        val sql = """
+            SELECT toString(series_hash) AS series_key, toJSONString(any(attributes)) AS attributes_json
+            FROM ${source.table}
+            WHERE service_name = :serviceName AND metric_name = :metricName
+              AND ${source.timeColumn} >= toDateTime(:fromSec) AND ${source.timeColumn} < toDateTime(:toSec)
+              AND toString(series_hash) IN (:seriesKeys) AND notEmpty(mapKeys(attributes))
+            GROUP BY series_hash
+        """.trimIndent()
+        val params = mapOf(
+            "serviceName" to serviceName,
+            "metricName" to metricName,
+            "seriesKeys" to seriesKeys,
+            "fromSec" to range.from.epochSecond,
+            "toSec" to range.to.epochSecond,
+        )
+        return queryAttributes(sql, params)
+    }
+
     // 원본 보관 기간이 지난 줄은 여기 없어 속성이 비게 된다
-    fun findAttributes(serviceName: String, metricName: String, seriesKeys: Set<String>): Map<String, Map<String, String>> {
+    private fun findRawAttributes(serviceName: String, metricName: String, seriesKeys: Set<String>): Map<String, Map<String, String>> {
         if (seriesKeys.isEmpty()) return emptyMap()
         val sql = """
             SELECT toString(series_hash) AS series_key, toJSONString(any(attributes)) AS attributes_json
@@ -98,11 +123,14 @@ class MetricRepository(
             GROUP BY series_hash
         """.trimIndent()
         val params = mapOf("serviceName" to serviceName, "metricName" to metricName, "seriesKeys" to seriesKeys)
-        return jdbc.query(sql, params) { rs, _ ->
+        return queryAttributes(sql, params)
+    }
+
+    private fun queryAttributes(sql: String, params: Map<String, Any>): Map<String, Map<String, String>> =
+        jdbc.query(sql, params) { rs, _ ->
             rs.getString("series_key") to
                 mapper.readTree(rs.getString("attributes_json")).properties().associate { (key, value) -> key to value.asText() }
         }.toMap()
-    }
 
     private fun sourceOf(rollup: Rollup): Source = when (rollup) {
         Rollup.RAW -> Source("metrics_raw", "ts", "avg(value)", "min(value)", "max(value)", "argMax(value, ts)")

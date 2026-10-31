@@ -37,7 +37,8 @@ GC 가 도는 동안 JVM 은 앱 스레드를 멈추는 구간이 있다(stop-th
 - 발화(`Transition.Fired`) 직후 그 파드의 `agent_uuid` 로 **한 번** 부른다. 사건 · 발송 의도는 이미 커밋된 뒤라 **기록 트랜잭션 밖**이다
 - 실패(503 · 504 · 시간 초과)와 쿨다운(200 + `skipped`, 파드당 5분)은 로그만 남긴다. 경보는 그대로 나간다
 - 재시도하지 않는다. 덤프는 "경보가 열린 그 순간"의 모습이라 늦게 다시 뜨면 의미가 달라진다
-- 시간 한도 8초 : API server가 Collector 쪽 덤프를 5초까지 기다린다. 여기서 끊어도 API server는 끝까지 떠서 저장한다
+- **평가 스레드 밖에서 뜬다**(`#248`) : 평가는 덤프 스레드(`AutoDumpLauncher`, 기본 1개 · 대기열 16칸)에 맡기기만 하고 바로 다음 판정으로 간다. 처음(`#223`)에는 평가 스레드에서 동기로 불러, 한도만큼 15초 주기가 밀리고 같은 주기에 발화한 파드가 여럿이면 차례로 더해졌다. 대기열이 차면 그 덤프만 건너뛴다(경보는 그대로). 종료할 때 대기 중인 덤프는 버린다
+- 시간 한도 16초(`#248`, 처음 8초) : API server 자동 덤프의 최악이 14초다 — Collector 호출 한 번이 덤프 5초(`ThreadDumpService.DEFAULT_TIMEOUT_MS`) + 여유 2초(`monimo.collector.response-margin`) = 7초이고, 답이 없으면 한 번 더 부른다. 8초에서 끊으면 API server 는 끝까지 떠서 저장하는데 Detector 로그에는 실패로 남았다. 이제 `request-timeout > upstream-worst(14초)` 를 **기동할 때 검사**한다. 14초는 API server 상수를 옮겨 적은 값이라 그쪽이 바뀌면 같이 고친다
 - `monimo.alert.schedule.thread-dump.enabled=false` 로 덤프만 끌 수 있다
 
 ## 4. 알림 문구
