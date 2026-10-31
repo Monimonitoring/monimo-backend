@@ -15,6 +15,8 @@ import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.AbstractExecutorService
+import java.util.concurrent.TimeUnit
 
 private val G0: Instant = Instant.parse("2026-10-16T10:00:00Z")
 
@@ -42,11 +44,23 @@ class FakeThreadDump : ThreadDumpClient {
     }
 }
 
+// 맡긴 일을 부른 스레드에서 바로 돌린다. 덤프를 따로 띄우는 것은 AutoDumpLauncherTest 가 보고, 여기는 "언제 맡기나" 만 본다
+class DirectExecutorService : AbstractExecutorService() {
+    @Volatile private var shut = false
+    override fun execute(command: Runnable) = command.run()
+    override fun shutdown() { shut = true }
+    override fun shutdownNow(): List<Runnable> { shut = true; return emptyList() }
+    override fun isShutdown() = shut
+    override fun isTerminated() = shut
+    override fun awaitTermination(timeout: Long, unit: TimeUnit) = true
+}
+
 @TestConfiguration(proxyBeanMethods = false)
 class GcTimeTestConfig {
     @Bean @Primary fun testClock() = MutableClock(G0)
     @Bean @Primary fun fakeGcTime() = FakeGcTime()
     @Bean @Primary fun fakeThreadDump() = FakeThreadDump()
+    @Bean @Primary fun directAutoDumpLauncher(dumps: FakeThreadDump) = AutoDumpLauncher(dumps, DirectExecutorService())
 }
 
 // 실제 PG + 가짜 gc-time · 가짜 덤프 문. 규칙은 서비스에 걸고 판정 · 사건은 파드마다 (docs/alert/80-gc-time.md). N=3 · M=2
@@ -169,9 +183,11 @@ class GcTimeRunnerTest(
         When("세 주기를 돌면") {
             val summaries = (5L..7L).map { tickAfter(it) }
 
-            Then("덤프 실패와 상관없이 B 의 사건 · 알림은 나간다") {
+            Then("덤프 실패와 상관없이 B 의 사건 · 알림은 나간다 (실패는 덤프 스레드 로그에만 남는다)") {
                 summaries.last().fired shouldBe 1
-                summaries.last().dumpFailures shouldBe 1
+                summaries.last().dumps shouldBe 1
+                summaries.last().dumpsDropped shouldBe 0
+                dumps.calls.last() shouldBe podB
                 events("gc-b", "FIRING") shouldBe 1
                 lastFiringPayload("gc-b") shouldContain "\"agent_key\": \"gc-b\""
             }
