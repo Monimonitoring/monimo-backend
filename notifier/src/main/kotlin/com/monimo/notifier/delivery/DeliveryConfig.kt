@@ -41,12 +41,14 @@ class DeliveryConfig {
     // 채널별 발송 레인 (#250). 스레드는 바쁜 채널 수만큼만 생기고(최대 max-busy-channels + 한 선점의 채널 수) 쉬면 60초 뒤 사라진다.
     // 종료 때는 진행 중인 호출(최대 connect + request timeout)을 마저 끝내고 기록하게 기다린다
     @Bean(destroyMethod = "close")
-    fun channelLanes(props: DeliveryProperties, http: DeliveryHttpProperties): ChannelLanes {
+    fun channelLanes(props: DeliveryProperties, http: DeliveryHttpProperties): DeliveryLanes {
+        val shutdownWait = http.connectTimeout.plus(http.requestTimeout).plusSeconds(1)
+        if (props.laneMode == LaneMode.COROUTINE) return CoroutineLanes(props.maxBusyChannels, shutdownWait, props.laneThreads)
         val executor = ThreadPoolExecutor(
             0, Int.MAX_VALUE, 60L, TimeUnit.SECONDS, SynchronousQueue(),
             { r -> Thread(r, "delivery-lane-${laneThreads.incrementAndGet()}") },
         )
-        return ChannelLanes(executor, props.maxBusyChannels, http.connectTimeout.plus(http.requestTimeout).plusSeconds(1))
+        return ChannelLanes(executor, props.maxBusyChannels, shutdownWait)
     }
 
     @Bean

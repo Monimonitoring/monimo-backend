@@ -1,11 +1,26 @@
 package com.monimo.notifier.delivery
 
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
+
+// 발송 레인이 지켜야 하는 약속. 스레드 레인(ChannelLanes)과 코루틴 레인(CoroutineLanes)이 같은 약속을 지킨다
+// (docs/alert/120-coroutine-lanes.md 에서 둘을 같은 입력으로 비교했다)
+interface DeliveryLanes : AutoCloseable {
+    // 레인 안에서 채널을 부를 때 코루틴답게(suspend) 부를지. 스레드 레인은 blocking send 를 그대로 부른다
+    val suspendsOnSend: Boolean
+
+    fun busyChannels(): Set<Long>
+
+    fun hasRoom(): Boolean
+
+    // 그 채널의 레인에 맡긴다. 맡긴 일은 끝날 때까지 그 채널을 바쁨으로 둔다
+    fun submit(channelId: Long, work: suspend () -> Unit)
+}
 
 // 채널별 발송 레인 (bulkhead, #250 · docs/alert/70-slow-channel.md).
 // 예전에는 스레드 하나가 선점한 그룹을 차례로 보내서, 느리게 성공하는 채널 하나가 뒤의 다른 채널 알림까지 밀었다(헤드 오브 라인).
@@ -19,24 +34,26 @@ class ChannelLanes(
     private val maxBusy: Int,
     // 종료할 때 진행 중인 발송을 기다리는 시간. 넘기면 그 줄은 IN_FLIGHT 로 남고 임대가 끝나면 다른 워커가 회수한다
     private val shutdownWait: Duration,
-) : AutoCloseable {
+) : DeliveryLanes {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     // 채널 → 맡은 일 수. 보통 0 이거나 1 이다(바쁜 채널은 선점에서 빠진다). 같은 인스턴스에서 폴러가 여럿이면 잠깐 2 가 될 수 있다
     private val busy = ConcurrentHashMap<Long, Int>()
 
-    fun busyChannels(): Set<Long> = busy.keys.toSet()
+    override val suspendsOnSend = false
 
-    fun hasRoom(): Boolean = busy.size < maxBusy
+    override fun busyChannels(): Set<Long> = busy.keys.toSet()
 
-    // 그 채널의 레인에 맡긴다. 맡긴 일은 끝날 때까지 그 채널을 바쁨으로 둔다
-    fun submit(channelId: Long, work: () -> Unit) {
+    override fun hasRoom(): Boolean = busy.size < maxBusy
+
+    // 레인 스레드 하나가 맡은 일을 처음부터 끝까지 돈다. 일 안에 suspend 지점이 없으므로(blocking send) runBlocking 은 바로 지나간다
+    override fun submit(channelId: Long, work: suspend () -> Unit) {
         busy.merge(channelId, 1, Int::plus)
         try {
             executor.execute {
                 try {
-                    work()
+                    runBlocking { work() }
                 } catch (e: Exception) {
                     // 끝내지 못한 줄은 IN_FLIGHT 로 남고 임대가 끝나면 회수된다. 레인은 계속 돈다
                     log.error("채널 {} 발송 실패", channelId, e)
