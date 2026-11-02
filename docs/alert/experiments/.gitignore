@@ -1,0 +1,8 @@
+# 스레드 레인 대 코루틴 레인(120-coroutine-lanes.md) : 스레드 덤프 · 전체 로그는 커서(173MB) 로컬에만 둔다.
+# 요약은 coro-lanes-*/summary.md · coro-lanes-diag/stacks.txt, 회차별 작은 원본(meta · proc · slack · outbox · nmt · pg-slow)은 올린다
+coro-lanes-*/**/threads.txt
+coro-lanes-*/**/diag-*.txt
+coro-lanes-*/**/notifier.log
+coro-lanes-*/slack.log
+# 회차별 원본은 폴더마다 raw.tar.gz 하나로 올린다 (풀기: tar xzf raw.tar.gz). 풀린 폴더는 올리지 않는다
+coro-lanes-*/*/
