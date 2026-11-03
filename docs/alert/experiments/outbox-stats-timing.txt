@@ -1,0 +1,123 @@
+##### 시도 1
+== 1) 빈 표일 때 찍은 통계 + PENDING 3000
+          ->  Nested Loop (actual time=0.516..0.517 rows=0 loops=1)
+                      ->  Bitmap Index Scan on notification_outbox_due (actual time=0.046..0.046 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.536..0.536 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.702 ms
+== 2) PENDING 3000 일 때 찍은 통계
+          ->  Nested Loop (actual time=0.382..0.382 rows=0 loops=1)
+                ->  Seq Scan on notification_outbox r (actual time=0.381..0.382 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.411..0.411 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.546 ms
+pg_stats status = {PENDING} {1}
+== 3) 전부 SENT 일 때 찍은 통계 → TRUNCATE → PENDING 3000 (실험 회차와 같은 순서)
+          ->  Nested Loop (actual time=1055.330..1055.330 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox f (actual time=0.013..1.131 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.351..0.351 rows=0 loops=3000)
+  ->  Nested Loop (actual time=1055.386..1055.392 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 1055.503 ms
+pg_stats status = {SENT} {1}
+== 4) SENT 이력 3000 상태에서 찍은 통계 + PENDING 3000 추가 (운영 모양)
+          ->  Nested Loop (actual time=1059.673..1059.674 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox f (actual time=0.019..1.167 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.353..0.353 rows=0 loops=3000)
+  ->  Nested Loop (actual time=1059.702..1059.703 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 1059.809 ms
+pg_stats status = {SENT} {1}
+== 5) 4) 뒤 ANALYZE
+          ->  Nested Loop (actual time=0.526..0.526 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.526..0.526 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.547..0.547 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.639 ms
+pg_stats status = {PENDING,SENT} {0.5,0.5}
+postgres (PostgreSQL) 17.11
+##### 시도 2
+== 1) 빈 표일 때 찍은 통계 + PENDING 3000
+          ->  Nested Loop (actual time=0.590..0.590 rows=0 loops=1)
+                      ->  Bitmap Index Scan on notification_outbox_due (actual time=0.064..0.064 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.623..0.624 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.838 ms
+== 2) PENDING 3000 일 때 찍은 통계
+          ->  Nested Loop (actual time=0.453..0.453 rows=0 loops=1)
+                ->  Seq Scan on notification_outbox r (actual time=0.453..0.453 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.481..0.482 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.594 ms
+pg_stats status = {PENDING} {1}
+== 3) 전부 SENT 일 때 찍은 통계 → TRUNCATE → PENDING 3000 (실험 회차와 같은 순서)
+          ->  Nested Loop (actual time=1056.845..1056.845 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox f (actual time=0.015..1.234 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.352..0.352 rows=0 loops=3000)
+  ->  Nested Loop (actual time=1056.876..1056.877 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 1056.994 ms
+pg_stats status = {SENT} {1}
+== 4) SENT 이력 3000 상태에서 찍은 통계 + PENDING 3000 추가 (운영 모양)
+          ->  Nested Loop (actual time=1062.900..1062.901 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox f (actual time=0.014..1.315 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.354..0.354 rows=0 loops=3000)
+  ->  Nested Loop (actual time=1062.925..1062.926 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 1063.025 ms
+pg_stats status = {SENT} {1}
+== 5) 4) 뒤 ANALYZE
+          ->  Nested Loop (actual time=0.449..0.449 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.449..0.449 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.471..0.471 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.561 ms
+pg_stats status = {PENDING,SENT} {0.5,0.5}
+postgres (PostgreSQL) 17.11
+##### 시도 3
+== 1) 빈 표일 때 찍은 통계 + PENDING 3000
+          ->  Nested Loop (actual time=0.553..0.554 rows=0 loops=1)
+                      ->  Bitmap Index Scan on notification_outbox_due (actual time=0.066..0.066 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.575..0.576 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.711 ms
+== 2) PENDING 3000 일 때 찍은 통계
+          ->  Nested Loop (actual time=0.339..0.339 rows=0 loops=1)
+                ->  Seq Scan on notification_outbox r (actual time=0.339..0.339 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.360..0.361 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.451 ms
+pg_stats status = {PENDING} {1}
+== 3) 전부 SENT 일 때 찍은 통계 → TRUNCATE → PENDING 3000 (실험 회차와 같은 순서)
+          ->  Nested Loop (actual time=1061.309..1061.309 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox f (actual time=0.015..1.084 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.353..0.353 rows=0 loops=3000)
+  ->  Nested Loop (actual time=1061.340..1061.342 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 1061.447 ms
+pg_stats status = {SENT} {1}
+== 4) SENT 이력 3000 상태에서 찍은 통계 + PENDING 3000 추가 (운영 모양)
+          ->  Nested Loop (actual time=1054.004..1054.004 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox f (actual time=0.015..1.156 rows=3000 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.351..0.351 rows=0 loops=3000)
+  ->  Nested Loop (actual time=1054.032..1054.033 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 1054.144 ms
+pg_stats status = {SENT} {1}
+== 5) 4) 뒤 ANALYZE
+          ->  Nested Loop (actual time=0.430..0.430 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.429..0.430 rows=0 loops=1)
+                ->  Index Scan using notification_outbox_alert_event_id_transition_alert_channel_key on notification_outbox f (never executed)
+  ->  Nested Loop (actual time=0.450..0.451 rows=0 loops=1)
+        ->  Index Scan using notification_outbox_pkey on notification_outbox (never executed)
+Execution Time: 0.540 ms
+pg_stats status = {PENDING,SENT} {0.5,0.5}
+postgres (PostgreSQL) 17.11

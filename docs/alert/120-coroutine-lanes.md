@@ -6,7 +6,7 @@
 ## 1. 문제
 
 `#250` 레인은 **바쁜 채널 하나 = 레인 스레드 하나**다. 스레드가 끝없이 늘지 않게 바쁜 채널 상한(`max-busy-channels`)을 8 로 묶었다.
-그 결과 느린 채널이 8개를 넘으면 나머지 채널은 레인이 빌 때까지 선점되지 못한다. 느린 채널(4초 응답) 100개 뒤에 줄 선 정상 채널 알림은 **51초**, 1000개면 **504초** 뒤에 나갔다(§4, 계산값 100 ÷ 8 × 4초 = 50초 · 1000 ÷ 8 × 4초 = 500초와 맞는다).
+그 결과 느린 채널이 8개를 넘으면 나머지 채널은 레인이 빌 때까지 선점되지 못한다. 느린 채널(4초 응답) 100개 뒤에 줄 선 정상 채널 알림은 **51초**, 1000개면 **504초** 뒤에 나갔다(§4). 가짜 Slack 수신 시각을 보면 요청은 **10건씩 약 5초 간격**으로 나간다(`T8-n100-r2/slack.tsv`). `pollOnce()` 는 바쁜 채널이 상한보다 적은지만 보고 한 번에 batch-size(10)줄을 선점하므로 바쁜 채널이 10개가 되고, 10 ≥ 8 이라 다음 선점을 쉬다가 4초 뒤 10개가 함께 끝나면 다음 1초 주기에 다시 10줄을 잡는다. 100 ÷ 10 × 약 5초 ≈ 50초 · 1000 ÷ 10 × 약 5초 ≈ 500초.
 
 상한을 올리면 지연은 사라지지만 기다리는 채널 수만큼 OS 스레드가 생긴다. 이 비용을 코루틴이 얼마나 줄이는지가 질문이다.
 
@@ -59,24 +59,26 @@ N=1000 · 3000 행은 `ANALYZE` 회차(`experiments/coro-lanes-analyzed/summary.
 
 ## 5. N=3000 의 지연 편차는 레인이 아니라 PostgreSQL 통계 시점 때문이었다
 
-`ANALYZE` 없이 돌린 첫 묶음에서 N=3000 은 CU 가 정상 채널 21.3초(세 회차 8.8 · 33.8 · 19.4)로 TU 9.5초보다 느렸다. 원인을 좇았다.
+`ANALYZE` 없이 돌린 첫 묶음에서 N=3000 은 CU 가 정상 채널 중앙 19.4초(세 회차 8.8 · 33.8 · 19.4)로 TU 11.0초(8.0 · 11.0 · 12.2)보다 느렸다(`coro-lanes-results/summary.md`). 원인을 좇았다.
 
 1. 느린 채널 요청이 **나간 시각**부터 늦었다(마지막 요청 CU 16 ~ 41초, TU 8 ~ 12초). 응답 대기가 아니라 선점이 느렸다.
 2. 0.5초 간격 스레드 덤프 60장(`coro-lanes-diag/stacks.txt`): CU 의 스케줄러 스레드는 120 표본 중 **26 번 PG 응답 대기**, TU 는 3 번. 레인 스레드는 둘 다 대부분 `commit` 에서 기다렸다.
 3. PG 느린 쿼리 로그(`log_min_duration_statement` 50ms): CU 회차에서 `claim()` 의 첫 쿼리 `cancelResolvedBeforeSend` 가 20 번, **중앙 1,083ms · 최대 3,171ms**. TU 회차에서는 한 번도 50ms 를 넘지 않았다.
-4. 같은 3000 줄 상태에서 `EXPLAIN ANALYZE`: 통계가 낡으면 outbox 자기 조인을 **중첩 루프**(바깥 3000 줄 × 안쪽 인덱스 스캔이 매번 3000 줄을 걸러 냄)로 풀어 **1,052ms**, `ANALYZE` 뒤에는 고유 인덱스(`alert_event_id, transition, alert_channel_id`)로 **0.24ms**.
+4. 원인은 **통계가 찍힌 시점의 상태**였다. 실험 스크립트는 회차마다 outbox 를 `TRUNCATE` 로 비우지만 `TRUNCATE` 는 통계(`pg_stats`)를 지우지 않아, 직전 회차가 끝난 상태(전부 SENT)의 통계가 남을 수 있다. 따로 띄운 PG 17.11(autovacuum 끔)에 같은 표 · 인덱스를 만들고 PENDING 3000줄에 대해 통계 시점만 바꿔 실제 쿼리를 `EXPLAIN ANALYZE` 했다(2026-11-04, 3회 중앙값, 도구 `experiments/outbox_stats_timing.sh`, 결과 `experiments/outbox-stats-timing.txt`).
 
-5. 원인은 "빈 표"가 아니라 **통계가 찍힌 시점의 상태**였다. 따로 띄운 PG 에 같은 표를 만들고 통계 시점만 바꿔 3000줄 PENDING 에서 같은 쿼리를 쟀다(2026-11-03, autovacuum 끔).
+| 통계를 찍은 상태 | 그때 `pg_stats` status | `cancelResolvedBeforeSend` |
+|---|---|---|
+| 빈 표 | (없음) | 0.71ms |
+| PENDING 3000줄 | `{PENDING}` 1.0 | 0.55ms |
+| **전부 SENT → `TRUNCATE` → PENDING 3000줄** (실험 회차와 같은 순서) | `{SENT}` 1.0 | **1,057ms** |
+| **SENT 이력 3000줄이 남은 채 → PENDING 3000줄 추가** (운영과 같은 모양) | `{SENT}` 1.0 | **1,060ms** |
+| 바로 위에서 `ANALYZE` | `{PENDING,SENT}` 0.5 · 0.5 | 0.56ms |
 
-| 통계를 찍은 상태 | `cancelResolvedBeforeSend` |
-|---|---|
-| 빈 표 | 0.65ms |
-| 3000줄 PENDING | 0.39ms |
-| **직전 묶음이 전부 SENT** (`pg_stats` status = `{SENT}` 1.0) | **1,057.6ms** |
+통계가 "PENDING 이 거의 없다"고 말하면 플래너는 PENDING FIRING 쪽(f)을 바깥에 둔 중첩 루프를 고르고, 안쪽은 부분 인덱스 `notification_outbox_due` 로 PENDING 3000줄을 매번 훑어 RESOLVED 를 찾는다(0.35ms × 3000). 통계가 맞으면 거의 없는 RESOLVED 쪽(r)에서 출발해 0줄이면 바로 끝난다. 넣자마자 `ANALYZE` 한 회차 12개(`coro-lanes-analyzed`)에서는 이 쿼리가 느린 쿼리 로그에 한 번도 잡히지 않았고 §4 처럼 TU · CU 가 같아졌다. 첫 묶음에서 CU 회차만 연달아 걸린 이유는 회차별 `pg_stats` 를 남기지 않아 확인하지 못했다.
 
-통계가 "PENDING 이 거의 없다"고 말하면 플래너는 PENDING 쪽을 바깥으로 둔 중첩 루프를 싸다고 본다. 실험에서는 직전 회차가 끝나 전부 SENT 인 상태를 autoanalyze 가 찍었느냐에 따라 회차가 갈렸다. 넣자마자 `ANALYZE` 하면 어느 회차에서도 느린 쿼리에 잡히지 않았고 §4 처럼 TU · CU 가 같아졌다. 첫 묶음에서 CU 회차만 연달아 걸린 것은 이 시점이 겹친 탓으로 본다(회차별 `pg_stats` 는 남기지 않아 확인하지 못했다).
+> 2026-11-04 바로잡음 : 11/3 판의 "EXPLAIN 1,052ms · ANALYZE 뒤 0.24ms" 와 통계 시점 표(0.65 · 0.39 · 1,057.6ms), 쿼리 후보 측정(1.4ms · 0.45ms)은 손으로 잰 것이라 원본 · 스크립트가 남지 않았다. 통계 시점 표는 위 스크립트로 다시 재서 바꿨고, 쿼리 후보 수치는 다시 재기 전까지 쓰지 않는다.
 
-이것은 레인과 별개의 **실제 위험**이고, 운영에서 더 잘 맞는다. 평소 outbox 는 대부분 SENT 이력이라 통계가 위 셋째 줄과 같은 상태다. 경보가 몰려 PENDING 수천 줄이 한꺼번에 생기면 autoanalyze 가 따라올 때까지 선점 한 번이 1초를 넘을 수 있다. `ANALYZE` 를 넣는 것은 실험 보정일 뿐 운영 해결책이 아니다. 같은 상태에서 쿼리 쪽 후보 둘을 쟀다: 드물게 있는 RESOLVED 대기 줄에서 출발하도록 조인을 바꾸면 **1.4ms**, RESOLVED 대기 줄이 있는지 먼저 보고 없으면 건너뛰면 그 확인이 **0.45ms**. 수정은 이 PR 밖에서 한다(AGENTS §6).
+이것은 레인과 별개의 **실제 위험**이고 운영에서 그대로 생긴다(표의 넷째 줄). 평소 outbox 는 대부분 SENT 이력이라 통계가 그 상태이고, 경보가 몰려 PENDING 수천 줄이 한꺼번에 생기면 통계가 따라올 때까지 선점 한 번이 1초를 넘을 수 있다. `ANALYZE` 를 넣는 것은 실험 보정일 뿐 운영 해결책이 아니다. 고칠 방향은 위의 빠른 계획처럼 RESOLVED 대기 줄에서 출발하게 하는 것이고, 수정은 이 PR 밖에서 한다(AGENTS §6).
 
 ## 6. 결정
 
@@ -103,6 +105,7 @@ docs/alert/experiments/coro_lanes_suite_analyzed.sh    # N 1000 · 3000 을 넣�
 DIAG=1 OUT=$PWD/docs/alert/experiments/coro-lanes-diag docs/alert/experiments/coro_lanes_run.sh run CU 3000 9   # 0.5초 간격 덤프
 python3 docs/alert/experiments/coro_lanes_stacks.py docs/alert/experiments/coro-lanes-diag/CU-n3000-r9
 docs/alert/experiments/coro_lanes_run.sh teardown
+docs/alert/experiments/outbox_stats_timing.sh 3 > docs/alert/experiments/outbox-stats-timing.txt   # §5 통계 시점 표 (Docker 만 있으면 된다)
 ```
 
 스레드 덤프 · 전체 로그(173 MB)는 레포에 올리지 않았다. 요약(`summary.md` · `stacks.txt`)은 글로, 회차별 원본(meta · proc · slack · outbox · nmt · pg-slow)은 결과 폴더마다 `raw.tar.gz` 하나로 올렸다. `tar xzf raw.tar.gz` 로 풀면 `coro_lanes_analyze.py` 를 그대로 다시 돌릴 수 있다.
