@@ -9,7 +9,8 @@
 # 느린 채널은 받고 4초 뒤 200(요청 한도 5초 안 = 실패가 아니라 느린 성공). 정상 채널 id 가 가장 커서 선점 순서가 맨 뒤다
 #
 # 사용: coro_lanes_run.sh setup              (한 번: 네트워크 · PG · 마이그레이션 · 채널 · 가짜 Slack)
-#       coro_lanes_run.sh run <변형> <N> <회>  변형 = T8(스레드, 바쁜 채널 8 — 지금 기본값) · TU(스레드, 상한 없음) · CU(코루틴, 상한 없음, 레인 스레드 8)
+#       coro_lanes_run.sh run <변형> <N> <회>  변형 = T8(스레드, 바쁜 채널 8 — #250 기본값) · TU(스레드, 상한 없음) · CU(코루틴, 상한 없음, 레인 스레드 8)
+#                                              · C<수>(코루틴, 상한 <수>, 예: C256 = 지금 기본값)
 #       coro_lanes_run.sh teardown
 # 전제: ./gradlew :notifier:bootJar
 set -euo pipefail
@@ -45,7 +46,7 @@ teardown(){ docker rm -f exp-coro-notifier exp-coro-slack exp-coro-pg >/dev/null
 run(){
   local V=$1 N=$2 R=$3; local D=$OUT/$V-n$N-r$R; rm -rf "$D"; mkdir -p "$D"
   local MODE=THREAD MAXBUSY=8
-  case $V in T8) ;; TU) MAXBUSY=100000 ;; CU) MODE=COROUTINE MAXBUSY=100000 ;; *) echo "변형?"; exit 1 ;; esac
+  case $V in T8) ;; TU) MAXBUSY=100000 ;; CU) MODE=COROUTINE MAXBUSY=100000 ;; C[0-9]*) MODE=COROUTINE MAXBUSY=${V#C} ;; *) echo "변형?"; exit 1 ;; esac
   docker rm -f exp-coro-notifier >/dev/null 2>&1 || true
   q "TRUNCATE notification_history, notification_outbox, alert_events RESTART IDENTITY CASCADE"
   docker run -d --name exp-coro-notifier --network exp-coro --cpus 2 --memory 1g \
@@ -107,5 +108,5 @@ case ${1:-} in
   setup) setup ;;
   teardown) teardown ;;
   run) run "$2" "$3" "$4" ;;
-  *) echo "사용: $0 setup | run <T8|TU|CU> <N> <회> | teardown"; exit 1 ;;
+  *) echo "사용: $0 setup | run <T8|TU|CU|C<상한>> <N> <회> | teardown"; exit 1 ;;
 esac

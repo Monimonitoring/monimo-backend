@@ -62,7 +62,8 @@ cols = ['v', 'n', 'rep', 'sent', 'normal', 'slow_first', 'slow_last_recv', 'drai
 head = ['변형', 'N', '회', 'SENT', '정상 도착(초)', '느린 첫 수신', '느린 끝 수신', '전부 끝(초)', '스레드 기준', '스레드 최고', '스레드(3초)', '레인', 'IO', 'HttpClient',
         '스택 예약 MB', '스택 커밋 MB', 'NMT 커밋 MB', 'RSS 기준 MB', 'RSS 최고 MB', 'CPU 초', '자발 전환', '비자발 전환']
 order = {'T8': 0, 'TU': 1, 'CU': 2}
-runs.sort(key=lambda r: (r['n'], order[r['v']], r['rep']))
+rank = lambda v: order.get(v, 100 + int(v[1:]) if v[1:].isdigit() else 99)  # C<상한> 은 상한 순
+runs.sort(key=lambda r: (r['n'], rank(r['v']), r['rep']))
 lines = ['# 스레드 레인 대 코루틴 레인 — 회차별', '', '| ' + ' | '.join(head) + ' |', '|' + '---|' * len(head)]
 for r in runs:
     lines.append('| ' + ' | '.join(f(r[c], 1 if c.startswith(('stack', 'nmt', 'rss')) else 2) for c in cols) + ' |')
@@ -73,7 +74,7 @@ h2 = ['변형', 'N', '회수', '정상 도착(초)', '전부 끝(초)', '스레�
 lines += ['| ' + ' | '.join(h2) + ' |', '|' + '---|' * len(h2)]
 by = collections.defaultdict(list)
 for r in runs:
-    by[(r['n'], order[r['v']], r['v'])].append(r)
+    by[(r['n'], rank(r['v']), r['v'])].append(r)
 for (n, _, v), rs in sorted(by.items()):
     med = lambda k: statistics.median([x[k] for x in rs if x[k] is not None]) if any(x[k] is not None for x in rs) else None
     lines.append('| ' + ' | '.join([v, str(n), str(len(rs))] + [f(med(k), 1 if k.startswith(('stack', 'rss')) else 2) for k in keys]) + ' |')

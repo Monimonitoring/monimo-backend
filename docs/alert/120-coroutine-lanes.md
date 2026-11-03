@@ -80,6 +80,15 @@ N=1000 · 3000 행은 `ANALYZE` 회차(`experiments/coro-lanes-analyzed/summary.
 
 이것은 레인과 별개의 **실제 위험**이고 운영에서 그대로 생긴다(표의 넷째 줄). 평소 outbox 는 대부분 SENT 이력이라 통계가 그 상태이고, 경보가 몰려 PENDING 수천 줄이 한꺼번에 생기면 통계가 따라올 때까지 선점 한 번이 1초를 넘을 수 있다. `ANALYZE` 를 넣는 것은 실험 보정일 뿐 운영 해결책이 아니다. 고칠 방향은 위의 빠른 계획처럼 RESOLVED 대기 줄에서 출발하게 하는 것이고, 수정은 이 PR 밖에서 한다(AGENTS §6).
 
+고칠 방향을 실행 계획 수준에서 확인했다(2026-11-04, `experiments/outbox_cancel_candidate.sh` → `outbox-cancel-candidate.txt`). 후보는 RESOLVED 대기 줄을 `MATERIALIZED` CTE 로 먼저 뽑고 그 줄에서 FIRING 짝을 찾는다(잠금 · 조건은 원래 쿼리와 같다). 같은 나쁜 통계(SENT 이력 3000 에서 `ANALYZE` → FIRING PENDING 3000 추가)에서 3회 :
+
+| 상황 | 원래 쿼리 | 후보 | 취소된 줄 |
+|---|---|---|---|
+| RESOLVED 대기 0줄 | 1,066 ~ 1,155ms | 0.45 ~ 0.62ms | 0 = 0 |
+| RESOLVED 대기 100줄 (짝 FIRING 100) | 1,136 ~ 1,159ms | 62 ~ 65ms | 200 = 200 |
+
+RESOLVED 100줄일 때 62ms 가 남는 것은 후보에서도 짝 찾기가 부분 인덱스 `notification_outbox_due` 를 훑기 때문이라(계획에 `rows=3050 loops=100`) 고칠 PR 에서 더 다듬을 여지가 있다. 여러 워커가 동시에 돌 때의 잠금 경합은 보지 않았다.
+
 ## 6. 결정
 
 - 코루틴 레인을 기본으로(`lane-mode=COROUTINE`), 바쁜 채널 상한 8 → **256**. 스레드 레인은 `THREAD` 로 남겨 되돌릴 수 있게 했다.
@@ -88,7 +97,18 @@ N=1000 · 3000 행은 `ANALYZE` 회차(`experiments/coro-lanes-analyzed/summary.
 - `limitedParallelism(8)` 은 레인의 DB 일만 묶는다. 같은 Hikari 풀을 선점 스케줄러와 시험 발송 API(톰캣 요청)도 쓰므로 동시에 잡히는 연결은 8을 넘을 수 있다. 연결 획득 대기(`hikaricp.connections.pending`)는 재지 않았다.
 - 실패 처리는 두 레인이 같은 코드를 쓴다 : 연결 2초 · 응답 5초 한도 → Unknown 으로 재시도, 429 는 `Retry-After`, 재시도 간격은 지수 증가, 실패가 이어지는 채널은 서킷 브레이커, 종료 때 진행 중 호출은 한도만큼 기다린 뒤 취소하고 남은 줄은 임대가 끝나면 회수. 이 실패 상황들을 코루틴 레인으로 따로 재지는 않았다. Slack 초당 1건 제한은 웹훅(채널)마다라, 레인이 채널 안에서 차례로 보내는 한 상한 256 이 늘리는 것은 채널 사이 동시성이지 한 웹훅의 동시 요청이 아니다. Notifier 여러 대는 선점이 `SKIP LOCKED` 로 나뉘지만 "바쁜 채널" 제외는 인스턴스마다라 같은 채널을 동시에 보낼 수 있다(레인 방식과 무관한 기존 한계, `70-slow-channel.md` §8).
 - 레인 스레드 8개(`limitedParallelism(8)`)가 결과 기록의 새 병목이 되는지는 상한 256 에서 따로 재지 않았다. 다만 상한 없는 N=1000 에서 전부 끝난 시각이 CU 6.57초 대 TU 6.99초로, 스레드 1,079개가 연결 10개를 다투는 쪽보다 늦지 않았다. 결과 기록의 상한은 레인 스레드보다 Hikari 연결 수다.
-- 256 은 측정한 값이 아니라 고른 값이다. 근거를 만들려면 64 · 128 · 256 · 512 에서 정상 알림 p95 · p99, 연결 대기, RSS 를 비교해야 한다(후속). 지금 채널 수(손으로 만드는 Slack 채널, 많아야 수십)보다 넉넉하고, 잰 범위(CU 3000 에서 RSS +202 MB) 안에서 메모리가 문제되지 않는 쪽으로 잡았다. 바쁜 채널 하나가 소켓 하나 · 힙 몇십 KB 를 쓰므로 상한 자체는 남긴다.
+- 256 은 처음에 고른 값이다. 지금 채널 수(손으로 만드는 Slack 채널, 많아야 수십)보다 넉넉하고, 잰 범위(CU 3000 에서 RSS +202 MB) 안에서 메모리가 문제되지 않는 쪽으로 잡았다. 바쁜 채널 하나가 소켓 하나 · 힙 몇십 KB 를 쓰므로 상한 자체는 남긴다.
+- **상한별 실측 (2026-11-04)** : 코루틴 레인 상한을 64 · 128 · 256 · 512 로 바꿔 느린 채널 1000 + 정상 1 을 3회씩(넣자마자 `ANALYZE`, `experiments/coro_lanes_suite_caps.sh` → `coro-lanes-caps/summary.md`). 중앙값 :
+
+| 상한 | 정상 채널 도착 | 스레드 최고 | RSS 증가 | 스택 커밋 |
+|---|---|---|---|---|
+| 64 | 59.7초 | 108 | +75 MB | 7.6 MB |
+| 128 | 30.8초 | 95 | +71 MB | 7.9 MB |
+| **256 (기본)** | **14.1초** | 96 | +79 MB | 8.2 MB |
+| 512 | 6.0초 | 111 | +93 MB | 9.2 MB |
+| 상한 없음 (§4 CU) | 2.6초 | 97 | +106 MB | 9 MB |
+
+  정상 알림 지연은 대략 "앞에 선 느린 채널 수 ÷ 상한 × 4초"로 상한에 반비례하고, 스레드는 상한과 무관하게 100개 안팎, RSS 증가는 64 → 512 에서 +75 → +93 MB 다. 즉 코루틴 레인에서는 상한을 올리는 비용이 메모리 수십 MB 수준이라, 상한은 스레드가 아니라 "몰린 느린 웹훅 뒤에서 얼마나 기다려도 되나"로 정하면 된다. 지금 기본값 256 이면 느린 웹훅 1000개가 한꺼번에 몰릴 때 정상 알림이 약 14초 늦는다. 회차마다 정상 알림이 1건이라 p95 · p99 는 이 측정으로 말할 수 없고, Hikari 연결 대기도 재지 않았다. 슬로 쿼리 로그(50ms)에 잡힌 쿼리는 회차마다 0 ~ 1건이었다.
 - 지금 규모(채널 몇 개)에서는 두 방식의 차이가 없다(N=10 표). 이득은 느린 채널이 8개를 넘을 때 생긴다.
 
 ## 7. 확인하지 못한 범위
@@ -106,6 +126,10 @@ DIAG=1 OUT=$PWD/docs/alert/experiments/coro-lanes-diag docs/alert/experiments/co
 python3 docs/alert/experiments/coro_lanes_stacks.py docs/alert/experiments/coro-lanes-diag/CU-n3000-r9
 docs/alert/experiments/coro_lanes_run.sh teardown
 docs/alert/experiments/outbox_stats_timing.sh 3 > docs/alert/experiments/outbox-stats-timing.txt   # §5 통계 시점 표 (Docker 만 있으면 된다)
+docs/alert/experiments/outbox_cancel_candidate.sh                  # §5 쿼리 후보 비교 (Docker 만 있으면 된다)
+OUT=$PWD/docs/alert/experiments/coro-lanes-caps docs/alert/experiments/coro_lanes_run.sh setup
+docs/alert/experiments/coro_lanes_suite_caps.sh                    # §6 상한 64 · 128 · 256 · 512 → coro-lanes-caps/summary.md
+docs/alert/experiments/coro_lanes_run.sh teardown
 ```
 
 스레드 덤프 · 전체 로그(173 MB)는 레포에 올리지 않았다. 요약(`summary.md` · `stacks.txt`)은 글로, 회차별 원본(meta · proc · slack · outbox · nmt · pg-slow)은 결과 폴더마다 `raw.tar.gz` 하나로 올렸다. `tar xzf raw.tar.gz` 로 풀면 `coro_lanes_analyze.py` 를 그대로 다시 돌릴 수 있다.
