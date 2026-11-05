@@ -31,7 +31,7 @@
 | GC 종류 구분 | series_hash 마다 | 같다. 실제로 10일간 쇼핑몰 4서비스에서 나온 줄은 `G1 Young Generation / end of minor GC` **하나뿐**(Old 줄 0) | CH 조회 | `history-replay-*.md` | 관측 |
 | 첫 점 · GC 없음 | 줄 없음 | 같다. 앞 점 없는 첫 1분 · 시계열이 아예 없는 파드는 줄이 없다 → Detector 에서 판정 불가 | | 계약 테스트 마지막 Given | 테스트 |
 | 결측은 연속을 끊는다 | (GC_TIME 평가 없음) | Detector 가 정착된 1분 끝을 **빠짐없이** 판정하고 값이 없으면 `NO_DATA` → `resetStreaks` | `GcTimeRunner.runOnce` · `BucketValues.settledBucketEnds` · `AlertStateMachine` | `GcTimeRunnerTest`(10/10) "B 의 빈 1분은 0ms 로 치지 않고 판정 불가" · 상태머신 테스트 | 구현 · 테스트 (PR #224 미머지) |
-| 평가가 아예 건너뛴 버킷 | — | `maxBucketGap = null`(운영 기본) 이라 **Detector 가 3분(maxStaleness) 넘게 멈췄다 돌아오면 건너뛴 버킷을 사이에 두고도 연속으로 센다** | `AlertDetectionConfig` · `AlertPolicy` | `AlertStateMachineGapContractTest` 둘째 | 한계 (테스트로 고정) |
+| 평가가 아예 건너뛴 버킷 | — | 예전 `maxBucketGap = null` 에서는 **Detector 가 3분(maxStaleness) 넘게 멈췄다 돌아오면 건너뛴 버킷을 사이에 두고도 연속으로 셌다.** 2026-11-05 기본값을 1분으로 바꿔 끊는다 — 복귀 뒤 첫 초과는 1회 | `AlertDetectionConfig` · `AlertPolicy` | `DetectorPauseStreakTest` · `AlertStateMachineGapContractTest` | **고침** |
 | 늦게 온 값 | — | 한 번 판정 불가로 반영한 버킷은 값이 늦게 와도 `DUPLICATE_BUCKET` 으로 무시된다 → 처음 판정이 남는다 | `AlertStateMachine.apply` | 상태머신 · Gap 계약 테스트 셋째 | 테스트 |
 | 덤프는 기록 트랜잭션 밖 | — | `recorder.record`(@Transactional) 가 돌아온 **뒤** 같은 스케줄 스레드에서 동기로 `dump()` 호출 | `GcTimeRunner.dump` · `EvaluationRecorder.record` | `GcTimeRunnerTest` "덤프 실패와 상관없이 사건 · 알림은 나간다" | 구현 · 테스트 |
 | 8초 한도 | — | Detector 쪽 HTTP 요청 한도(연결 1초 · 응답 8초). **API server 의 덤프 작업은 끊지 않는다**(API server 는 Collector를 5초씩, 아무도 못 뜨면 한 번 더 부른다). 한도에 걸리면 스케줄 스레드가 그만큼 늦어져 다음 15초 주기 전체가 밀린다(미측정) | `EvaluationProperties.ThreadDump` · `HttpThreadDumpClient` · `ThreadDumpService.dumped` | `HttpThreadDumpClientTest`(4/4) | 구현 · 테스트 |
@@ -162,12 +162,12 @@ L738 [2026-10-26T05:11:20.603+0000][212.723s][info][gc          ] GC(23) Pause Y
 
 ### D-4. N=3 이 세는 것 (구현 · 테스트 기준)
 
-| 입력 (운영 기본 N=3 · M=2 · 간격 검사 없음) | 결과 | 근거 |
+| 입력 (운영 기본 N=3 · M=2 · 간격 검사 1분, 2026-11-05 부터) | 결과 | 근거 |
 |---|---|---|
 | 초과 · 초과 · 초과 | 세 번째에서 발화 1건 | `AlertStateMachineTest` · `GcTimeRunnerTest` |
 | 초과 · 초과 · 판정 불가 · 초과 | 발화 없음, 연속 1 | Gap 계약 테스트 · `AlertStateMachineTest` "PENDING 중 위반 · 위반 · 조회 실패 · 위반" |
 | 1분 값이 비어 있음 | Detector 가 그 1분 끝도 판정해 `NO_DATA` → 연속 끊김 | `GcTimeRunnerTest` "B 의 빈 1분은 0ms 로 치지 않고 판정 불가" |
-| 버킷 하나가 **평가조차** 안 됨 (Detector 가 3분 넘게 멈춤) | 남은 초과 셋을 연속으로 세어 발화 | Gap 계약 테스트 (현재 동작) |
+| 버킷 하나가 **평가조차** 안 됨 (Detector 가 3분 넘게 멈춤) | 간격 검사가 연속을 끊어 복귀 뒤 첫 초과는 1회, 복귀 뒤 세 번째 초과에서 발화 (예전 null 에서는 남은 초과 셋을 연속으로 세어 발화했다) | `DetectorPauseStreakTest` · Gap 계약 테스트 |
 | 한 긴 구간 평균을 여러 1분에 채움 (#239) | 채운 1분도 각각 값이 있는 1분이라 **각각 N 에 센다** (`Condition.judge` 는 값만 본다) | 계약 테스트 b + `Condition` 코드. 둘을 묶은 테스트는 없다 |
 | 같은 버킷 다시 평가 | `DUPLICATE_BUCKET` 무시, 덤프도 다시 안 부름 | `GcTimeRunnerTest` "같은 시각에 주기를 또 돌면" |
 | 늦게 온 버킷 | 과거 버킷은 `OUT_OF_ORDER`, 판정 불가로 이미 반영한 버킷은 `DUPLICATE` 로 무시 | 상태머신 테스트 |
@@ -194,7 +194,7 @@ L738 [2026-10-26T05:11:20.603+0000][212.723s][info][gc          ] GC(23) Pause Y
 
 **5절에 넣을 것 — 세 번 연속은 실제로 무엇을 셌나**
 
-> GC 경보를 탐지에 연결하면서, 값이 없는 1분을 건너뛰지 않도록 했다. 탐지는 정착 대기가 지난 1분 끝을 빠짐없이 판정하고, 값이 없으면 판정 불가로 넣는다. 상태머신은 판정 불가를 받으면 연속 횟수를 0 으로 되돌린다. "초과, 초과, 판정 불가, 초과" 는 발화하지 않는다. 다만 상태머신 자체에는 버킷 간격 검사가 꺼져 있다. 탐지가 3분 넘게 멈췄다 돌아와 사이 버킷을 아예 평가하지 못하면, 남은 초과 세 개를 연속으로 세어 발화한다. 테스트로 이 동작을 고정해 두었다.
+> GC 경보를 탐지에 연결하면서, 값이 없는 1분을 건너뛰지 않도록 했다. 탐지는 정착 대기가 지난 1분 끝을 빠짐없이 판정하고, 값이 없으면 판정 불가로 넣는다. 상태머신은 판정 불가를 받으면 연속 횟수를 0 으로 되돌린다. "초과, 초과, 판정 불가, 초과" 는 발화하지 않는다. 처음에는 상태머신의 버킷 간격 검사가 꺼져 있어, 탐지가 3분 넘게 멈췄다 돌아와 사이 버킷을 아예 평가하지 못하면 남은 초과 세 개를 연속으로 세어 발화했다. 간격 검사를 1분으로 켜서, 복귀 뒤 첫 초과를 1회로 세고 그 뒤 두 분도 초과일 때만 발화하게 고쳤다.
 >
 > 쌓인 10일치 쇼핑몰 GC 원본으로 같은 규칙을 다시 돌렸다. 6,000ms를 넘은 1분은 한 번도 없어 N=1 도 N=3 도 발화하지 않았다. 기준을 1,000ms로 낮추면 N=1 은 gateway 에서 4번(이전 계산이면 5번) 발화했지만 N=3 은 0번이었다. 1,000ms를 넘은 1분이 세 번 이어진 적이 없었다. 이 결과는 오탐을 줄였다는 근거가 아니다. 그 순간들이 실제 문제였는지 판단할 기준을 따로 두지 않았기 때문이다.
 
