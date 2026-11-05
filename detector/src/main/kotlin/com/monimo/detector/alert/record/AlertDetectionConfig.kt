@@ -14,7 +14,11 @@ import java.time.Duration
 data class AlertEvaluationProperties(
     val fireAfter: Int = 3,
     val resolveAfter: Int = 2,
-    val maxBucketGap: Duration? = null,
+    // 반영한 두 버킷 사이가 1분(버킷 하나)보다 벌어지면 연속을 끊는다. 평가 주기는 1분 버킷을 빠짐없이 차례로 넣으므로
+    // (값이 없으면 판정 불가로) 이 간격이 벌어지는 경우는 Detector 가 maxStaleness(3분)보다 오래 멈춰 버킷 평가 자체가 빠졌을 때뿐이다.
+    // 예전 기본값 null 은 그 빈 구간을 사이에 두고도 연속으로 세어, 실제로는 3분 연속 초과한 적이 없는데 "3분 연속" 으로 발화했다
+    // (DetectorPauseStreakTest). null 로 두면 검사를 끈다
+    val maxBucketGap: Duration? = Duration.ofMinutes(1),
     // AGENT_DOWN 은 판정 자체가 이미 90초 침묵을 기다리므로 N 을 따로 둔다 (제안 · 팀 확인 전, docs/alert/40-agent-down.md D14)
     val agentDownFireAfter: Int = 1,
 )
