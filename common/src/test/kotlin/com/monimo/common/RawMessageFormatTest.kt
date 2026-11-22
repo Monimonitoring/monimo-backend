@@ -2,6 +2,7 @@ package com.monimo.common
 
 import com.monimo.common.kafka.RawHeaders
 import com.monimo.common.kafka.RawSignal
+import com.monimo.common.kafka.RawTopics
 import com.monimo.common.kafka.UnknownRawKeyException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
@@ -10,7 +11,7 @@ import io.opentelemetry.proto.collector.logs.v1.ExportLogsServiceRequest
 import io.opentelemetry.proto.collector.metrics.v1.ExportMetricsServiceRequest
 import io.opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest
 
-// raw 토픽 메시지의 **봉투 겉면** 약속을 못박는 시험 (개발환경 9단계 · ADR `#65`).
+// raw 토픽들의 메시지 **봉투 겉면** 약속을 못박는 시험 (개발환경 9단계 · ADR `#65` · 토픽 셋은 ADR `#74`).
 //
 // 값(protobuf 바이트)은 `OtlpProtobufRoundTripTest` 가 본다. 여기서 보는 것은 글자들이다 :
 // 토픽 이름 · 신호 키 셋 · 헤더 이름. 붙이는 쪽(Collector)과 꺼내는 쪽(Ingester)이 **다른 모듈**이라
@@ -24,8 +25,23 @@ class RawMessageFormatTest : BehaviorSpec({
     Given("raw 토픽 메시지 약속") {
 
         When("토픽 이름을 보면") {
-            Then("raw 다 : compose kafka-init 이 만드는 이름과 같아야 한다") {
-                RawSignal.TOPIC shouldBe "raw"
+            Then("신호별로 셋이다 : compose kafka-init 과 kafka-init Job 이 만드는 이름과 같아야 한다 (ADR `#74`)") {
+                RawTopics.ALL shouldBe listOf("raw.traces", "raw.metrics", "raw.logs")
+            }
+
+            Then("신호마다 자기 토픽을 들고 있다 : Collector 가 보낼 곳을 키가 아니라 이것으로 고른다") {
+                RawSignal.TRACES.topic shouldBe "raw.traces"
+                RawSignal.METRICS.topic shouldBe "raw.metrics"
+                RawSignal.LOGS.topic shouldBe "raw.logs"
+            }
+
+            Then("키로 되넣을 토픽을 고를 수 있다 : DLQ 되넣기가 쓰는 길 (#281)") {
+                RawSignal.entries.forEach { RawSignal.topicOfKey(it.key) shouldBe it.topic }
+            }
+
+            Then("모르는 키는 null 이다 : 되넣기가 예외가 아니라 건너뛰기로 다룬다") {
+                RawSignal.topicOfKey("spans") shouldBe null
+                RawSignal.topicOfKey(null) shouldBe null
             }
         }
 

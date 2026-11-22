@@ -13,7 +13,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 class RawPeerAddressHeaderTest : BehaviorSpec({
 
     fun record(vararg headers: Pair<String, ByteArray>): ConsumerRecord<String, ByteArray> =
-        ConsumerRecord(RawSignal.TOPIC, 0, 0L, RawSignal.TRACES.key, ByteArray(0))
+        ConsumerRecord(RawSignal.TRACES.topic, 0, 0L, RawSignal.TRACES.key, ByteArray(0))
             .also { record -> headers.forEach { (name, value) -> record.headers().add(name, value) } }
 
     Given("raw 토픽에서 꺼낸 메시지") {

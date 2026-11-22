@@ -1,5 +1,6 @@
 package com.monimo.ingester.job.dlq
 
+import com.monimo.common.kafka.RawSignal // 키 → 되넣을 토픽
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -103,21 +104,32 @@ class DlqReprocessJob(
 
             DlqReprocessPlan.Decision.REPLAY -> {
                 val kept = DlqReprocessPlan.keep(record.headers())
+                // 되넣을 곳은 키가 정한다 (ADR #74 · #281). 원본 토픽이 셋으로 갈려 고정 대상이 없다.
+                // 키가 모르는 글자면 되넣을 토픽이 없다 : 되넣어도 같은 예외가 또 나므로 독성과 같게 건너뛴다 (ADR #51)
+                val target = RawSignal.topicOfKey(record.key())
+                if (target == null) {
+                    log.warn(
+                        "{}@{} 건너뛴다 : 키가 '{}' 라 되넣을 토픽을 모른다 (attempt={})",
+                        props.sourceTopic, record.offset(), record.key(), attempt,
+                    )
+                    commit(consumer, record)
+                    return acc.copy(read = read, skipped = acc.skipped + 1)
+                }
                 if (props.dryRun) {
                     log.info(
                         "[마른 실행] {}@{} → {} (key={}, {}바이트, 머리말 {}장, attempt={})",
-                        props.sourceTopic, record.offset(), props.targetTopic,
+                        props.sourceTopic, record.offset(), target,
                         record.key(), record.value().size, kept.size, attempt,
                     )
                 } else {
                     // get() 으로 기다린다 : 보냈는지 확인하지 않고 커밋하면 조용히 유실된다.
                     // 실패하면 예외가 올라가 이 회차가 끝나고 커밋이 안 되므로 다음에 다시 읽는다
                     producer.send(
-                        ProducerRecord(props.targetTopic, null, record.key(), record.value(), kept),
+                        ProducerRecord(target, null, record.key(), record.value(), kept),
                     ).get()
                     log.info(
                         "{}@{} → {} (key={}, attempt={} → {})",
-                        props.sourceTopic, record.offset(), props.targetTopic, record.key(), attempt, attempt + 1,
+                        props.sourceTopic, record.offset(), target, record.key(), attempt, attempt + 1,
                     )
                 }
                 commit(consumer, record)

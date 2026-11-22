@@ -94,16 +94,21 @@ class RawErrorHandlerConfig {
         // 보낸 뒤에 세고 로그를 남긴다. 보내기가 실패하면(위 setFailIfSendResultIsError) 세지 않는다.
         //
         // 꼭 ConsumerAware 판이어야 한다. verifyPartition 은 consumer 로 목적지 파티션 수를 물어보는데, 두 인자 판
-        // accept(record, failure) 로 감싸면 consumer 가 null 로 넘어가 그 검사가 조용히 꺼진다. 그러면 raw 파티션 1 · 2 에서
-        // 실패한 것이 raw.dlq 파티션 1 · 2(없음)로 가려다 60초 메타데이터 대기 뒤 실패하고, failIfSendResultIsError 때문에
-        // 그 레코드에서 영원히 멈춘다. 처음 구현에서 그렇게 됐고 수동 검증(키 logs 로 파티션 1)에서 잡았다
+        // accept(record, failure) 로 감싸면 consumer 가 null 로 넘어가 그 검사가 조용히 꺼진다. 옛 토픽 raw 는 파티션이 3개라
+        // 파티션 1 · 2 에서 실패한 것이 raw.dlq 파티션 1 · 2(없음)로 가려다 60초 메타데이터 대기 뒤 실패하고,
+        // failIfSendResultIsError 때문에 그 레코드에서 영원히 멈췄다. 처음 구현에서 그렇게 됐고 수동 검증(키 logs 로 파티션 1)에서 잡았다.
+        //
+        // **지금은 그 어긋남이 안 난다** (ADR #74 · #281) : 토픽 셋과 raw.dlq 가 모두 파티션 1개(0번)라 번호가 항상 맞는다.
+        // 그래도 ConsumerAware 판을 유지한다 : 어느 토픽의 파티션을 늘리면 그날 다시 어긋나고, 그때 조용히 멈춘다
         val recoverer = ConsumerAwareRecordRecoverer { record, consumer, failure ->
             val reason = FailureClassifier.classify(failure)
             dlq.accept(record, consumer, failure)
             counter.sent(reason)
+            // 토픽 이름을 찍는다 : 신호별로 토픽이 갈려서 "raw-" 로 박아 두면 어느 신호가 실패했는지 안 보인다 (#281)
             log.warn(
-                "raw-{}@{} → {} (reason={}, cause={})",
-                record.partition(), record.offset(), properties.dlqTopic, reason.name.lowercase(), rootMessage(failure),
+                "{}-{}@{} → {} (reason={}, cause={})",
+                record.topic(), record.partition(), record.offset(), properties.dlqTopic,
+                reason.name.lowercase(), rootMessage(failure),
             )
         }
 

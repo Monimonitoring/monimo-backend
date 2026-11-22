@@ -10,7 +10,7 @@
 
 ```
 쇼핑몰 앱            Collector              Kafka            Ingester        ClickHouse
-(OTel Agent)  ──▶  :4317 gRPC  ──▶   raw 토픽   ──▶   @KafkaListener ──▶  spans 등
+(OTel Agent)  ──▶  :4317 gRPC  ──▶  raw.<신호> 셋  ──▶  @KafkaListener 셋 ──▶  spans 등
      ①                 ②               ③                  ④                 ⑤
                                                               └──▶ PostgreSQL (agents)
                                                                        ⑥

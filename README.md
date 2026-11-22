@@ -6,7 +6,7 @@
 Monitored app (쇼핑몰 4개 + OTel Java Agent)
    │ OTLP gRPC 4317 · mTLS
    ▼
-Collector ── 헬스체크 거르기 · System 별 샘플링 · Minimum log level ──▶ Kafka raw ──실패──▶ raw.dlq (30일)
+Collector ── 헬스체크 거르기 · System 별 샘플링 · Minimum log level ──▶ Kafka raw.traces · raw.metrics · raw.logs ──실패──▶ raw.dlq (30일)
                                                                         │
                                                                     Ingester ──▶ ClickHouse (spans · metrics · logs → 1분 · 1시간 롤업)
                                                                                      │
@@ -130,7 +130,7 @@ docker compose --profile collector --profile ingester down
 ```
 
 - 시드의 서비스 표시 이름(`Monimo Collector` 등, `scripts/seed/postgres-applications.sql`)은 `ON CONFLICT (name) DO NOTHING` 이라 **다시 돌려도 이미 있는 줄은 안 바뀐다.** 예전 이름(「모니모 수집기」)이 보이면 `docker compose down -v` 뒤 다시 켜고 시드를 넣는다 (`#241`)
-- Kafka 토픽 `raw`(7일 보관, 파티션 3) · `raw.dlq`(30일 보관)는 켤 때 자동으로 만든다. 그 외 토픽은 자동으로 생기지 않는다.
+- Kafka 토픽 `raw.traces` · `raw.metrics` · `raw.logs`(각 7일 보관, 파티션 1) · `raw.dlq`(30일 보관)는 켤 때 자동으로 만든다. 그 외 토픽은 자동으로 생기지 않는다. 신호별로 토픽을 나눈 이유는 ADR `#74` 에 있다.
 - Kafka 메시지는 컨테이너 안에만 있어서 `down` 하면 지워진다.
 - **PostgreSQL 표는 `db/postgres/` 한 곳**에 파트별 폴더(`config/` · `alert/` · `ingest/`)로 추가하고, 켤 때 Flyway가 자동 적용한다. 서비스는 마이그레이션을 돌리지 않는다. 규칙은 [`db/postgres/README.md`](db/postgres/README.md) (ADR #49)
 - **ClickHouse 표도 `db/clickhouse/`** 한 곳에 `V{년월일시분}__{동사}_{대상}.sql` 로 두고, 켤 때 Flyway(`clickhouse-migrate`)가 자동 적용한다. 원본 4표 → 집계 7표 → MV 7개 순서이고 정본은 노션 ERD「CH 영역」이다. **바꾼 DDL 을 적용하려고 `down -v` 할 필요가 없다** : 떠 있는 서버에 안 돌린 파일만 적용된다. 규칙과 표 정의를 바꿀 때의 절차는 [`db/clickhouse/README.md`](db/clickhouse/README.md) (ADR `#57`)

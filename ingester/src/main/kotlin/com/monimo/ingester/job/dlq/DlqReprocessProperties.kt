@@ -1,19 +1,19 @@
 package com.monimo.ingester.job.dlq // 잡(job) : 한 번 돌고 끝나는 일. 들어오는 문(inbound)도 나가는 문(outbound)도 아니라 자리를 따로 둔다
 
-import com.monimo.common.kafka.RawSignal
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 
-// raw.dlq 에 쌓인 것을 raw 로 되넣는 잡의 설정 (ADR 참조 · #195).
+// raw.dlq 에 쌓인 것을 원래 토픽으로 되넣는 잡의 설정 (ADR 참조 · #195 · #281).
 //
 // 이 잡은 **사람이 부른다** : docker compose run --rm dlq-reprocess.
 // 주기 실행을 넣지 않은 이유는 "돌릴 이유가 생긴 횟수가 아직 0번" 이기 때문이다
 // (ADR #55 · #66 ① · #67 기각 ⑥ 에서 팀이 세 번 쓴 기준). 두 번 부르게 되면 주기 실행으로 올린다.
 @ConfigurationProperties("monimo.ingester.dlq-reprocess")
 data class DlqReprocessProperties(
-    // 읽는 토픽과 되넣는 토픽. 기본값을 글자로 두지 않고 약속 파일에서 가져온다 (common/kafka/RawSignal.kt)
+    // 읽는 토픽. DLQ 는 신호가 섞인 토픽 하나다 (ADR #74 가 원본만 셋으로 갈랐다, #281)
     val sourceTopic: String = "raw.dlq",
-    val targetTopic: String = RawSignal.TOPIC,
+    // 되넣을 토픽은 설정이 아니라 **레코드의 키**가 정한다 (traces → raw.traces 등, RawSignal.topic).
+    // 고정 값을 두면 신호가 섞인 DLQ 를 한 토픽에 쏟아 Ingester 가 엉뚱한 protobuf 로 풀려 든다
 
     // **ingester 가 아니어야 한다.** 같은 이름을 쓰면 잡이 뜰 때와 끝날 때 각각 그룹 리밸런스가 나서
     // Ingester 의 raw 소비가 멈춘다 (실측 211밀리초 · 229밀리초). 파티션이 섞이지는 않는다 :

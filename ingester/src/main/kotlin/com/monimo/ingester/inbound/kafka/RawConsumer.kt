@@ -19,7 +19,9 @@ import io.opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest
 import org.apache.kafka.clients.consumer.ConsumerRecord // Kafka 에서 꺼낸 메시지 한 개 (키 · 값 · 오프셋)
 import org.slf4j.LoggerFactory
 import io.opentelemetry.proto.resource.v1.Resource
+import com.monimo.common.kafka.RawTopics // 토픽 이름 상수 셋 (애너테이션은 컴파일 상수만 받는다)
 import org.springframework.kafka.annotation.KafkaListener // "이 함수가 토픽을 구독한다" 표시
+import org.springframework.kafka.annotation.KafkaListeners // 같은 함수에 리스너를 여럿 붙일 때
 import org.springframework.stereotype.Component
 import java.time.Instant
 
@@ -42,7 +44,20 @@ class RawConsumer(
 
     // 스프링이 알아서 소비자를 만들어 메시지를 하나씩 이 함수에 넣어 준다.
     // 그룹 이름(ingester) · 바이트로 읽기 · 처음부터 읽기는 application.yml 의 spring.kafka.consumer 가 정한다
-    @KafkaListener(topics = [RawSignal.TOPIC])
+    //
+    // 토픽 셋을 **리스너 셋**으로 받는다 (ADR #74 · #281). 한 리스너에 토픽 셋을 주면 컨테이너가 하나라
+    // 스레드도 하나이고, 한 신호가 느리면 나머지 둘이 그 스레드를 기다린다. 컨테이너를 셋으로 두면
+    // 스레드가 셋이고, 에러 핸들러의 pause(ContainerPausingBackOffHandler)도 막힌 신호의 컨테이너만 멈춘다
+    //
+    // idIsGroup = false 인 이유 : id 만 주면 스프링이 그것을 **컨슈머 그룹 이름으로도** 쓴다.
+    // 그러면 그룹이 셋으로 갈라져 application.yml 의 group-id(ingester)가 무시되고
+    // lag 을 보는 자리(docs/kafka-reprocess/experiments/reprocess_exp.sh)가 어긋난다.
+    // 그룹 분리는 이번 범위가 아니다 : 토픽 · 스레드 · pause 만 가른다
+    @KafkaListeners(
+        KafkaListener(id = "raw-traces", idIsGroup = false, topics = [RawTopics.TRACES]),
+        KafkaListener(id = "raw-metrics", idIsGroup = false, topics = [RawTopics.METRICS]),
+        KafkaListener(id = "raw-logs", idIsGroup = false, topics = [RawTopics.LOGS]),
+    )
     fun onMessage(record: ConsumerRecord<String, ByteArray>) {
         val signal = RawSignal.fromKey(record.key()) // 키("traces") → 항목(TRACES). 모르는 키면 예외가 난다
 

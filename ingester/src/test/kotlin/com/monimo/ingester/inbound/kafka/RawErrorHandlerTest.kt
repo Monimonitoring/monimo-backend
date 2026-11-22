@@ -38,7 +38,7 @@ class RawErrorHandlerTest(
 ) : BehaviorSpec({
 
     val bootstrap = environment.getRequiredProperty("spring.kafka.bootstrap-servers")
-    // 토픽은 TestInfraConfig 가 compose 와 같은 모양(raw 3 · raw.dlq 1)으로 만들어 뒀다
+    // 토픽은 TestInfraConfig 가 compose 와 같은 모양(raw.traces · raw.metrics · raw.logs · raw.dlq, 각 파티션 1)으로 만들어 뒀다
 
     val producer = KafkaProducer<String, ByteArray>(
         mapOf(
@@ -80,14 +80,16 @@ class RawErrorHandlerTest(
 
     Given("에러 핸들러가 붙은 Ingester") {
 
-        When("키는 traces 인데 값이 protobuf 가 아닌 바이트를 raw 의 파티션 1 에 넣으면") {
+        When("키는 traces 인데 값이 protobuf 가 아닌 바이트를 raw.traces 에 넣으면") {
             // 0x0A = 1번 필드 · 길이 있는 타입, 0x7F = 길이 127 이라고 선언. 그런데 뒤에 바이트가 없다 → 잘린 메시지 → 파싱 실패.
-            // 파티션 1 로 보내는 이유 : raw.dlq 는 파티션이 1개(0번)뿐이라 "원본과 같은 번호" 가 없다. verifyPartition 이 그걸 비워
-            // Kafka 가 고르게 해야 들어간다. 처음 구현은 이 경로가 깨져 있었다
+            //
+            // **옛 모양에서는 파티션 1 로 보냈다** : raw 가 파티션 3개였고 raw.dlq 는 1개(0번)라 "원본과 같은 번호" 가 없어서
+            // verifyPartition 이 그 번호를 비워야 들어갔고, 처음 구현은 그 경로가 깨져 있었다. 이제 토픽이 신호별로 갈리고
+            // 모두 파티션 1개라(ADR #74 · #281) 어긋날 번호가 없다. 그 경로는 어느 토픽의 파티션을 늘리는 날 다시 시험해야 한다
             val poison = byteArrayOf(0x0A, 0x7F)
             val before = dlqCounter.count(FailureClass.POISON)
             // Collector 가 붙이는 주소 메모도 같이 넣는다. 재처리 잡이 주소를 잃지 않는지 보려는 것이다 (`#149`)
-            val poisonRecord = ProducerRecord(RawSignal.TOPIC, 1, RawSignal.TRACES.key, poison)
+            val poisonRecord = ProducerRecord(RawSignal.TRACES.topic, 0, RawSignal.TRACES.key, poison)
             poisonRecord.headers().add(RawHeaders.PEER_ADDRESS, "172.19.0.11".toByteArray())
             producer.send(poisonRecord).get()
             val dlqRecord = awaitDlq()
@@ -100,13 +102,13 @@ class RawErrorHandlerTest(
                 dlqRecord.value().toList() shouldBe poison.toList()
             }
 
-            Then("원본 파티션은 1 이었고 raw.dlq 에서는 0 번에 들어갔다 : verifyPartition 이 번호를 비워 Kafka 가 골랐다") {
-                ByteBuffer.wrap(dlqRecord!!.headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_PARTITION).value()).int shouldBe 1
+            Then("원본 파티션 0 · raw.dlq 파티션 0 : 번호가 같아 verifyPartition 이 비울 것이 없다") {
+                ByteBuffer.wrap(dlqRecord!!.headers().lastHeader(KafkaHeaders.DLT_ORIGINAL_PARTITION).value()).int shouldBe 0
                 dlqRecord.partition() shouldBe 0
             }
 
             Then("원본이 어디서 왔는지 자동 헤더가 붙는다") {
-                header(dlqRecord!!, KafkaHeaders.DLT_ORIGINAL_TOPIC) shouldBe RawSignal.TOPIC
+                header(dlqRecord!!, KafkaHeaders.DLT_ORIGINAL_TOPIC) shouldBe RawSignal.TRACES.topic // 어느 신호의 토픽에서 왔는지가 여기 남는다
                 header(dlqRecord, KafkaHeaders.DLT_ORIGINAL_OFFSET).shouldNotBeNull()
                 header(dlqRecord, KafkaHeaders.DLT_EXCEPTION_FQCN).shouldNotBeNull()
             }
@@ -125,11 +127,11 @@ class RawErrorHandlerTest(
             }
         }
 
-        When("raw.dlq 에 들어간 레코드를 헤더째 raw 로 되돌려 넣으면 (재처리 잡이 할 일을 흉내)") {
+        When("raw.dlq 에 들어간 레코드를 헤더째 raw.traces 로 되돌려 넣으면 (재처리 잡이 할 일을 흉내)") {
             // 재처리 잡은 범위 밖이지만, "DLQ 를 몇 번 거쳤나" 를 세는 헤더가 두 번째 통과에 2 가 되는지는 지금 고정해 둔다
             val first = awaitDlqSeen.shouldNotBeNull()
             val before = dlqCounter.count(FailureClass.POISON)
-            producer.send(ProducerRecord(RawSignal.TOPIC, 1, first.key(), first.value(), first.headers())).get()
+            producer.send(ProducerRecord(RawSignal.TRACES.topic, 0, first.key(), first.value(), first.headers())).get()
             val second = awaitDlq()
 
             Then("x-dlq-attempt 가 2 가 되고, 같은 이름 헤더가 쌓이지 않고 하나만 남는다") {
@@ -146,7 +148,7 @@ class RawErrorHandlerTest(
             val request = ExportTraceServiceRequest.newBuilder()
                 .addResourceSpans(ResourceSpans.newBuilder().addScopeSpans(ScopeSpans.newBuilder().addSpans(Span.newBuilder().setName("GET /after-poison"))))
                 .build()
-            producer.send(ProducerRecord(RawSignal.TOPIC, RawSignal.TRACES.key, request.toByteArray())).get()
+            producer.send(ProducerRecord(RawSignal.TRACES.topic, RawSignal.TRACES.key, request.toByteArray())).get()
 
             Then("독성 하나가 뒤를 막지 않고 정상 소비된다") {
                 awaitConsumed(RawSignal.TRACES, before + 1)

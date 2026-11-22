@@ -1,5 +1,6 @@
 package com.monimo.ingester.support
 
+import com.monimo.common.kafka.RawTopics
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.NewTopic
 import org.springframework.boot.test.context.TestConfiguration
@@ -20,14 +21,18 @@ class TestInfraConfig {
     fun postgres(): PostgreSQLContainer<*> = PostgreSQLContainer("postgres:17.11-alpine").apply { start() }
 
 
-    // compose.yaml 과 같은 모양으로 토픽을 미리 만든다 : raw 파티션 3 · raw.dlq 파티션 1.
-    // 자동 생성에 맡기면 둘 다 파티션 1개가 되어, "raw 파티션 1 에서 실패한 것이 raw.dlq(파티션 1개)로 가나" (ADR #51 의
-    // verifyPartition 경로)를 테스트가 못 밟는다. 실제로 그 경로에 버그가 있었는데 테스트가 못 잡고 수동 검증에서 잡았다
+    // compose.yaml 과 같은 모양으로 토픽을 미리 만든다 : 신호 셋 + raw.dlq, 모두 파티션 1개 (ADR #74 · #281).
+    // 자동 생성에 맡기지 않는 이유는 그대로다 : compose 가 만드는 모양과 어긋나면 테스트가 실제와 다른 토폴로지를 밟는다.
+    //
+    // **옛 모양에서 쟀던 것 하나가 여기서 사라진다** : raw 가 파티션 3개였을 때는 "파티션 1 에서 실패한 것이
+    // raw.dlq(파티션 1개)로 가나"(ADR #51 의 verifyPartition 경로)를 테스트가 밟을 수 있었다. 이제 모든 토픽이
+    // 파티션 1개라 번호가 항상 맞아 그 경로가 안 밟힌다. 어느 토픽의 파티션을 늘리는 날 그 시험을 되살려야 한다
     @Bean
     fun kafka(): KafkaContainer = KafkaContainer("apache/kafka:3.9.2").apply {
         start()
         AdminClient.create(mapOf("bootstrap.servers" to bootstrapServers)).use { admin ->
-            admin.createTopics(listOf(NewTopic("raw", 3, 1.toShort()), NewTopic("raw.dlq", 1, 1.toShort()))).all().get()
+            val topics = RawTopics.ALL.map { NewTopic(it, 1, 1.toShort()) } + NewTopic("raw.dlq", 1, 1.toShort())
+            admin.createTopics(topics).all().get()
         }
     }
 

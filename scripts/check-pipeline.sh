@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 파이프라인 E2E 점검: 가짜 발신기(telemetrygen) → Collector(OTLP gRPC) → Kafka raw → Ingester → ClickHouse.
+# 파이프라인 E2E 점검: 가짜 발신기(telemetrygen) → Collector(OTLP gRPC) → Kafka raw.<신호> → Ingester → ClickHouse.
 # Collector 가 "받은 건수" 와 Ingester 가 "푼 건수" 가 같은 만큼 늘었는지 대조하고,
 # 신호별 ClickHouse 표(spans · metrics_raw · logs)의 줄 수까지 늘었는지 본다.
 # 중간에 하나라도 끊기면 숫자가 어긋나므로, 어디서 막혔는지도 메시지로 드러난다.
@@ -139,13 +139,13 @@ for signal in traces metrics logs; do
     cur_dlq=$(dlq_total); cur_dlq=${cur_dlq:-0}
     dlq_delta=$((cur_dlq - before_dlq))
     [ "$dlq_delta" -gt 0 ] \
-      && fail "$signal 중 ${dlq_delta}건이 적재에 실패해 raw.dlq 로 갔다 (Collector 가 ${sent}건 넘김 · Ingester 는 ${got}건 풂). 숫자를 맞추지 않는다 : DLQ 는 실패다. Ingester 로그의 'raw-N@M → raw.dlq (reason=...)' 줄과 FailureClassifier 의 분류를 확인하라"
-    fail "$signal 이 중간에서 끊겼다: Collector 가 ${sent}건 넘겼는데(받은 수 $received_delta · 버린 수 $dropped_delta) Ingester 는 ${got}건만 풀었다 (${WAIT_SECONDS}초 대기). raw.dlq 에도 안 갔다. Kafka 토픽 raw 와 Ingester 로그를 확인하라"
+      && fail "$signal 중 ${dlq_delta}건이 적재에 실패해 raw.dlq 로 갔다 (Collector 가 ${sent}건 넘김 · Ingester 는 ${got}건 풂). 숫자를 맞추지 않는다 : DLQ 는 실패다. Ingester 로그의 'raw.<신호>-0@M → raw.dlq (reason=...)' 줄과 FailureClassifier 의 분류를 확인하라"
+    fail "$signal 이 중간에서 끊겼다: Collector 가 ${sent}건 넘겼는데(받은 수 $received_delta · 버린 수 $dropped_delta) Ingester 는 ${got}건만 풀었다 (${WAIT_SECONDS}초 대기). raw.dlq 에도 안 갔다. Kafka 토픽 raw.${signal} 과 Ingester 로그를 확인하라"
   fi
 
   # 적재할 표가 없는 신호는 여기서 끝
   if [ -z "$table" ]; then
-    ok "$signal ${sent}건: Collector 수신 → Kafka raw → Ingester 소비까지 도착 (ClickHouse 적재는 아직 없음)"
+    ok "$signal ${sent}건: Collector 수신 → Kafka raw.${signal} → Ingester 소비까지 도착 (ClickHouse 적재는 아직 없음)"
     continue
   fi
 
@@ -158,7 +158,7 @@ for signal in traces metrics logs; do
   done
   added=$((after_rows - before_rows))
   [ "$added" -gt 0 ] \
-    && ok "$signal ${sent}건: Collector 수신 → Kafka raw → Ingester 소비 → ClickHouse $table (+${added}줄)" \
+    && ok "$signal ${sent}건: Collector 수신 → Kafka raw.${signal} → Ingester 소비 → ClickHouse $table (+${added}줄)" \
     || fail "$signal 을 Ingester 가 풀었지만 ClickHouse $table 에 안 들어갔다 (${before_rows}줄 그대로, ${WAIT_SECONDS}초 대기). Ingester 로그의 insert 오류를 확인하라"
 done
 
@@ -243,4 +243,4 @@ else
   fi
 fi
 
-echo "파이프라인 E2E 정상: 에이전트 → Collector → Kafka raw → Ingester → ClickHouse"
+echo "파이프라인 E2E 정상: 에이전트 → Collector → Kafka 토픽 셋(raw.traces · raw.metrics · raw.logs) → Ingester → ClickHouse"

@@ -107,7 +107,7 @@ class DlqReprocessPlanTest : BehaviorSpec({
             "kafka_dlt-exception-cause-fqcn" to "com.clickhouse.client.api.ServerException",
             "kafka_dlt-exception-message" to "Code: 243. DB::Exception: NOT_ENOUGH_SPACE",
             "kafka_dlt-exception-stacktrace" to "a".repeat(5_144), // 실측 크기
-            "kafka_dlt-original-topic" to "raw",
+            "kafka_dlt-original-topic" to "raw.traces",
             "kafka_dlt-original-partition" to "0",
             "kafka_dlt-original-offset" to "0",
             "kafka_dlt-original-timestamp" to "1791919934609",
