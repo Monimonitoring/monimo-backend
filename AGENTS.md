@@ -54,7 +54,7 @@ Kotlin · Java 17 · Spring Boot 3.5 · Gradle 멀티모듈. 버전은 `gradle/l
 5. PR 의 base 는 **`develop`** 이다 (기본 브랜치라 기본값 그대로 두면 된다). `main` 은 배포 단위로 `develop` 에서 한 번에 올린다.
 6. **`main` · `develop` 직접 push 는 막혀 있다.** 리뷰 승인은 필수가 아니지만 CI 통과는 필수다 (ADR `#46`).
 
-CI 는 `build`(테스트 포함) · 이미지 빌드 5개(`docker-image`, develop 머지면 ECR 에 커밋 SHA 태그로 올린다 : `#277`) · `dev-infra`(compose E2E 점검) 를 돈다. `dev-infra` 는 compose · db · scripts · collector · ingester 가 바뀐 PR 에서만 돈다.
+CI 는 `build`(테스트 포함) · 이미지 빌드 5개(`docker-image`, develop 머지면 ECR 에 커밋 SHA 태그로 올린다 : `#277`) · `deploy-tag`(그 SHA 를 deploy 레포 EKS overlay 에 커밋한다 : `#279`) · `dev-infra`(compose E2E 점검) 를 돈다. `dev-infra` 는 compose · db · scripts · collector · ingester 가 바뀐 PR 에서만 돈다.
 
 `develop` → `main` 올릴 때는 **스쿼시가 아니라 머지 커밋**으로 머지한다. 스쿼시하면 두 브랜치의 역사가 갈라져 다음 배포 PR 에 충돌이 쏟아진다.
 
@@ -213,13 +213,16 @@ CI 는 `build`(테스트 포함) · 이미지 빌드 5개(`docker-image`, develo
 
 - **develop 에 머지되면 모듈 다섯 이미지를 ECR 에 올린다 (2026-11-22, `#277`, 배포 5단계 앞 절반)** : `ci.yml` `docker-image` job 이 develop push 일 때만 GitHub OIDC 로 AWS 역할(레포 변수 `AWS_ROLE_ARN`)을 빌려 `<계정>.dkr.ecr.ap-northeast-2.amazonaws.com/monimo/<모듈>:<커밋 SHA>` 로 올린다. 저장해 둔 키는 없다 : OIDC 권한은 이 job 에만 준다(`id-token: write`). PR 은 지금처럼 만들기만 한다. `latest` 는 붙이지 않는다(ArgoCD 가 바뀐 것을 못 본다). **변수가 비어 있으면 올리기를 건너뛰고 notice 만 남긴다** : AWS 쪽 저장소 · 역할이 서기 전에 머지돼도 CI 가 깨지지 않게. AWS 쪽은 GitHub OIDC ID 제공업체만 섰다(계정 `218549829575`). 남은 것은 §6
 
+- **ECR 저장소 다섯 · CI 역할을 만들고 첫 push 를 확인했다 (2026-11-22, 유경, `#277` 의 AWS 쪽)** : 서울 리전 `monimo/<모듈>` 다섯(태그 불변 · push 때 스캔 · 태그 달린 이미지 최근 20개만 보관), 역할 `monimo-ci-backend`(권한 경계 `monimo-ci-boundary`, 권한은 `monimo/*` 에 push 만), 레포 변수 `AWS_ROLE_ARN`. **신뢰 정책 `sub` 는 새 형식이었다** : 이 레포는 `use_immutable_subject: true` 라 `repo:Monimonitoring@321116354/monimo-backend@1379951952:ref:refs/heads/develop` 로 와서 옛 형식으로 쓴 첫 시도가 `Not authorized to perform sts:AssumeRoleWithWebIdentity` 로 실패했다(`gh api repos/Monimonitoring/monimo-backend/actions/oidc/customization/sub` 로 확인). 고친 뒤 f0edc05 다섯 이미지가 올라갔다. **보관 규칙은 태그 달린 것만 센다** : buildx 가 push 한 번에 태그 없는 자식(플랫폼 이미지 · attestation) 둘을 같이 올려서 `any` 로 세면 자식이 먼저 지워져 이미지가 깨진다
+- **ECR 에 올린 SHA 를 deploy 레포에 커밋한다 (2026-11-22, `#279`, 배포 5단계 뒤 절반)** : `ci.yml` `deploy-tag` job 이 `docker-image` 다섯이 다 성공한 뒤에만 돈다(하나라도 실패한 SHA 를 커밋하면 그 파드가 `ImagePullBackOff`). GitHub App `monimo-deploy-bot`(contents write) 토큰으로 monimo-deploy `develop` 을 받아 `overlays/eks/3-apps` 의 이미지 다섯 줄을 `kustomize edit set image` 로 바꾸고 봇 이름으로 커밋한다. Argo CD 는 레지스트리가 아니라 Git 만 보므로 이 커밋이 배포 버튼이다. 개인 PAT · deploy key 는 쓰지 않는다. 머지 둘이 겹치면 `concurrency` 로 줄 세우고 push 가 밀리면 rebase 해 세 번까지 다시 한다. **레포 변수 `DEPLOY_APP_ID` 가 비어 있으면 건너뛴다**(시크릿은 org 의 `DEPLOY_APP_SECRET`)
+
 ## 6. 지금 막혀 있는 것
 
 2026-09-29 레포 전체 점검에서 나온 것들이다. 파트를 넘나드는 것만 적는다.
 
 | 무엇 | 누가 풀어야 하나 | 안 풀면 |
 |---|---|---|
-| **ECR 저장소 다섯 · CI 역할이 아직 없다** (`#277` 은 CI 쪽만 깔았다) | 배포 (유경이 콘솔에서 만든다, 2026-11-22 권한 줌) | develop 에 머지해도 ECR 에 안 올라간다(notice 만). 만들 것 : 서울 리전 ECR `monimo/collector` · `ingester` · `api-server` · `detector` · `notifier`, IAM 역할 `monimo-ci-backend`(권한 경계 `monimo-ci-boundary` 필수, 신뢰 정책은 이 레포 develop 만), 그다음 레포 변수 `AWS_ROLE_ARN` 에 그 역할 ARN. 신뢰 정책의 `sub` 는 레포를 옮겨서 옛 형식(`repo:Monimonitoring/monimo-backend:…`)과 새 형식(`repo:org@ID/repo@ID:…`) 중 어느 것으로 올지 첫 실행에서 확인한다. 마이그레이션 이미지 둘(SQL 굽기)과 deploy 레포 태그 커밋은 이 다음 |
+| **deploy-tag 의 첫 실행이 아직이다** (`#279`) | 배포 (유경) | ECR 까지는 올라가지만 deploy 레포가 안 바뀌어 Argo CD 가 새 버전을 모른다. 확인할 것 : monimo-deploy `develop` 보호 규칙이 PR 을 요구하면 봇 push 가 막힌다(설정은 admin 만 보여서 첫 실행 로그로 본다 — 막히면 `monimo-deploy-bot` 을 bypass 에 넣는다), App 이 monimo-deploy 에 설치돼 있는지(토큰 단계에서 실패하면 설치). 마이그레이션 이미지 둘(SQL 굽기)은 이 다음 |
 | 남의 앱이 HTTP 로 말하는 DB 를 쓰면 Service map 이 호출 수를 2배로 보여 준다 (`#259` → `#265`) | 수집 (우리 모듈은 끝) | 우리 모듈은 에이전트 설정 한 줄(`span-suppression-strategy=span-kind`)로 접었지만 **그 설정은 감시 대상 앱의 환경변수**라 우리가 못 넣는다. 앱 주인에게 알리는 쪽은 해 뒀다 (`monimo-shop otel/agent.properties` 에 조건 · 근거 · 주석 처리된 줄). 집계에서 거르려면 「`db.system` 도 `peer_service` 도 없고 부모가 CLIENT 인 스팬」을 봐야 하는데 MV 는 INSERT 묶음만 보는 트리거라 부모를 못 본다. **`#265` 에 길 둘과 트리거 조회를 적어 뒀다** : 같은 창에 같은 주소로 가는 DB 간선과 EXTERNAL 간선이 같이 나오는 일이 두 번 더 보이면 조회 쪽에서 거른다 |
 | Service map 의 비동기 간선이 세 겹째에서 끊긴다 (`#259`) | 수집 (지금은 맞는 동작) | 필터를 두 겹으로 넓혀도 `shop-gateway` 로 걸면 `kafka → shop-inventory` 가 안 온다(셋째 겹). 서비스가 늘어 「두 겹도 좁다」가 되면 깊이를 설정으로 뺀다. 지금 빼 두면 설정이 하나 늘고 쓰는 사람이 없다 |
 | **~~한 낱말을 두 곳에서 다르게 쓴다 (서버맵 · Service map)~~** (2026-10-29 해소 : 막힌 것이 아니었다) | 수집 (끝) | `#264` 머지 때 「`glossary.md` 가 둘을 다 인정한다 · ADR 을 되돌려야 모을 수 있다」고 적었는데 **둘 다 틀렸다.** 글로서리는 서버맵을 **「옛 이름」 칸**에 두고 **「새 이름」을 Service map** 으로 정해 뒀고(`#240`), ADR `#73` 은 평면 이름(Monitored app · APM · Watchdog)만 다룬다. 즉 되돌릴 ADR 이 없다. 화면 제목도 이미 `Service map` 이고 `ServerMap` 은 컴포넌트 이름일 뿐이다. 규칙을 글로서리 머리에 한 줄로 적었다 |

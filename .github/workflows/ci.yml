@@ -71,3 +71,76 @@ jobs:
           tags: ${{ env.PUSH == 'true' && format('{0}/monimo/{1}:{2}', steps.ecr.outputs.registry, matrix.module, github.sha) || format('monimo/{0}:ci', matrix.module) }}
           cache-from: type=gha,scope=${{ matrix.module }}
           cache-to: type=gha,mode=max,scope=${{ matrix.module }}
+
+  # ECR 에 올린 다섯 이미지의 태그를 deploy 레포에 커밋한다 (배포 5단계 뒤 절반, ADR #62 H).
+  # Argo CD 는 레지스트리가 아니라 Git 만 본다 : 이 커밋이 생겨야 "새 버전이 나왔다" 를 안다.
+  # 다섯이 전부 올라간 뒤에만 돈다(needs) : 하나라도 실패한 SHA 를 커밋하면 그 파드가 ImagePullBackOff 가 된다.
+  # 쓰는 자격증명은 GitHub App 토큰(1시간 · deploy 레포 하나 · 레포 변수/시크릿). 개인 PAT · deploy key 는 쓰지 않는다
+  deploy-tag:
+    name: deploy-tag
+    needs: docker-image
+    # docker-image 가 실제로 올렸을 때만(AWS_ROLE_ARN) · App 이 준비됐을 때만(DEPLOY_APP_ID)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && vars.AWS_ROLE_ARN != '' && vars.DEPLOY_APP_ID != ''
+    runs-on: ubuntu-latest
+    # 머지 두 번이 거의 같이 끝나면 커밋이 엇갈린다 : 줄을 세워 하나씩 커밋한다 (취소하지 않는다 — 뒤의 것이 이긴다)
+    concurrency:
+      group: deploy-tag
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - name: GitHub App 토큰 (deploy 레포 하나만)
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_SECRET }}
+          owner: ${{ github.repository_owner }}
+          repositories: monimo-deploy
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/monimo-deploy
+          ref: develop
+          token: ${{ steps.app-token.outputs.token }}
+          path: deploy
+
+      - name: EKS overlay 의 이미지 줄을 이 커밋 SHA 로
+        working-directory: deploy/overlays/eks/3-apps
+        env:
+          ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+          SHA: ${{ github.sha }}
+        run: |
+          # 계정 번호는 역할 ARN 에서 꺼낸다 (arn:aws:iam::<계정>:role/...) : 같은 값을 변수 두 곳에 두지 않는다
+          account=$(cut -d: -f5 <<<"$ROLE_ARN")
+          registry="${account}.dkr.ecr.ap-northeast-2.amazonaws.com"
+          kustomize version
+          for m in collector ingester api-server detector notifier; do
+            kustomize edit set image "monimo-local.invalid/${m}=${registry}/monimo/${m}:${SHA}"
+          done
+          kustomize build . | grep -E '^\s+image: .*monimo/' || true
+
+      - name: deploy 레포에 커밋
+        working-directory: deploy
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if git diff --quiet; then
+            echo "::notice::이미지 줄이 이미 ${SHA:0:7} 이다. 커밋하지 않는다"
+            exit 0
+          fi
+          # 커밋 작성자를 App 봇으로 둔다 : 사람 이름이 아니라 "CI 가 바꿨다" 가 로그에 남는다
+          bot_id=$(gh api "/users/${APP_SLUG}%5Bbot%5D" --jq .id)
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${bot_id}+${APP_SLUG}[bot]@users.noreply.github.com"
+          git commit -am "chore(images): backend ${SHA:0:7} 이미지 다섯 (eks)" -m "${RUN_URL}"
+          # 다른 커밋이 먼저 들어왔으면 그 위로 다시 얹는다. 세 번까지
+          for _ in 1 2 3; do
+            git push origin HEAD:develop && exit 0
+            git pull --rebase origin develop
+          done
+          echo "::error::deploy 레포 develop 에 세 번 다 못 올렸다"
+          exit 1
