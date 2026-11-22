@@ -34,10 +34,31 @@ jobs:
     strategy:
       matrix:
         module: [collector, ingester, api-server, detector, notifier]
+    # 이 job 만 GitHub 에게 OIDC 증명서를 받아도 된다 (AWS 역할을 빌리는 데 쓴다, 저장해 둔 키는 없다)
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # develop 에 머지됐을 때만 ECR 에 올린다 (#277). PR 은 지금처럼 만들기만 한다.
+      # 레포 변수 AWS_ROLE_ARN 이 비어 있으면(AWS 쪽 역할이 아직 없으면) 올리기를 건너뛴다
+      PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/develop' && vars.AWS_ROLE_ARN != '' }}
     steps:
       - uses: actions/checkout@v7
+      - name: 올리기를 건너뛴 이유 남기기
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && vars.AWS_ROLE_ARN == ''
+        run: echo "::notice::레포 변수 AWS_ROLE_ARN 이 비어 있어 ECR 에 올리지 않는다 (#277)"
+      - name: AWS 로그인 (GitHub OIDC 로 역할 빌리기)
+        if: env.PUSH == 'true'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+      - name: ECR 로그인
+        if: env.PUSH == 'true'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
       - uses: docker/setup-buildx-action@v4
-      - name: 이미지 만들기만 (1a에서는 올리지 않음)
+      - name: 이미지 만들기 (develop 머지면 ECR 에 커밋 SHA 태그로 올린다)
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -45,7 +66,8 @@ jobs:
           target: ${{ matrix.module }}
           # 러너마다 이미지 하나라 그 모듈만 Gradle 로 만든다 (Dockerfile BOOT_JARS)
           build-args: BOOT_JARS=:${{ matrix.module }}:bootJar
-          push: false
-          tags: monimo/${{ matrix.module }}:ci
+          push: ${{ env.PUSH == 'true' }}
+          # 태그는 커밋 SHA 하나만 : latest 는 ArgoCD 가 바뀐 것을 못 본다 (deploy docs/plan.md)
+          tags: ${{ env.PUSH == 'true' && format('{0}/monimo/{1}:{2}', steps.ecr.outputs.registry, matrix.module, github.sha) || format('monimo/{0}:ci', matrix.module) }}
           cache-from: type=gha,scope=${{ matrix.module }}
           cache-to: type=gha,mode=max,scope=${{ matrix.module }}
