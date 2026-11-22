@@ -54,7 +54,7 @@ Kotlin · Java 17 · Spring Boot 3.5 · Gradle 멀티모듈. 버전은 `gradle/l
 5. PR 의 base 는 **`develop`** 이다 (기본 브랜치라 기본값 그대로 두면 된다). `main` 은 배포 단위로 `develop` 에서 한 번에 올린다.
 6. **`main` · `develop` 직접 push 는 막혀 있다.** 리뷰 승인은 필수가 아니지만 CI 통과는 필수다 (ADR `#46`).
 
-CI 는 `build`(테스트 포함) · 이미지 빌드 2개 · `dev-infra`(compose E2E 점검) 를 돈다. `dev-infra` 는 compose · db · scripts · collector · ingester 가 바뀐 PR 에서만 돈다.
+CI 는 `build`(테스트 포함) · 이미지 빌드 5개(`docker-image`, develop 머지면 ECR 에 커밋 SHA 태그로 올린다 : `#277`) · `dev-infra`(compose E2E 점검) 를 돈다. `dev-infra` 는 compose · db · scripts · collector · ingester 가 바뀐 PR 에서만 돈다.
 
 `develop` → `main` 올릴 때는 **스쿼시가 아니라 머지 커밋**으로 머지한다. 스쿼시하면 두 브랜치의 역사가 갈라져 다음 배포 PR 에 충돌이 쏟아진다.
 
@@ -211,12 +211,15 @@ CI 는 `build`(테스트 포함) · 이미지 빌드 2개 · `dev-infra`(compose
 
 - **Service map 이 우리 시스템을 틀리게 그리던 문제 넷 (2026-10-28, `#259` · 쇼핑몰 `#54` 멘토 피드백 D)** : 화면을 띄워 보니 문제가 넷이었고 멘토가 짚은 「간선 종류」는 하나였다. ① **필터가 한 겹이라 이웃의 의존이 사라졌다** : `ServerMapRepository.findEdges` 가 `caller = :s OR callee = :s` 만 봐서 `shop-gateway` 로 걸면 DB 노드가 0개였다. 이웃 집합을 서브쿼리로 만들어 **질의 한 번에 한 겹 더** 가져온다(간선 2 → 8 · DB 0 → 3 · 필터 없음 14개는 그대로). 두 번 질의하는 안은 버렸다(두 질의 사이에 1분 창이 넘어가면 이웃과 간선이 다른 창에서 나온다) ② **비동기 간선 종류가 없었다** : `span_kind` 에 PRODUCER · CONSUMER 가 처음부터 있는데 `mv_server_map_1m` 이 `WHERE span_kind = 'CLIENT'` 였고 스팬 495만건 중 비동기가 0건이라 아무도 못 알아챘다. `callee_kind` Enum 에 `MESSAGING` 을 붙이고 MV 가 셋을 다 읽게 했다(CONSUMER 는 부른 쪽과 받는 쪽을 뒤집는다). 노드 이름은 `peer_address` 가 아니라 `attributes['messaging.system']` 에서 가져온다 : Kafka 계측 모듈이 `server.address` 를 안 넣어 실측에서 `peer_address` 가 빈 글자였다. 데이터는 쇼핑몰에 토픽 하나를 둬서 만들었고(`#54`) Collector · Ingester 의 트레이스를 켜는 안은 버렸다(`#213` 되먹임) ③ **ClickHouse 호출이 2배로 세어졌다** : 쿼리 하나가 스팬 둘(부모 `SELECT monimo` → DB · 자식 `POST` → EXTERNAL)을 만들어 `POST` 110,816건이 CH 쪽 DB 스팬 전부의 합과 정확히 같았다. **전용 포트(9000) 안은 실제로 붙여 보고 기각했다** : `clickhouse-java 0.10.0` 은 전용 포트에도 HTTP 로 말을 걸고 `ClickHouseClient` 를 등록하는 jar 가 `clickhouse-http-client` 하나뿐이다. 대신 api-server 이미지에 `OTEL_INSTRUMENTATION_EXPERIMENTAL_SPAN_SUPPRESSION_STRATEGY=span-kind` 를 넣어 **겉 스팬과 같은 종류의 안쪽 스팬을 접었다**(같은 1분에 DB 32 · EXTERNAL 32 → DB 24 · EXTERNAL 0). 그 계측 모듈을 끄는 안은 버렸다 : api-server 가 진짜로 부르는 Collector · 알림 · Detector 간선까지 사라진다 ④ **`monimo-detector → api-server:8080` 이 EXTERNAL 31,458건**이었다 : 부르는 주소와 등록된 이름(`monimo-api-server`)이 달라 `PeerServiceResolver` 가 못 맞췄다. compose 의 detector 에 이름 짝 한 줄(쇼핑몰 `#23` 선례와 같은 방법). 조사와 결과는 `monimo-shop docs/seungjo/54-servermap-edge-kinds/`
 
+- **develop 에 머지되면 모듈 다섯 이미지를 ECR 에 올린다 (2026-11-22, `#277`, 배포 5단계 앞 절반)** : `ci.yml` `docker-image` job 이 develop push 일 때만 GitHub OIDC 로 AWS 역할(레포 변수 `AWS_ROLE_ARN`)을 빌려 `<계정>.dkr.ecr.ap-northeast-2.amazonaws.com/monimo/<모듈>:<커밋 SHA>` 로 올린다. 저장해 둔 키는 없다 : OIDC 권한은 이 job 에만 준다(`id-token: write`). PR 은 지금처럼 만들기만 한다. `latest` 는 붙이지 않는다(ArgoCD 가 바뀐 것을 못 본다). **변수가 비어 있으면 올리기를 건너뛰고 notice 만 남긴다** : AWS 쪽 저장소 · 역할이 서기 전에 머지돼도 CI 가 깨지지 않게. AWS 쪽은 GitHub OIDC ID 제공업체만 섰다(계정 `218549829575`). 남은 것은 §6
+
 ## 6. 지금 막혀 있는 것
 
 2026-09-29 레포 전체 점검에서 나온 것들이다. 파트를 넘나드는 것만 적는다.
 
 | 무엇 | 누가 풀어야 하나 | 안 풀면 |
 |---|---|---|
+| **ECR 저장소 다섯 · CI 역할이 아직 없다** (`#277` 은 CI 쪽만 깔았다) | 배포 (유경이 콘솔에서 만든다, 2026-11-22 권한 줌) | develop 에 머지해도 ECR 에 안 올라간다(notice 만). 만들 것 : 서울 리전 ECR `monimo/collector` · `ingester` · `api-server` · `detector` · `notifier`, IAM 역할 `monimo-ci-backend`(권한 경계 `monimo-ci-boundary` 필수, 신뢰 정책은 이 레포 develop 만), 그다음 레포 변수 `AWS_ROLE_ARN` 에 그 역할 ARN. 신뢰 정책의 `sub` 는 레포를 옮겨서 옛 형식(`repo:Monimonitoring/monimo-backend:…`)과 새 형식(`repo:org@ID/repo@ID:…`) 중 어느 것으로 올지 첫 실행에서 확인한다. 마이그레이션 이미지 둘(SQL 굽기)과 deploy 레포 태그 커밋은 이 다음 |
 | 남의 앱이 HTTP 로 말하는 DB 를 쓰면 Service map 이 호출 수를 2배로 보여 준다 (`#259` → `#265`) | 수집 (우리 모듈은 끝) | 우리 모듈은 에이전트 설정 한 줄(`span-suppression-strategy=span-kind`)로 접었지만 **그 설정은 감시 대상 앱의 환경변수**라 우리가 못 넣는다. 앱 주인에게 알리는 쪽은 해 뒀다 (`monimo-shop otel/agent.properties` 에 조건 · 근거 · 주석 처리된 줄). 집계에서 거르려면 「`db.system` 도 `peer_service` 도 없고 부모가 CLIENT 인 스팬」을 봐야 하는데 MV 는 INSERT 묶음만 보는 트리거라 부모를 못 본다. **`#265` 에 길 둘과 트리거 조회를 적어 뒀다** : 같은 창에 같은 주소로 가는 DB 간선과 EXTERNAL 간선이 같이 나오는 일이 두 번 더 보이면 조회 쪽에서 거른다 |
 | Service map 의 비동기 간선이 세 겹째에서 끊긴다 (`#259`) | 수집 (지금은 맞는 동작) | 필터를 두 겹으로 넓혀도 `shop-gateway` 로 걸면 `kafka → shop-inventory` 가 안 온다(셋째 겹). 서비스가 늘어 「두 겹도 좁다」가 되면 깊이를 설정으로 뺀다. 지금 빼 두면 설정이 하나 늘고 쓰는 사람이 없다 |
 | **~~한 낱말을 두 곳에서 다르게 쓴다 (서버맵 · Service map)~~** (2026-10-29 해소 : 막힌 것이 아니었다) | 수집 (끝) | `#264` 머지 때 「`glossary.md` 가 둘을 다 인정한다 · ADR 을 되돌려야 모을 수 있다」고 적었는데 **둘 다 틀렸다.** 글로서리는 서버맵을 **「옛 이름」 칸**에 두고 **「새 이름」을 Service map** 으로 정해 뒀고(`#240`), ADR `#73` 은 평면 이름(Monitored app · APM · Watchdog)만 다룬다. 즉 되돌릴 ADR 이 없다. 화면 제목도 이미 `Service map` 이고 `ServerMap` 은 컴포넌트 이름일 뿐이다. 규칙을 글로서리 머리에 한 줄로 적었다 |
