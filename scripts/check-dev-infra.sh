@@ -16,7 +16,7 @@ for s in kafka clickhouse postgres; do
 done
 
 topics=$(C exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --list)
-for t in raw raw.dlq; do
+for t in raw.traces raw.metrics raw.logs raw.dlq; do
   grep -qx "$t" <<< "$topics" && ok "Kafka 토픽 $t" || fail "Kafka 토픽 $t 없음"
 done
 

@@ -65,10 +65,10 @@ class RawConsumerTest(
         counter.count(signal) shouldBe expected // 10초 안에 안 오르면 여기서 실패한다
     }
 
-    // 만든 요청을 protobuf 바이트로 바꿔 raw 토픽에 넣는다. .get() = 브로커가 받을 때까지 기다린다.
+    // 만든 요청을 protobuf 바이트로 바꿔 **그 신호의 토픽**에 넣는다 (#281). .get() = 브로커가 받을 때까지 기다린다.
     // peerAddress 를 주면 Collector 가 붙이는 봉투 메모를 흉내 낸다 (`#149`)
     fun sendToRaw(signal: RawSignal, payload: ByteArray, peerAddress: String? = null) {
-        val record = ProducerRecord(RawSignal.TOPIC, signal.key, payload)
+        val record = ProducerRecord(signal.topic, signal.key, payload)
         peerAddress?.let { record.headers().add(RawHeaders.PEER_ADDRESS, it.toByteArray()) }
         producer.send(record).get()
     }

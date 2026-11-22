@@ -5,6 +5,7 @@ import com.monimo.collector.support.TestCerts
 import com.monimo.collector.support.TestCertsConfig
 import com.monimo.collector.support.TestInfraConfig
 import com.monimo.common.kafka.RawHeaders
+import com.monimo.common.kafka.RawTopics
 import com.monimo.common.kafka.RawSignal
 import io.grpc.Status
 import io.kotest.assertions.nondeterministic.eventually
@@ -65,7 +66,7 @@ class OtlpGrpcMtlsRequireTest(
             ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
             ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
         ),
-    ).also { it.subscribe(listOf(RawSignal.TOPIC)) }
+    ).also { it.subscribe(RawTopics.ALL) } // 토픽 셋을 한꺼번에 구독한다 (#281)
     afterSpec { consumer.close() }
 
     // 한 손님이 세 신호를 잇달아 보내므로 한 번의 poll 에 세 메시지가 같이 올 수 있다. 읽은 것을 버리지 않고 모아 두고 키로 찾는다

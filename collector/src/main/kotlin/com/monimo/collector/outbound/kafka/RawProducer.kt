@@ -9,7 +9,8 @@ import org.springframework.kafka.support.SendResult // 보내기 결과(토픽 �
 import org.springframework.stereotype.Component // "스프링이 이 객체를 만들어 관리한다" 표시
 import java.util.concurrent.CompletableFuture // 나중에 결과가 들어올 상자
 
-// raw 토픽으로 내보내는 문. Collector 가 데이터를 밖으로 보내는 곳은 여기 하나다.
+// raw 토픽들로 내보내는 문. Collector 가 데이터를 밖으로 보내는 곳은 여기 하나다.
+// 토픽은 신호가 정한다 (raw.traces · raw.metrics · raw.logs, ADR #74 · #281) : 여기에 if 나 when 이 없는 이유다.
 // 직렬화(String 키 · ByteArray 값)와 acks 는 application.yml 의 producer 설정이 정한다.
 @Component//스프링이 시작할 때 하나 만들어 두고 필요한 곳에 넣어 준다(객체 하나를)
 class RawProducer(private val kafkaTemplate: KafkaTemplate<String, ByteArray>) { // 괄호 = 생성자. 스프링이 Kafka 도구를 넣어 준다 (private 이라 밖에서는 못 꺼낸다)
@@ -23,7 +24,8 @@ class RawProducer(private val kafkaTemplate: KafkaTemplate<String, ByteArray>) {
     // 기본값을 두지 않는다 : 깜빡하면 메모가 조용히 빠져 화면 칸이 비는데 그걸 알아챌 방법이 없다
     fun send(signal: RawSignal, payload: ByteArray, peerAddress: String?): CompletableFuture<SendResult<String, ByteArray>> {
         val headers = peerAddress?.let { listOf(RecordHeader(RawHeaders.PEER_ADDRESS, it.toByteArray())) } // 값은 UTF-8 바이트 (Kafka 헤더는 byte[] 다)
-        // 파티션 · 타임스탬프는 null 로 둬서 Kafka 가 고르게 한다. 키 · 값은 전과 같다
-        return kafkaTemplate.send(ProducerRecord(RawSignal.TOPIC, null, null, signal.key, payload, headers))
+        // 파티션 · 타임스탬프는 null 로 둬서 Kafka 가 고르게 한다 (토픽마다 파티션이 1개라 고를 것이 하나다).
+        // 키는 토픽이 갈린 뒤에도 그대로 둔다 : DLQ 되넣기가 키로 원래 토픽을 고르고(#195) 모르는 키가 독성 분류다(ADR #51)
+        return kafkaTemplate.send(ProducerRecord(signal.topic, null, null, signal.key, payload, headers))
     }
 }

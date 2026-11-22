@@ -2,6 +2,7 @@ package com.monimo.collector.inbound.otlp
 
 import com.monimo.collector.support.TestInfraConfig
 import com.monimo.common.kafka.RawHeaders
+import com.monimo.common.kafka.RawTopics
 import com.monimo.common.kafka.RawSignal
 import io.grpc.ManagedChannelBuilder
 import io.kotest.core.spec.style.BehaviorSpec
@@ -71,7 +72,7 @@ class OtlpGrpcReceiverTest(
             ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
             ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to ByteArrayDeserializer::class.java,
         ),
-    ).also { it.subscribe(listOf(RawSignal.TOPIC)) }
+    ).also { it.subscribe(RawTopics.ALL) } // 토픽 셋을 한꺼번에 구독한다 (#281)
     afterSpec { consumer.close() }
 
     // 키가 signal 인 메시지가 올 때까지 최대 10초 기다린다.

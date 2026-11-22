@@ -37,8 +37,8 @@ class DlqReprocessConfig {
     @Bean
     fun dlqReprocessRunner(job: DlqReprocessJob, props: DlqReprocessProperties) = ApplicationRunner {
         log.info(
-            "되넣기 시작 : {} → {} (그룹 {}, 포기 {}회{})",
-            props.sourceTopic, props.targetTopic, props.groupId, props.maxAttempt,
+            "되넣기 시작 : {} → 키가 정하는 원래 토픽 (그룹 {}, 포기 {}회{})",
+            props.sourceTopic, props.groupId, props.maxAttempt,
             if (props.dryRun) ", 마른 실행" else "",
         )
         val result = job.run()

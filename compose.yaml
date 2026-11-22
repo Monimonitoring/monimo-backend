@@ -44,7 +44,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       # 토픽은 kafka-init 이 정해진 설정으로만 만든다. 오타 난 토픽이 저절로 생기지 않게 막는다.
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-    # "정상" = 브로커가 떴고 토픽 2개까지 만들어진 상태. 그래서 up --wait 은 토픽이 준비된 뒤에 끝난다.
+    # "정상" = 브로커가 떴고 토픽 4개(신호 셋 + DLQ)까지 만들어진 상태. 그래서 up --wait 은 토픽이 준비된 뒤에 끝난다.
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --list 2> /dev/null | grep -qx raw.dlq"]
       interval: 5s
@@ -52,7 +52,7 @@ services:
       retries: 30
       start_period: 10s
 
-  # 토픽 만들기 (한 번 실행하고 끝나는 컨테이너). raw 7일 · raw.dlq 30일 보관 (ADR #34)
+  # 토픽 만들기 (한 번 실행하고 끝나는 컨테이너). 신호별 토픽 셋 7일 · raw.dlq 30일 보관 (ADR #34 · #74)
   # Kafka 데이터는 컨테이너 안에만 있어서 down 하면 메시지와 토픽이 지워지고, 다시 켜면 이게 새로 만든다.
   kafka-init:
     image: apache/kafka:3.9.2
@@ -68,8 +68,11 @@ services:
           /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:29092 > /dev/null 2>&1 && break
           sleep 2
         done
-        $$T --bootstrap-server kafka:29092 --create --if-not-exists --topic raw     --partitions 3 --replication-factor 1 --config retention.ms=604800000
-        $$T --bootstrap-server kafka:29092 --create --if-not-exists --topic raw.dlq --partitions 1 --replication-factor 1 --config retention.ms=2592000000
+        $$T --bootstrap-server kafka:29092 --create --if-not-exists --topic raw.traces  --partitions 1 --replication-factor 1 --config retention.ms=604800000
+        $$T --bootstrap-server kafka:29092 --create --if-not-exists --topic raw.metrics --partitions 1 --replication-factor 1 --config retention.ms=604800000
+        $$T --bootstrap-server kafka:29092 --create --if-not-exists --topic raw.logs    --partitions 1 --replication-factor 1 --config retention.ms=604800000
+        # raw.dlq 는 **맨 마지막에** 만든다 : kafka 헬스체크가 이 토픽이 목록에 보이는 것으로 "토픽 준비 끝" 을 판단한다
+        $$T --bootstrap-server kafka:29092 --create --if-not-exists --topic raw.dlq     --partitions 1 --replication-factor 1 --config retention.ms=2592000000
         $$T --bootstrap-server kafka:29092 --list
     restart: "no"
 
@@ -464,7 +467,7 @@ services:
       retries: 30
       start_period: 30s
 
-  # raw.dlq 에 쌓인 것을 raw 로 되넣는 잡 (#195, ADR 참조). **사람이 부른다** :
+  # raw.dlq 에 쌓인 것을 원래 토픽(키가 정한다)으로 되넣는 잡 (#195 · #281, ADR 참조). **사람이 부른다** :
   #   docker compose run --rm dlq-reprocess                                     되넣는다
   #   docker compose run --rm -e MONIMO_INGESTER_DLQ_REPROCESS_DRY_RUN=true dlq-reprocess   무엇을 넣을지만 본다
   #
