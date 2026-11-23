@@ -105,7 +105,35 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           path: deploy
 
+      # 옛 실행을 Re-run 하면 deploy 레포가 그 옛 SHA 로 내려간다 (2026-11-23 실제로 났다 : #285).
+      # 기준은 "develop 최신인가" 가 아니라 "지금 올라가 있는 것보다 새것인가" 다 :
+      # 더 새 머지의 이미지 빌드가 실패해도 그 앞 것은 올라가야 하기 때문이다
+      - name: 올라가 있는 SHA 보다 옛것이면 건너뛴다
+        id: guard
+        working-directory: deploy/overlays/eks/3-apps
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          # 다섯 줄의 태그 중 SHA 꼴인 것만 (처음엔 태그가 없다) — 손으로 하나만 바꿨을 수도 있으니 전부 본다
+          # yq 가 실패하면 여기서 job 이 멈춘다 : 검사가 고장 나서 조용히 통과하는 일이 없게 grep 과 나눠 둔다
+          all=$(yq '.images[] | select(.name == "monimo-local.invalid/*") | .newTag // ""' kustomization.yaml)
+          tags=$(grep -E '^[0-9a-f]{40}$' <<<"$all" | sort -u || true)
+          for deployed in $tags; do
+            [ "$deployed" = "$SHA" ] && continue
+            status=$(gh api "repos/${REPO}/compare/${deployed}...${SHA}" --jq .status)
+            echo "올라가 있는 ${deployed:0:7} 대비 이번 ${SHA:0:7} : ${status}"
+            if [ "$status" != "ahead" ]; then
+              echo "::notice::이번 ${SHA:0:7} 은 올라가 있는 ${deployed:0:7} 보다 새것이 아니다(${status}). 되돌리지 않으려고 커밋하지 않는다. 일부러 되돌리려면 deploy 레포에서 revert 한다"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
       - name: EKS overlay 의 이미지 줄을 이 커밋 SHA 로
+        if: steps.guard.outputs.skip != 'true'
         working-directory: deploy/overlays/eks/3-apps
         env:
           ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
@@ -121,6 +149,7 @@ jobs:
           kustomize build . | grep -E '^\s+image: .*monimo/' || true
 
       - name: deploy 레포에 커밋
+        if: steps.guard.outputs.skip != 'true'
         working-directory: deploy
         env:
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
