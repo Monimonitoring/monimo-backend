@@ -7,7 +7,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 // 가짜 Slack 수신 서버. 발신 쪽 로그가 아니라 "실제로 받은 것"을 센다.
 // 주소 /hook/{mode}: ok · 429 · 503 · 400 · slow(응답 전에 오래 멈춤) · switch(switchStatus 로 응답)
-class FakeSlackServer : AutoCloseable {
+// threads: 동시에 붙잡고 있을 수 있는 요청 수. 느린 채널 여럿을 동시에 받으려면 늘린다
+class FakeSlackServer(threads: Int = 8) : AutoCloseable {
     val received = ConcurrentLinkedQueue<String>()
     val hits = AtomicInteger()
     @Volatile var slowMillis = 2_000L
@@ -32,7 +33,7 @@ class FakeSlackServer : AutoCloseable {
             ex.sendResponseHeaders(status, bytes.size.toLong())
             ex.responseBody.use { it.write(bytes) }
         }
-        executor = java.util.concurrent.Executors.newFixedThreadPool(8)
+        executor = java.util.concurrent.Executors.newFixedThreadPool(threads)
         start()
     }
 

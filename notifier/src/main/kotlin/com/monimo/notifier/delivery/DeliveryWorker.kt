@@ -20,7 +20,7 @@ class DeliveryWorker(
     private val props: DeliveryProperties,
     private val clock: Clock,
     private val pollAge: LastSuccessAge,
-    private val lanes: ChannelLanes,
+    private val lanes: DeliveryLanes,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val senderByType: Map<ChannelType, NotificationSender> = senders.associateBy { it.type }
@@ -43,7 +43,7 @@ class DeliveryWorker(
         return claims.size
     }
 
-    fun process(group: List<Claim>) {
+    suspend fun process(group: List<Claim>) {
         val finishes = decide(group)
         group.forEach { claim ->
             val finish = finishes.getValue(claim.outboxId)
@@ -53,7 +53,7 @@ class DeliveryWorker(
     }
 
     // 그룹 하나 = 채널 호출 1번. 결과 · 재시도 판단 · 서킷은 호출 기준이고, 결과는 줄마다 같은 값으로 적는다
-    private fun decide(group: List<Claim>): Map<Long, Finish> {
+    private suspend fun decide(group: List<Claim>): Map<Long, Finish> {
         fun all(finish: Finish) = group.associate { it.outboxId to finish }
         // 그룹은 같은 채널이다. 보내기 직전에 채널을 다시 본다. 발화 뒤 채널이 꺼졌으면 보내지 않는다
         val channel = channels.findById(group.first().alertChannelId).orElse(null)
@@ -68,7 +68,9 @@ class DeliveryWorker(
         val permit = breaker.acquire(channel.id)
         if (permit is ChannelCircuitBreaker.Permit.Rejected) return group.associate { it.outboxId to deferred(it, permit) }
 
-        val result = sender.send(OutboundMessage(group.map { it.payload }), channel.config)
+        val message = OutboundMessage(group.map { it.payload })
+        // 스레드 레인은 응답이 올 때까지 레인 스레드가 잠든다. 코루틴 레인은 코루틴만 멈추고 스레드는 다른 레인 일을 한다 (120-coroutine-lanes.md)
+        val result = if (lanes.suspendsOnSend) sender.sendSuspending(message, channel.config) else sender.send(message, channel.config)
         when (result) {
             is SendResult.Accepted, is SendResult.Permanent -> breaker.onResponded(channel.id)
             is SendResult.Retryable, is SendResult.Unknown -> breaker.onFailure(channel.id)

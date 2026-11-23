@@ -1,6 +1,7 @@
 package com.monimo.notifier.channel
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.future.await
 import org.springframework.stereotype.Component
 import java.io.IOException
 import java.net.ConnectException
@@ -31,24 +32,45 @@ class SlackWebhookSender(
     override val type = ChannelType.SLACK
 
     override fun send(message: OutboundMessage, config: Map<String, Any?>): SendResult {
-        val url = config["webhook_url"] as? String ?: return SendResult.Permanent("config.webhook_url 없음")
+        val request = request(message, config) ?: return NO_URL
+        val response = try {
+            client.send(request, HttpResponse.BodyHandlers.ofString())
+        } catch (e: IOException) {
+            return failure(e)
+        }
+        return classify(response)
+    }
+
+    // 같은 요청을 sendAsync 로 보내고 응답이 올 때까지 코루틴만 멈춘다(스레드는 놓는다).
+    // 소켓은 HttpClient 의 셀렉터 스레드 하나가 epoll 로 지켜보다 응답이 오면 future 를 끝낸다 — blocking send 도 안에서는 같은 길을 쓴다
+    override suspend fun sendSuspending(message: OutboundMessage, config: Map<String, Any?>): SendResult {
+        val request = request(message, config) ?: return NO_URL
+        val response = try {
+            client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).await()
+        } catch (e: IOException) {
+            return failure(e)
+        }
+        return classify(response)
+    }
+
+    private fun request(message: OutboundMessage, config: Map<String, Any?>): HttpRequest? {
+        val url = config["webhook_url"] as? String ?: return null
         val body = objectMapper.writeValueAsString(mapOf("text" to message.summary()))
-        val request = HttpRequest.newBuilder(URI.create(url))
+        return HttpRequest.newBuilder(URI.create(url))
             .timeout(props.requestTimeout)
             .header("Content-Type", "application/json; charset=utf-8")
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build()
-        val response = try {
-            client.send(request, HttpResponse.BodyHandlers.ofString())
-        } catch (e: HttpConnectTimeoutException) {
-            return SendResult.Retryable("연결 시간 초과")          // 요청이 나가기 전
-        } catch (e: HttpTimeoutException) {
-            return SendResult.Unknown("응답 시간 초과 ${props.requestTimeout}")  // 나갔는데 결과 모름
-        } catch (e: ConnectException) {
-            return SendResult.Retryable("연결 실패")
-        } catch (e: IOException) {
-            return SendResult.Unknown("입출력 오류: ${e.javaClass.simpleName}")
-        }
+    }
+
+    private fun failure(e: IOException): SendResult = when (e) {
+        is HttpConnectTimeoutException -> SendResult.Retryable("연결 시간 초과")          // 요청이 나가기 전
+        is HttpTimeoutException -> SendResult.Unknown("응답 시간 초과 ${props.requestTimeout}")  // 나갔는데 결과 모름
+        is ConnectException -> SendResult.Retryable("연결 실패")
+        else -> SendResult.Unknown("입출력 오류: ${e.javaClass.simpleName}")
+    }
+
+    private fun classify(response: HttpResponse<String>): SendResult {
         val text = sanitize(response.body())
         val status = response.statusCode()
         return when {
@@ -71,4 +93,8 @@ class SlackWebhookSender(
 
     // 응답 원문은 이력에 남기므로 길이를 자른다. 웹훅 주소(비밀값)는 애초에 넣지 않는다
     private fun sanitize(body: String?): String = (body ?: "").take(500)
+
+    private companion object {
+        val NO_URL = SendResult.Permanent("config.webhook_url 없음")
+    }
 }

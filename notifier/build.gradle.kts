@@ -10,6 +10,7 @@ dependencies {
     implementation(project(":common"))
     implementation(libs.bundles.service.base)
     implementation(libs.bundles.postgres)
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.bundles.service.test)
     testImplementation(libs.bundles.postgres.test)

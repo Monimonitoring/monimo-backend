@@ -1,0 +1,23 @@
+== coro-lanes-diag/CU-n3000-r9 (덤프 60장)
+ 스케줄러 스레드 (scheduling-* 두 개 중 바쁜 쪽 포함, 표본 수):
+     91  쉼 (다음 주기 대기 또는 일 없음)
+     26  PG 응답 대기 (소켓 read)
+      3  그 밖 (CPU 에서 실행 중 등)
+ 레인 스레드 중 깨어 있던 것 (표본 수, 가장 가까운 우리 코드 · Hikari 프레임):
+     21  com.zaxxer.hikari.pool.ProxyConnection.commit
+      7  com.zaxxer.hikari.pool.ProxyPreparedStatement.executeUpdate
+      6  com.monimo.notifier.delivery.OutboxClaimer.finish
+      1  com.monimo.notifier.channel.SlackWebhookSender.sanitize
+      1  com.monimo.notifier.delivery.OutboxClaimer$$SpringCGLIB$$0.finish
+== coro-lanes-diag/TU-n3000-r9 (덤프 60장)
+ 스케줄러 스레드 (scheduling-* 두 개 중 바쁜 쪽 포함, 표본 수):
+    109  쉼 (다음 주기 대기 또는 일 없음)
+      6  그 밖 (CPU 에서 실행 중 등)
+      3  PG 응답 대기 (소켓 read)
+      2  Hikari 연결 대기
+ 레인 스레드 중 깨어 있던 것 (표본 수, 가장 가까운 우리 코드 · Hikari 프레임):
+     26  com.zaxxer.hikari.pool.ProxyConnection.commit
+      9  com.zaxxer.hikari.pool.ProxyPreparedStatement.executeUpdate
+      8  com.monimo.notifier.delivery.DeliveryWorker.decide
+      4  com.monimo.notifier.channel.SlackWebhookSender.send
+      4  com.monimo.notifier.delivery.OutboxClaimer.finish

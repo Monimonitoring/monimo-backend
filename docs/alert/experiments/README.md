@@ -16,6 +16,11 @@
 | `outbox_poll_analyze.py <폴더>` | 생김 → 수신 · 수신 → 완료 지연, 유휴 PG 트랜잭션 · 읽은 줄 · Notifier CPU, 몰림 → `<폴더>/summary.md` |
 | `cdc/` (`compose.yml` · `schema.sql` · `connector.json` · `producer.py` · `relay_poll.py` · `consumer.py`) | 경보 사건 발행 CDC 격리 환경 (`101-outbox-cdc.md`). 프로젝트 `monimo-cdc`, 포트 25432 · 29092 · 28083. 팀 compose 는 안 건드린다 |
 | `cdc/cdc_run.sh` · `cdc/cdc_analyze.py` | E1 롤백 · E2 커밋 직후 종료 · E3 Connect 강제 종료 → 복구(누락 · 중복 · WAL) · E4 소비자 종료, CDC · 폴링 릴레이 전달 지연 · 유휴 DB 비용 → `summary.md`. `PY` = kafka-python · psycopg 가 있는 python |
+| `coro_lanes_run.sh setup \| run <T8\|TU\|CU> <N> <회> \| teardown` | 스레드 레인 대 코루틴 레인 한 회차 (`120-coroutine-lanes.md`). 격리 네트워크 `exp-coro`(PG 호스트 25433), Notifier 를 리눅스 컨테이너(Temurin 17 · CPU 2 · 1 GB)로 띄워 느린 채널 N 개 + 정상 채널 1개를 한 번에 넣는다. `ANALYZE=1` 넣자마자 통계 갱신, `DIAG=1` 0.5초 간격 스레드 덤프 |
+| `coro_lanes_suite.sh` · `coro_lanes_suite_analyzed.sh` | 변형 · N · 회차 묶음 (순서를 회차마다 돌림) → `coro-lanes-results/` · `coro-lanes-analyzed/`. 회차별 원본은 폴더마다 `raw.tar.gz` (풀어서 analyze) |
+| `fake_slack_async.py <port> <log> <hold초>` | asyncio 가짜 Slack. `/slow/<i>` 는 hold 초 뒤 200, `/normal` 은 바로. 연결 수천 개를 이벤트 루프 하나로 받는다 |
+| `coro_lanes_sampler.sh` | Notifier 컨테이너 안에서 `/proc` 의 스레드 수 · RSS · CPU 틱 · 문맥 교환을 0.2초마다 |
+| `coro_lanes_analyze.py <폴더>` · `coro_lanes_stacks.py <회차폴더>...` | 회차별 · 중앙값 표 → `summary.md` / 진단 덤프에서 스케줄러 · 레인 스레드가 어디서 시간을 썼는지 |
 
 | `overhead_gc.sh <off\|on\|dump> <이름> [RATE] [SECS]` | 에이전트 · 스레드 덤프가 order JVM 의 GC · 요청 지연에 주는 비용 한 회차. 쇼핑몰 `perf/overhead/`(#36 · #51 CPU · 메모리) 출발선에 `overhead_gc_override.yml`(G1 · 힙 고정 · GC · safepoint 로그)을 얹고, dump 는 측정 중 30초마다 Collector 에 덤프를 직접 요청한다 |
 | `overhead_gc_suite.sh [REPS] [RATE] [SECS]` | 세 변형을 순서를 돌려 가며 REPS 번 → `overhead_gc_analyze.py` |

@@ -1,5 +1,7 @@
 package com.monimo.notifier.channel
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Duration
 
 enum class ChannelType { SLACK, EMAIL, WEBHOOK, PAGERDUTY }
@@ -21,6 +23,11 @@ sealed interface SendResult {
 interface NotificationSender {
     val type: ChannelType
     fun send(message: OutboundMessage, config: Map<String, Any?>): SendResult
+
+    // 코루틴 레인이 부르는 쪽 (docs/alert/120-coroutine-lanes.md). 응답을 기다리는 동안 스레드를 붙잡지 않으려면 채널이 덮어쓴다.
+    // 덮어쓰지 않은 채널은 blocking send 를 IO 스레드로 넘긴다 — 동작은 같고 기다리는 동안 스레드 하나를 쓴다
+    suspend fun sendSuspending(message: OutboundMessage, config: Map<String, Any?>): SendResult =
+        withContext(Dispatchers.IO) { send(message, config) }
 
     // 보내기 전에 config 모양만 본다. 틀리면 이유, 맞으면 null. 시험 발송이 400 으로 돌려주는 데 쓴다
     fun configError(config: Map<String, Any?>): String? = null

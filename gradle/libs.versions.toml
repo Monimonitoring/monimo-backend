@@ -19,6 +19,8 @@ spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+# Notifier 발송 레인을 코루틴으로 돌리는 실험 (docs/alert/120-coroutine-lanes.md). 버전은 Spring Boot BOM 이 정한다
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core" }
 # 저장소 연결 (PG = JPA ADR #42 · CH 조회 = JDBC · CH 적재 = client-v2 · Kafka = Spring for Apache Kafka)
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
 postgresql = { module = "org.postgresql:postgresql" }

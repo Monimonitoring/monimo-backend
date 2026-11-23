@@ -1,0 +1,23 @@
+# outbox_cancel_candidate.sh 결과 (2026-11-04, PostgreSQL 17.11-alpine, autovacuum 끔)
+# 나쁜 통계 = SENT 이력 3000줄 상태에서 ANALYZE → FIRING PENDING 3000줄 추가. 각 3회
+== RESOLVED 0줄 (FIRING PENDING 3000, 나쁜 통계)
+  원래: 1083.974 ms · 취소 0줄
+  후보: 0.615 ms · 취소 0줄
+  원래: 1155.374 ms · 취소 0줄
+  후보: 0.449 ms · 취소 0줄
+  원래: 1065.350 ms · 취소 0줄
+  후보: 0.528 ms · 취소 0줄
+== RESOLVED 100줄 (짝 있는 FIRING 100 → 200줄 취소돼야 함, 나쁜 통계)
+  원래: 1158.694 ms · 취소 200줄
+  후보: 64.780 ms · 취소 200줄
+  원래: 1145.796 ms · 취소 200줄
+  후보: 62.484 ms · 취소 200줄
+  원래: 1135.802 ms · 취소 200줄
+  후보: 62.582 ms · 취소 200줄
+== 후보 실행 계획 (RESOLVED 100줄)
+    ->  Index Scan using notification_outbox_due on notification_outbox notification_outbox_1 (actual time=0.343..0.379 rows=100 loops=1)
+          ->  Nested Loop (actual time=0.947..61.511 rows=100 loops=1)
+                ->  Nested Loop (actual time=0.937..59.981 rows=100 loops=1)
+                      ->  CTE Scan on res (actual time=0.351..0.436 rows=100 loops=1)
+                      ->  Index Scan using notification_outbox_due on notification_outbox r (actual time=0.002..0.468 rows=3050 loops=100)
+                ->  Index Scan using notification_outbox_due on notification_outbox f (actual time=0.003..0.012 rows=50 loops=100)

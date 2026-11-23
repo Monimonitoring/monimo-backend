@@ -30,18 +30,22 @@ class LanesTestConfig {
     properties = [
         "monimo.notifier.delivery.enabled=false",
         "monimo.notifier.delivery.group-wait=0s",
+        "monimo.notifier.delivery.lane-mode=THREAD",
         "monimo.notifier.http.connect-timeout=500ms",
         "monimo.notifier.http.request-timeout=3s",
     ],
 )
 class ChannelLanesTest(
     worker: DeliveryWorker,
-    lanes: ChannelLanes,
+    lanes: DeliveryLanes,
     jdbc: JdbcTemplate,
     fake: FakeSlackServer,
-) : BehaviorSpec({
+) : BehaviorSpec(laneRules(worker, lanes, jdbc, fake))
 
-    val appId = jdbc.queryForObject("INSERT INTO applications (name) VALUES ('lane-order') RETURNING id", Long::class.java)!!
+// 스레드 레인 · 코루틴 레인이 같이 지켜야 하는 규칙 (CoroutineLanesTest 가 같은 규칙을 코루틴 레인으로 돈다)
+fun laneRules(worker: DeliveryWorker, lanes: DeliveryLanes, jdbc: JdbcTemplate, fake: FakeSlackServer): BehaviorSpec.() -> Unit = {
+
+    val appId = jdbc.queryForObject("INSERT INTO applications (name) VALUES (?) RETURNING id", Long::class.java, "lane-order-${UUID.randomUUID()}")!!
     val ruleId = jdbc.queryForObject(
         """
         INSERT INTO alert_rules (application_id, name, metric_kind, operator, threshold, window_sec, severity)
@@ -123,14 +127,19 @@ class ChannelLanesTest(
             }
         }
     }
-})
+}
 
 // 레인 자체의 규칙 (스프링 없이)
-class ChannelLanesUnitTest : BehaviorSpec({
+class ChannelLanesUnitTest : BehaviorSpec(
+    laneUnitRules { ChannelLanes(Executors.newCachedThreadPool(), maxBusy = 2, shutdownWait = Duration.ofSeconds(5)) },
+)
+
+// 바쁜 채널 상한 2 인 레인을 만들어 주면 그 레인이 지켜야 하는 규칙 (CoroutineLanesUnitTest 도 같은 규칙)
+fun laneUnitRules(make: () -> DeliveryLanes): BehaviorSpec.() -> Unit = {
 
     Given("바쁜 채널 상한 2") {
         val gate = CountDownLatch(1)
-        val lanes = ChannelLanes(Executors.newCachedThreadPool(), maxBusy = 2, shutdownWait = Duration.ofSeconds(5))
+        val lanes = make()
 
         When("두 채널이 보내는 중이면") {
             lanes.submit(1) { gate.await(5, TimeUnit.SECONDS) }
@@ -170,4 +179,4 @@ class ChannelLanesUnitTest : BehaviorSpec({
             }
         }
     }
-})
+}

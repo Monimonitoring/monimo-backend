@@ -75,6 +75,20 @@ class SlackWebhookSenderTest : BehaviorSpec({
         }
     }
 
+    Given("코루틴 레인이 부르는 sendSuspending (sendAsync + await)") {
+        fake.reset()
+        fake.slowMillis = 1_500
+        suspend fun sendSuspending(mode: String) = sender.sendSuspending(message, mapOf("webhook_url" to fake.url(mode)))
+        Then("blocking send 와 같은 분류 — 200 · 429 · 400 · 늦은 응답 · 닿지 않음 · 주소 없음") {
+            sendSuspending("ok") shouldBe SendResult.Accepted("ok")
+            sendSuspending("429").shouldBeInstanceOf<SendResult.Retryable>()
+            sendSuspending("400").shouldBeInstanceOf<SendResult.Permanent>()
+            sendSuspending("slow").shouldBeInstanceOf<SendResult.Unknown>()
+            sender.sendSuspending(message, mapOf("webhook_url" to "http://127.0.0.1:1/hook/ok")).shouldBeInstanceOf<SendResult.Retryable>()
+            sender.sendSuspending(message, emptyMap()).shouldBeInstanceOf<SendResult.Permanent>()
+        }
+    }
+
     Given("AGENT_DOWN 발화") {
         val agentDown = OutboundMessage(
             mapOf(
