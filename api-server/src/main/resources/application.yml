@@ -26,12 +26,16 @@ monimo:
   clickhouse:
     data-source-properties:
       # 서버가 쿼리를 스스로 멈추는 상한. 단위 초. 넘으면 TIMEOUT_EXCEEDED 로 끊고 자원을 놓는다
-      clickhouse_setting_max_execution_time: 10
+      # 화면 조회 기준. 다른 APM 의 조회 상한(30~60초)에 맞춘다
+      clickhouse_setting_max_execution_time: 30
       # 드라이버 재시도에서 서버 에러(ServerRetryable)를 뺀다. 기본은 시간 초과로 끊긴 쿼리도 3번 다시 보내 상한이 4배가 된다
       client_retry_on_failures: NoHttpResponse,ConnectTimeout,ConnectionRequestTimeout
   # 서버가 아예 대답이 없을 때(멈춤 · 네트워크) 요청 스레드가 기다리는 상한. 위 서버 상한보다 길어야 서버 쪽이 먼저 끊는다.
   # 드라이버 socket_timeout 대신 이 값을 쓴다 (DataSourceConfig.WaitLimitedDataSource)
-  clickhouse-wait-timeout: 15s
+  clickhouse-wait-timeout: 35s
+  # Detector 내부 문(service-health · cpu-heap · gc-time · agents/active) 조회만 쓰는 서버 상한. 단위 초.
+  # Detector 가 3초만 기다리므로 그보다 짧게 둬서, 포기한 뒤에도 쿼리가 계속 도는 헛일을 막는다 (InternalQueryLimit)
+  clickhouse-internal-max-execution-time: 2
   auth:
     # access JWT(HS256) 서명 키. 32바이트 이상. 비우면 기동 때 임시 키를 만들어 재시작마다 토큰이 전부 무효가 된다 (로컬 · 테스트 전용)
     jwt-secret: ${MONIMO_JWT_SECRET:}
