@@ -1,5 +1,6 @@
 package com.monimo.api.query.metric
 
+import com.monimo.api.common.config.InternalQueryLimit
 import com.monimo.api.common.web.TimeRange
 import com.monimo.api.query.metric.dto.GcTimeResponse
 import io.kotest.core.spec.style.BehaviorSpec
@@ -128,7 +129,7 @@ data class RawPoint(val metric: String, val series: String, val ts: Instant, val
 
 // GcTimeRepository SQL 과 같은 일 : [since, to) 의 점을 시계열 · 1분마다 묶어 마지막 값과 그 시각을 돌려준다
 private class FakeGcTimeRepository(private val points: List<RawPoint>) :
-    GcTimeRepository(NamedParameterJdbcTemplate(JdbcTemplate())) {
+    GcTimeRepository(NamedParameterJdbcTemplate(JdbcTemplate()), InternalQueryLimit(2)) {
 
     override fun findTotals(serviceName: String?, since: Instant, to: Instant): List<GcTotal> =
         points.filter { !it.ts.isBefore(since) && it.ts.isBefore(to) }

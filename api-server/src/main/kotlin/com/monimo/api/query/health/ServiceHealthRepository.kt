@@ -1,5 +1,6 @@
 package com.monimo.api.query.health
 
+import com.monimo.api.common.config.InternalQueryLimit
 import com.monimo.api.common.web.TimeRange
 import com.monimo.api.query.health.dto.ServiceHealthResponse
 import org.springframework.beans.factory.annotation.Qualifier
@@ -11,6 +12,7 @@ import java.time.Instant
 @Repository
 class ServiceHealthRepository(
     @Qualifier("clickHouseJdbcTemplate") private val jdbc: NamedParameterJdbcTemplate,
+    private val limit: InternalQueryLimit,
 ) {
 
     fun find(serviceName: String?, range: TimeRange, step: Int): List<ServiceHealthResponse> {
@@ -32,6 +34,7 @@ class ServiceHealthRepository(
             WHERE ts_min >= toDateTime(:from) AND ts_min < toDateTime(:to) $serviceFilter
             GROUP BY bucket, service_name
             ORDER BY bucket, service_name
+            ${limit.settings}
         """.trimIndent()
         val params = mapOf(
             "step" to step,

@@ -1,5 +1,6 @@
 package com.monimo.api.query.metric
 
+import com.monimo.api.common.config.InternalQueryLimit
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
@@ -10,6 +11,7 @@ import java.time.Instant
 @Repository
 class CpuHeapRepository(
     @Qualifier("clickHouseJdbcTemplate") private val jdbc: NamedParameterJdbcTemplate,
+    private val limit: InternalQueryLimit,
 ) {
 
     fun findPoints(serviceName: String?, since: Instant, to: Instant): List<GaugePoint> {
@@ -29,6 +31,7 @@ class CpuHeapRepository(
               AND ts >= toDateTime(:sinceSec) AND ts < toDateTime(:toSec) $serviceFilter
             GROUP BY service_name, agent_id, metric_name, series_hash, minute_ts
             ORDER BY service_name, agent_id, minute_ts
+            ${limit.settings}
         """.trimIndent()
         val params = mapOf(
             "cpuMetric" to CPU_METRIC,
