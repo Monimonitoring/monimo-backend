@@ -1,5 +1,6 @@
 package com.monimo.api.query.agent
 
+import com.monimo.api.common.config.InternalQueryLimit
 import com.monimo.api.common.web.TimeRange
 import com.monimo.api.query.agent.dto.ActiveAgentResponse
 import org.springframework.beans.factory.annotation.Qualifier
@@ -11,6 +12,7 @@ import java.time.Instant
 @Repository
 class ActiveAgentRepository(
     @Qualifier("clickHouseJdbcTemplate") private val jdbc: NamedParameterJdbcTemplate,
+    private val limit: InternalQueryLimit,
 ) {
 
     fun find(serviceName: String?, range: TimeRange): List<ActiveAgentResponse> {
@@ -37,6 +39,7 @@ class ActiveAgentRepository(
             )
             GROUP BY service_name, agent_id
             ORDER BY service_name, agent_id
+            ${limit.settings}
         """.trimIndent()
         val params = mapOf(
             "fromMs" to range.from.toEpochMilli(),

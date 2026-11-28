@@ -1,5 +1,6 @@
 package com.monimo.api.query.metric
 
+import com.monimo.api.common.config.InternalQueryLimit
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Repository
@@ -11,6 +12,7 @@ import java.time.Instant
 @Repository
 class GcTimeRepository(
     @Qualifier("clickHouseJdbcTemplate") private val jdbc: NamedParameterJdbcTemplate,
+    private val limit: InternalQueryLimit,
 ) {
 
     fun findTotals(serviceName: String?, since: Instant, to: Instant): List<GcTotal> {
@@ -30,6 +32,7 @@ class GcTimeRepository(
             GROUP BY service_name, agent_id, metric_name, series_hash, minute_ts
             HAVING max(is_counter) = 1
             ORDER BY service_name, agent_id, metric_name, series_hash, minute_ts
+            ${limit.settings}
         """.trimIndent()
         val params = mapOf(
             "metricNames" to listOf(TIME_METRIC, COUNT_METRIC),
